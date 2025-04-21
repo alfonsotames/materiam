@@ -27,13 +27,12 @@ import java.util.logging.Logger;
  * @author Alfonso Tames
  */
 @Entity
-@Table(name="muser", uniqueConstraints = {@UniqueConstraint(columnNames = {"EMAIL"})})
+@Table(name="users", uniqueConstraints = {@UniqueConstraint(columnNames = {"EMAIL"})})
 public class User implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     /** Class Members **/
     
     private Long id;
@@ -109,7 +108,7 @@ public class User implements Serializable {
 
     @Override
     public String toString() {
-        return "com.materiam.entities.User[ id=" + id + " ]";
+        return "com.materiam.entities.User[ id=" + id + " ]: "+name+" ";
     }
 
 

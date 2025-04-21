@@ -17,10 +17,13 @@ import java.io.Serializable;
 @Entity
 public class Role implements Serializable {
 
+
+
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+    private String roleName;
 
     public Long getId() {
         return id;
@@ -29,7 +32,19 @@ public class Role implements Serializable {
     public void setId(Long id) {
         this.id = id;
     }
+    /**
+     * @return the roleName
+     */
+    public String getRoleName() {
+        return roleName;
+    }
 
+    /**
+     * @param roleName the roleName to set
+     */
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
+    }
     @Override
     public int hashCode() {
         int hash = 0;

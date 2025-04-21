@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html" 
+                xmlns:p="http://primefaces.org/ui"
+                template="./fetemplate.xhtml">
+
+    <ui:define name="top">
+        
+    </ui:define>
+
+    <ui:define name="content">
+        <div class="form-container">
+            <h:form id="registrationForm">
+                <div class="form-field">
+                    <label for="name">Name</label>
+                    <h:inputText id="name" value="#{userController.newUser.name}" />
+                </div>
+
+                <div class="form-field">
+                    <label for="email">Email</label>
+                    <h:inputText id="email" value="#{userController.newUser.email}" />
+                </div>
+
+                <div class="form-field">
+                    <label for="password">Password</label>
+                    <h:inputSecret id="password" value="#{userController.newUser.password}" />
+                </div>
+                <div class="submit-button">
+                    <p:commandButton value="Create User" action="#{userController.createUser}" styleClass="ui-button-primary" update="registrationForm,username" />
+                </div>
+                <div>
+                    <p:messages />
+                </div>
+            </h:form>
+        </div>
+    </ui:define>
+
+    <ui:define name="bottom">
+        bottom
+    </ui:define>
+
+</ui:composition>

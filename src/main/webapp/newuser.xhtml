@@ -12,19 +12,23 @@
 
     <ui:define name="content">
         <div class="form-container">
-            <h:form id="loginForm">
+            <h:form id="registrationForm">
+                <div class="form-field">
+                    <label for="name">Name</label>
+                    <h:inputText id="name" value="#{newuserController.newUser.name}" />
+                </div>
 
                 <div class="form-field">
                     <label for="email">Email</label>
-                    <h:inputText id="email" value="#{loginController.loginEmail}" />
+                    <h:inputText id="email" value="#{newuserController.newUser.email}" />
                 </div>
 
                 <div class="form-field">
                     <label for="password">Password</label>
-                    <h:inputSecret id="password" value="#{loginController.loginPassw}" />
+                    <h:inputSecret id="password" value="#{newuserController.newUser.password}" />
                 </div>
                 <div class="submit-button">
-                    <p:commandButton value="Login" action="#{loginController.login}" styleClass="ui-button-primary"  ajax="false" />
+                    <p:commandButton value="Create User" action="#{newuserController.createUser}" styleClass="ui-button-primary" update="registrationForm,username" />
                 </div>
                 <div>
                     <p:messages />

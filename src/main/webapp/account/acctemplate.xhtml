@@ -14,7 +14,8 @@
     <h:body>
         
         <div id="top">
-            <img src="images/materiam.png" style="width: 140px;" alt="MATERIAM" /> <h:outputText id="username" value="#{userController.user.name}" />
+            <div><img src="images/materiam.png" style="width: 140px;" alt="MATERIAM" /></div>
+            <div><h:outputText  id="username" value="#{loginController.user.name}" /> </div>
             <ui:insert name="top">Top</ui:insert>
         </div>
 

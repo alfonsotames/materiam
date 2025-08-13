@@ -15,6 +15,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.security.enterprise.AuthenticationStatus;
 import static jakarta.security.enterprise.AuthenticationStatus.SEND_CONTINUE;
 import static jakarta.security.enterprise.AuthenticationStatus.SEND_FAILURE;
+import static jakarta.security.enterprise.AuthenticationStatus.SUCCESS;
 import jakarta.security.enterprise.SecurityContext;
 import static jakarta.security.enterprise.authentication.mechanism.http.AuthenticationParameters.withParams;
 import jakarta.security.enterprise.credential.Credential;
@@ -30,6 +31,17 @@ import java.util.logging.Logger;
 /**
  *
  * @author mufufu
+ * 
+ * 
+ * LoginController is sessionScoped in order to make the User bean available
+ * to all jsf's and controllers. We could store the user in the FacesContext:
+ *      
+ *      FacesContext context = FacesContext.getCurrentInstance();
+ *       context.getExternalContext().getSessionMap().put("user", current);
+ * 
+ * But it has a very deep hierarchy.
+ * 
+ * 
  */
 @Named(value = "loginController")
 @SessionScoped
@@ -56,10 +68,10 @@ public class LoginController implements Serializable {
   
     private String loginEmail;
     private String loginPassw;
-    private User user;
+    private User user = null;
 
 
-    public void login() {
+    public String login() {
         try {
             
             Logger.getLogger(this.getClass().getName()).log(Level.INFO, "Trying login in for : {0}", loginEmail);
@@ -72,21 +84,28 @@ public class LoginController implements Serializable {
                     getResponse(context),
                     withParams()
                             .credential(credential));
-            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "* - * - * - * - * - * - Authenticate invocado  * - * - * - * - * - * - ");            
+            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "* - * - * - * - * - * - Authenticate invocado  * - * - * - * - * - * - ");
+            setUser((User) em.createQuery("select u from User u where u.email=:email").setParameter("email", loginEmail).getSingleResult());
+            
+            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "status equals {0}", status);
             if (status.equals(SEND_CONTINUE)) {
                 Logger.getLogger(this.getClass().getName()).log(Level.INFO,"* * * SEND_CONTINUE * * * *");
                 context.responseComplete();
                 
-                setUser((User) em.createQuery("select u from User u where u.email=:email").setParameter("email", loginEmail).getSingleResult());
                 
+                Logger.getLogger(this.getClass().getName()).log(Level.INFO,"* * * Setting user {0} * * * *", user.getName());
+            } else if (status.equals(SUCCESS)) {
+                
+                return "account/index.xhtml";
             } else if (status.equals(SEND_FAILURE)) {
                 Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, "*** racaso al autentificar ***");
-                //return "login.xhtml";
+                return "login.xhtml";
             }
 
         } catch (Exception e) {
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, "*** Error while login User ***",e);
         }
+        return "/";
     }    
 
 

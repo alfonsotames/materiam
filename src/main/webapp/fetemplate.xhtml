@@ -14,7 +14,13 @@
     <h:body>
         
         <div id="top">
-            <img src="images/materiam.png" style="width: 140px;" alt="MATERIAM" /> <h:outputText id="username" value="#{userController.user.name}" />
+            <img src="images/materiam.png" style="width: 140px;" alt="MATERIAM" /> 
+            
+            <h:outputText id="username"  value="#{loginController.user.name}" rendered="#{loginController.user != null}" />
+                <h:panelGroup rendered="#{loginController.user == null}">
+                    <a href="login.xhtml">Login</a>
+                </h:panelGroup>
+
             <ui:insert name="top">Top</ui:insert>
         </div>
 

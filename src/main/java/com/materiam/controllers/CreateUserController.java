@@ -1,8 +1,9 @@
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/J2EE/EJB40/StatelessEjbClass.java to edit this template
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package com.materiam.controllers;
+
 
 import com.materiam.entities.Role;
 import com.materiam.entities.User;
@@ -16,7 +17,13 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.security.enterprise.AuthenticationStatus;
+import static jakarta.security.enterprise.AuthenticationStatus.SEND_CONTINUE;
+import static jakarta.security.enterprise.AuthenticationStatus.SEND_FAILURE;
 import jakarta.security.enterprise.SecurityContext;
+import static jakarta.security.enterprise.authentication.mechanism.http.AuthenticationParameters.withParams;
+import jakarta.security.enterprise.credential.Credential;
+import jakarta.security.enterprise.credential.UsernamePasswordCredential;
 import jakarta.security.enterprise.identitystore.IdentityStoreHandler;
 import jakarta.security.enterprise.identitystore.Pbkdf2PasswordHash;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,57 +37,53 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+
 /**
  *
  * @author mufufu
  */
-@Named(value = "newuserController")
+
+@Named(value = "createUserController")
 @RequestScoped
 @Transactional
-public class newuserController {
 
 
+public class CreateUserController implements Serializable {
     
     @Inject
-    private SecurityContext securityContext;
-    @Inject
-    private HttpServletRequest request;
+    private LoginController loginController;
 
-    @Inject
-    private FacesContext context;    
-    
     @PersistenceContext(unitName = "materiam")
     private EntityManager em;
-
-    @Inject
-    private IdentityStoreHandler identityStoreHandler;    
-
     private User newUser = new User();
-    private User user = new User();
-    private String loginEmail;
-    private String loginPassw;
-
+    
     public void createUser() {
+        
+        Logger.getLogger(this.getClass().getName()).log(Level.INFO,
+                "Creating user: {0}", newUser.getEmail());
+        
         try {
-
-            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "*** User Persisted ***");
             newUser.setPassword(hashPassword(newUser.getPassword()));
             Role role = em.find(Role.class, 2l);
             List roles = new ArrayList<Role>();
             roles.add(role);
             newUser.setRoles(roles);
-            em.persist(newUser);        
-            setUser(newUser);
-            newUser = new User();
-            Logger.getLogger(this.getClass().getName()).log(Level.INFO, "Now the user is: {0}", getUser().toString());
+            em.persist(newUser);
+            loginController.setUser(newUser);
+            //Logger.getLogger(this.getClass().getName()).log(Level.INFO, "Now the user is: {0}", getUser().toString());
             
         } catch (Exception e) {
-            Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, "*** Error while persisting User ***",e);
-                        FacesContext.getCurrentInstance().addMessage("", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Hay un fuerte error" + e.getMessage(),""));
+            Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, 
+                    "*** Error while persisting User ***",e);
+                        FacesContext.getCurrentInstance().addMessage("", 
+                                new FacesMessage(FacesMessage.SEVERITY_ERROR, 
+                                        "Hay un fuerte error" + e.getMessage(),""));
         }
-
-    }
-
+        
+        Logger.getLogger(this.getClass().getName()).log(Level.INFO, "*** User Persisted ***");
+    }        
+        
+    
 
     public static String hashPassword(String plainPassword) {
         // Create the hasher manually
@@ -100,31 +103,6 @@ public class newuserController {
         return hasher.generate(plainPassword.toCharArray());
     }
     
-    
-    private static HttpServletResponse getResponse(FacesContext context) {
-        return (HttpServletResponse) context
-                .getExternalContext()
-                .getResponse();
-    }
-
-    private static HttpServletRequest getRequest(FacesContext context) {
-        return (HttpServletRequest) context
-                .getExternalContext()
-                .getRequest();
-    }
-    /**
-     * @return the user
-     */
-    public User getUser() {
-        return user;
-    }
-
-    /**
-     * @param user the user to set
-     */
-    public void setUser(User user) {
-        this.user = user;
-    }
     /**
      * @return the newUser
      */
@@ -138,33 +116,9 @@ public class newuserController {
     public void setNewUser(User newUser) {
         this.newUser = newUser;
     }
-    /**
-     * @return the loginEmail
-     */
-    public String getLoginEmail() {
-        return loginEmail;
-    }
+    
 
-    /**
-     * @param loginEmail the loginEmail to set
-     */
-    public void setLoginEmail(String loginEmail) {
-        this.loginEmail = loginEmail;
-    }
-
-    /**
-     * @return the loginPassw
-     */
-    public String getLoginPassw() {
-        return loginPassw;
-    }
-
-    /**
-     * @param loginPassw the loginPassw to set
-     */
-    public void setLoginPassw(String loginPassw) {
-        this.loginPassw = loginPassw;
-    }
-
+    
+    
     
 }

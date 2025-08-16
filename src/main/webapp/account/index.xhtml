@@ -2,7 +2,9 @@
 <!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:ui="jakarta.faces.facelets"
-                template="./acctemplate.xhtml">
+                template="./acctemplate.xhtml"
+                xmlns:p="http://primefaces.org/ui"
+                xmlns:f="jakarta.faces.core">
 
     <ui:define name="top">
         
@@ -10,6 +12,26 @@
 
     <ui:define name="content">
         Welcome to your account #{loginController.user.name} !!!
+        <div>
+            <p:card style="width: 240px">
+                <f:facet name="header">
+                    <img alt="user header" style="width: 240px; height: 100px; object-fit: cover" src="https://image.made-in-china.com/2f0j00RMtVrJLwAdfb/Customized-Parking-Lot-Standing-Pylon-Sign-Totem-for-Shopping-Mall-Wayfinding-Signage.webp"/>
+                </f:facet>
+                <f:facet name="title">
+                    Parking Lot Totem
+                </f:facet>
+                <f:facet name="subtitle">
+                    Card subtitle
+                </f:facet>
+
+                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
+
+                <f:facet name="footer">
+                    <p:commandButton icon="pi pi-check" value="Save"/>
+                    <p:commandButton icon="pi pi-times" value="Cancel" styleClass="ui-button-secondary" style="margin-left: .5em"/>
+                </f:facet>
+            </p:card>
+        </div>
     </ui:define>
 
     <ui:define name="bottom">

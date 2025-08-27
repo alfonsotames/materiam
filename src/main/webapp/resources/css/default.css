@@ -9,6 +9,17 @@
     src: url("#{resource['fonts/Unit-Light.ttf']}") format('opentype');
 }
 
+@font-face {
+    font-family:"Roboto Regular";
+    src: url("#{resource['fonts/Roboto-Regular.ttf']}") format('opentype');
+}
+
+@font-face {
+    font-family:"Lato Regular";
+    src: url("#{resource['fonts/Lato-Regular.ttf']}") format('opentype');
+}
+
+
 
 body {
     height: 100vh;
@@ -19,7 +30,7 @@ body {
         #121212 100%
       );
     font-size: 12px;
-    font-family: "Unit Light", Verdana, "Verdana CE",  Arial, "Arial CE", "Lucida Grande CE", lucida, "Helvetica CE", sans-serif;
+    font-family: "Lato Regular";
     color: #000000;  
     margin: 0px;
     background-image: url('../..//images/welder_dark.webp');

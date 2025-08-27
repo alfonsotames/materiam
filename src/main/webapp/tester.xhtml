@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html">
+    <h:head>
+        <title>Facelet Title</title>
+    </h:head>
+    <style>
+        body {
+                margin: 0;
+                padding: 0;
+                background-color: #000;
+                color: white;
+        }
+
+        .block {
+                position: relative;
+
+                margin: 300px auto 0;
+                width: 500px;
+                height: 250px;
+                background: linear-gradient(0deg, #000, #272727);
+        }
+
+        .block:before, .block:after {
+                content: '';
+                position: absolute;
+                left: -1px;
+                top: -1px;
+                background: linear-gradient(45deg, #fb0094, #0000ff, #00ff00,#ffff00, #ff0000, #fb0094, 
+                        #0000ff, #00ff00,#ffff00, #ff0000);
+                background-size: 400%;
+                width: calc(100% + 2px);
+                height: calc(100% + 2px);
+                z-index: -1;
+                animation: steam 20s linear infinite;
+        }
+
+        @keyframes steam {
+                0% {
+                        background-position: 0 0;
+                }
+                50% {
+                        background-position: 400% 0;
+                }
+                100% {
+                        background-position: 0 0;
+                }
+        }
+
+        .block:after {
+                filter: blur(40px);
+        }
+        </style>
+    <h:body>
+<h1>This is a heading</h1>
+<p>This is a paragraph.</p>
+
+<div class="block">
+  </div>
+    </h:body>
+</html>

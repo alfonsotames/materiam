@@ -14,7 +14,9 @@
     <h:body>
         
         <div id="top">
-            <div><img src="images/materiam.png" style="width: 140px;" alt="MATERIAM" /></div>
+            <div onclick="location.href='#{request.contextPath}/';">
+                <img  src="images/materiam.png" style="width: 140px; cursor: pointer;" alt="MATERIAM" />
+            </div>
             <div><h:outputText  id="username" value="#{loginController.user.name}" /> </div>
             <ui:insert name="top">Top</ui:insert>
         </div>

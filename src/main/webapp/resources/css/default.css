@@ -1,3 +1,15 @@
+
+@font-face {
+    font-family:"Materiam";
+    src: url("#{resource['fonts/Materiam.ttf']}") format('opentype');
+}
+
+@font-face {
+    font-family:"Unit Light";
+    src: url("#{resource['fonts/Unit-Light.ttf']}") format('opentype');
+}
+
+
 body {
     height: 100vh;
       background: radial-gradient(
@@ -7,19 +19,24 @@ body {
         #121212 100%
       );
     font-size: 12px;
-    font-family: Verdana, "Verdana CE",  Arial, "Arial CE", "Lucida Grande CE", lucida, "Helvetica CE", sans-serif;
+    font-family: "Unit Light", Verdana, "Verdana CE",  Arial, "Arial CE", "Lucida Grande CE", lucida, "Helvetica CE", sans-serif;
     color: #000000;  
     margin: 0px;
+    background-image: url('../..//images/welder_dark.webp');
+    background-size:     cover;                      /* <------ */
+    background-repeat:   no-repeat;
+    background-position: center center;              /* optional, center the image */
+
+    
 }
 
 h1 {
-    font-family: Arial, "Arial CE", "Lucida Grande CE", lucida, "Helvetica CE", sans-serif;
-    border-bottom: 1px solid #AFAFAF; 
-    font-size:  16px;
-    font-weight: bold;
+    font-family: "Materiam";
+
+    font-size:  48px;
     margin: 0px;
     padding: 0px;
-    color: #D20005;
+    color: white;
 }
 
 a:link, a:visited {
@@ -92,4 +109,62 @@ input[type="text"]:focus, input[type="password"]:focus {
 }
 
 
-/* - - - - - - - - - - - - - - - */
+/* - - - - -  BORDER ANIMATION - - - - - - - - - - */
+
+
+
+.block {
+	position: relative;
+
+	width: 300px;
+	height: 250px;
+	background: linear-gradient(0deg, #000, #272727);
+}
+
+.block:before, .block:after {
+	content: '';
+	position: absolute;
+	left: -1px;
+	top: -1px;
+	background: linear-gradient(45deg, #fb0094, #0000ff, #00ff00,#ffff00, #ff0000, #fb0094, 
+		#0000ff, #00ff00,#ffff00, #ff0000);
+	background-size: 400%;
+	width: calc(100% + 2px);
+	height: calc(100% + 2px);
+	z-index: -1;
+	animation: steam 20s linear infinite;
+}
+
+@keyframes steam {
+	0% {
+		background-position: 0 0;
+	}
+	50% {
+		background-position: 300% 0;
+	}
+	100% {
+		background-position: 0 0;
+	}
+}
+
+.block:after {
+	filter: blur(10px);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - */
+
+
+.wrapper {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+
+  grid-template-areas:
+    ". a a ."
+    ". a a .";
+}
+.item1 {
+  grid-area: a;
+  align-self: center;
+  justify-self: center;
+}

@@ -25,22 +25,7 @@ import java.sql.Connection;
     maxPoolSize = 20,
     initialPoolSize = 2
 )
-/*
-@DatabaseIdentityStoreDefinition(
-    dataSourceLookup = "java:app/jdbc/materiam",
-    callerQuery = "SELECT password FROM users WHERE email = ?",
-    groupsQuery = "select r.roleName from role as r, users_role as ur, users as u where u.email = ? and ur.user_id=u.id and r.id=ur.roles_id",
-    hashAlgorithm = Pbkdf2PasswordHash.class
-)
 
-    callerQuery = "SELECT password FROM users WHERE email = ?",
-    groupsQuery = "select r.roleName from role as r, users_role as ur, users as u where u.email = ? and ur.user_id=u.id and r.id=ur.roles_id",
-
-    callerQuery = "SELECT 'PBKDF2WithHmacSHA256:2048:ADGZtUssVm02Ou8MzyhLQ6X8oiJx6KNubBgaSZG3ge4=:ktufknrDd/DamyFAa/63UHGUylCEZszjPwQNnwex4+c=' as password",
-    groupsQuery = "SELECT 'USER' AS role;",
-
-
-*/
 @DatabaseIdentityStoreDefinition(
     dataSourceLookup = "java:app/jdbc/materiam",
     callerQuery = "#{'SELECT password FROM users WHERE email = ?'}",

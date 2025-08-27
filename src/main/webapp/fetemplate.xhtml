@@ -12,25 +12,43 @@
     </h:head>
 
     <h:body>
-        
-        <div id="top">
-            <img src="images/materiam.png" style="width: 140px;" alt="MATERIAM" /> 
+
             
-            <h:outputText id="username"  value="#{loginController.user.name}" rendered="#{loginController.user != null}" />
-                <h:panelGroup rendered="#{loginController.user == null}">
-                    <a href="login.xhtml">Login</a>
-                </h:panelGroup>
+            
+            <div id="top" >
+                <div class="grid_three">
+                    <div style="font-family: Materiam; font-size: 38px; color: white; margin-left: 10px;">MATERIAM</div>
+                    <div><ui:insert name="top">Top</ui:insert></div>
+                    <div class="grid_three">
+                        <div>
+                            <h:outputText id="username"  value="#{loginController.user.name}" rendered="#{loginController.user != null}" />
+                            <h:panelGroup rendered="#{loginController.user == null}">
+                                <a href="login.xhtml">Login</a>
+                            </h:panelGroup>
+                        </div>
+                        <div>
+                            <div>Mis Pedidos</div>
+                            <div>Mis Proyectos</div>
+                        </div>    
+                        <div>
+                        </div>
+                    </div>   
+                </div>
+            </div>
 
-            <ui:insert name="top">Top</ui:insert>
-        </div>
+            
+            <div class="center_content" >
+                <ui:insert name="content">Content</ui:insert>
+            </div>
 
-        <div id="content" class="center_content">
-            <ui:insert name="content">Content</ui:insert>
-        </div>
+            
+            <div  id="bottom" >
+                <ui:insert name="bottom">bottom</ui:insert>
+                <img style="width:70px;" src="images/americansteel.png" />
+                <img style="width:70px;" src="images/americanaluminium.png" />
 
-        <div id="bottom">
-            <ui:insert name="bottom">Bottom</ui:insert>
-        </div>
+            </div>
+            
 
     </h:body>
 

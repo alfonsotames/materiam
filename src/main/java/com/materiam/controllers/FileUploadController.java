@@ -15,16 +15,21 @@ import jakarta.enterprise.context.RequestScoped;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.inject.Named;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.StringReader;
 
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -73,8 +78,27 @@ public class FileUploadController {
             out.flush();
             out.close();
             System.out.println("New file uploaded: " + (destination + fileName));
+            
+            
+
+            Runtime rt = Runtime.getRuntime();
+            String command = String.format("asiSheetMetalExe %s %s/out.json -image %s/out/dump.png -asm -imagesForParts -gltf -flat -expandCompounds -onlyCuttingLines -gltfWithColors -step -profile -weldings", (destination + fileName), destination, destination);
+            Process pr = rt.exec(command);
+
+            
+            
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
+        
+        try (JsonReader jsonReader = Json.createReader(new StringReader(Files.readString(Paths.get(destination+"out.json"))))) {
+
+            JsonObject readObject = jsonReader.readObject();
+            System.out.println(readObject.toString());
+            
+        }   catch (IOException ex) {
+                System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            }
+        
     }
 }

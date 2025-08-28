@@ -1,62 +1,28 @@
 <?xml version='1.0' encoding='UTF-8' ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:h="jakarta.faces.html">
-    <h:head>
-        <title>Facelet Title</title>
-    </h:head>
-    <style>
-        body {
-                margin: 0;
-                padding: 0;
-                background-color: #000;
-                color: white;
-        }
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                template="./fetemplate.xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:p="http://primefaces.org/ui"
+                
+                >
 
-        .block {
-                position: relative;
+    <ui:define name="top">
+    </ui:define>
 
-                margin: 300px auto 0;
-                width: 500px;
-                height: 250px;
-                background: linear-gradient(0deg, #000, #272727);
-        }
+    <ui:define name="content">
 
-        .block:before, .block:after {
-                content: '';
-                position: absolute;
-                left: -1px;
-                top: -1px;
-                background: linear-gradient(45deg, #fb0094, #0000ff, #00ff00,#ffff00, #ff0000, #fb0094, 
-                        #0000ff, #00ff00,#ffff00, #ff0000);
-                background-size: 400%;
-                width: calc(100% + 2px);
-                height: calc(100% + 2px);
-                z-index: -1;
-                animation: steam 20s linear infinite;
-        }
+        <h1>File Upload</h1>
+        <h:form> 
+            <p:fileUpload listener="#{fileUploadController.upload}" mode="advanced" auto="true"  multiple="true" />
+            <p:growl id="messages" showDetail="true" />          
+        </h:form>
 
-        @keyframes steam {
-                0% {
-                        background-position: 0 0;
-                }
-                50% {
-                        background-position: 400% 0;
-                }
-                100% {
-                        background-position: 0 0;
-                }
-        }
+    </ui:define>
 
-        .block:after {
-                filter: blur(40px);
-        }
-        </style>
-    <h:body>
-<h1>This is a heading</h1>
-<p>This is a paragraph.</p>
+    <ui:define name="bottom">
+        
+    </ui:define>
 
-<div class="block">
-  </div>
-    </h:body>
-</html>
+</ui:composition>

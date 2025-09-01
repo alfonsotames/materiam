@@ -9,6 +9,15 @@
         <h:outputStylesheet name="/css/default.css"/>
         <h:outputStylesheet name="/css/cssLayout.css"/>
         <title>MATERIAM</title>
+
+        <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/"
+          }
+        }
+        </script>
     </h:head>
 
     <h:body>
@@ -17,7 +26,7 @@
             
             <div id="top" >
                 <div class="grid_three">
-                    <div style="font-family: Materiam; font-size: 38px; color: white; margin-left: 10px;">MATERIAM</div>
+                    <div onclick="location.href='#{request.contextPath}/'" style="cursor: pointer; font-family: Materiam; font-size: 38px; color: white; margin-left: 10px;">MATERIAM</div>
                     <div><ui:insert name="top">Top</ui:insert></div>
                     <div class="grid_three">
                         <div>

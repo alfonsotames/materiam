@@ -33,10 +33,7 @@ body {
     font-family: "Lato Regular";
     color: #000000;  
     margin: 0px;
-    background-image: url('../..//images/welder_dark.webp');
-    background-size:     cover;                      /* <------ */
-    background-repeat:   no-repeat;
-    background-position: center center;              /* optional, center the image */
+
 
     
 }
@@ -186,28 +183,3 @@ input[type="text"]:focus, input[type="password"]:focus {
       display: none;
   }
   
-  .ui-panel  {
-      color: red;
-      border: 1px solid red;
-      
-  }
-  
-  .ui-panel ui-widget {
-      color: red;
-      border: 1px solid red;
-      
-  }
-  
- .ui-widget-content{
-      color: red;
-      border: 1px solid red;
-      background-color: black;
-      
-  }
-  
-  .ui-panel-content  {
-      background-color: black;
-      color: red;
-      
-      
-  }

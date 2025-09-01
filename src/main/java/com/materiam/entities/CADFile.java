@@ -8,30 +8,41 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
 import java.io.Serializable;
-import java.util.List;
+import java.util.Set;
 
 /**
  *
  * @author mufufu
  */
 @Entity
-public class Organization implements Serializable {
+public class CADFile implements Serializable {
+
 
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
     private String name;
-    private String taxid;
-    @OneToMany(mappedBy="organization")
-    private List<User> users;
-    @OneToMany
-    private List<Address> addresses;
+    private Project project;
+    private Set<Part> parts;
+    private Set<Instance>instances;
     
+
     
+    /**
+     * @return the project
+     */
+    public Project getProject() {
+        return project;
+    }
+
+    /**
+     * @param project the project to set
+     */
+    public void setProject(Project project) {
+        this.project = project;
+    }
     
     public Long getId() {
         return id;
@@ -51,10 +62,10 @@ public class Organization implements Serializable {
     @Override
     public boolean equals(Object object) {
         // TODO: Warning - this method won't work in the case the id fields are not set
-        if (!(object instanceof Organization)) {
+        if (!(object instanceof CADFile)) {
             return false;
         }
-        Organization other = (Organization) object;
+        CADFile other = (CADFile) object;
         if ((this.id == null && other.id != null) || (this.id != null && !this.id.equals(other.id))) {
             return false;
         }
@@ -63,8 +74,9 @@ public class Organization implements Serializable {
 
     @Override
     public String toString() {
-        return "com.materiam.entities.Organization[ id=" + id + " ]";
+        return "com.materiam.entities.File[ id=" + id + " ]";
     }
+    
 
 
     /**
@@ -82,46 +94,31 @@ public class Organization implements Serializable {
     }
 
     /**
-     * @return the taxid
+     * @return the parts
      */
-    public String getTaxid() {
-        return taxid;
+    public Set<Part> getParts() {
+        return parts;
     }
 
     /**
-     * @param taxid the taxid to set
+     * @param parts the parts to set
      */
-    public void setTaxid(String taxid) {
-        this.taxid = taxid;
+    public void setParts(Set<Part> parts) {
+        this.parts = parts;
     }
 
     /**
-     * @return the users
+     * @return the instances
      */
-    public List<User> getUsers() {
-        return users;
+    public Set<Instance> getInstances() {
+        return instances;
     }
 
     /**
-     * @param users the users to set
+     * @param instances the instances to set
      */
-    public void setUsers(List<User> users) {
-        this.users = users;
+    public void setInstances(Set<Instance> instances) {
+        this.instances = instances;
     }
 
-    /**
-     * @return the addresses
-     */
-    public List<Address> getAddresses() {
-        return addresses;
-    }
-
-    /**
-     * @param addresses the addresses to set
-     */
-    public void setAddresses(List<Address> addresses) {
-        this.addresses = addresses;
-    }
-
-    
 }

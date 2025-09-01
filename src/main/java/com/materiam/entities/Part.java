@@ -8,8 +8,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import java.io.Serializable;
+import java.util.Set;
 
 /**
  *
@@ -18,15 +20,49 @@ import java.io.Serializable;
 @Entity
 public class Part implements Serializable {
 
+    /**
+     * @return the file
+     */
+    public CADFile getFile() {
+        return file;
+    }
+
+    /**
+     * @param file the file to set
+     */
+    public void setFile(CADFile file) {
+        this.file = file;
+    }
+
+
+
+
+
     private static final long serialVersionUID = 1L;
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
     @ManyToOne
     private Material material;
-    
+    private String nid;
+    private CADFile file;
 
+    
+    /**
+     * @return The native id of the part defined in the STEP file
+     */
+    public String getNid() {
+        return nid;
+    }
+
+    /**
+     * @param nid The native id of the part defined in the STEP file
+     */
+    public void setNid(String nid) {
+        this.nid = nid;
+    }
+    
     public Long getId() {
         return id;
     }

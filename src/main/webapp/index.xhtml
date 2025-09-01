@@ -13,12 +13,18 @@
 
     <ui:define name="content">
 
-
-            <div style="margin-bottom: 5px; margin-top: 50px; margin-left: 40px;">
+        <div style="position: relative; z-index: 0; 
+            background-image: url('images/welder_dark.webp');
+            background-size:     cover;                      
+            background-repeat:   no-repeat;
+            background-position: center center;">
+            <div style="margin-bottom: 5px; padding-top: 90px; padding-bottom: 150px; margin-left: 40px;">
                 <div class="wrapper">
-                    <div style="color: white; font-family: Lato Regular; width: 400px;">
-                        <span style="font-size: 64px">Instant sheet metal parts</span>
+                    <div style="color: white; font-family: Lato Regular; width: 450px;">
+                        <span style="font-size: 52px">A fabrication service that knows how you work</span>
                         <ul style="font-size: 16px;">
+
+                            <li>Automatic quoting for sheet metal projects</li>
                             <li>Drop your files and get instant pricing</li>
                             <li>Lead time as little as 2 days</li>
                             <li>MIG &amp; TIG Welding available</li>
@@ -44,8 +50,60 @@
                     </div>
                 </div>
             </div>
+         </div>    
         <br/><br/><br/><br/><br/>
-        <center><h1>MANUFACTURING ON DEMAND</h1></center>
+        <center><h1>FROM PARTS TO FINISHED PROJECTS<br/>WE GOT YOU COVERED</h1></center>
+        <br/><br/><br/><br/><br/>
+        
+        <div style="
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr); /* Creates 3 columns of equal width */
+                    grid-template-rows: auto; /* Allows row height to adjust to content */
+                    justify-content: center; /* Centers the grid horizontally within its parent */
+                    align-items: center; /* Centers items vertically within their cells */
+                    place-items: center; /* Shorthand for justify-items and align-items */
+                    ">
+            
+            
+            <div style="background-image: url('images/parts.png');
+                        width: 220px;
+                        height: 260px;
+                        border: 1px solid;
+                        background-size:  100% 100%;
+
+                            text-align: center;">
+                            
+                1
+            </div>
+            <div style="background-image: url('images/welding.png');
+                        width: 220px;
+                        height: 260px;
+                        border: 1px solid;
+                        background-size:  100% 100%;
+
+                            text-align: center;">
+                            
+                
+            </div>
+            <div style="background-image: url('images/retail.png');
+                        width: 220px;
+                        height: 260px;
+                        border: 1px solid;
+                        background-size: 100% 100%;
+
+                            text-align: center;">
+                            
+                
+            </div>          
+        </div>
+        <div style="width: 100%; margin-top: 50px; height: 390px;
+            background-image: url('images/planta_bw.png');
+            background-size:     cover;                      
+            background-repeat:   no-repeat;
+            background-position: center center;">
+            <h2>we build</h2>
+        </div>
+        
     </ui:define>
 
     <ui:define name="bottom">

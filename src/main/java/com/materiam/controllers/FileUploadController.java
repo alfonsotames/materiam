@@ -5,6 +5,7 @@
 package com.materiam.controllers;
 
 import com.materiam.entities.CADFile;
+import com.materiam.entities.Instance;
 import com.materiam.entities.Part;
 import com.materiam.entities.Project;
 import org.primefaces.PrimeFaces;
@@ -16,11 +17,13 @@ import org.primefaces.util.EscapeUtils;
 
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.faces.application.FacesMessage;
+import jakarta.faces.context.ExternalContext;
 import jakarta.faces.context.FacesContext;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
+import jakarta.json.JsonNumber;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 import jakarta.json.JsonString;
@@ -30,10 +33,12 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringReader;
 
@@ -41,6 +46,9 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 
@@ -75,12 +83,28 @@ public class FileUploadController {
         
         UploadedFile file = event.getFile();
         // Do what you want with the file
+        
+
+        
         try {
             copyFile(event.getFile().getFileName(), file.getInputStream());
         } catch (IOException e) {
             e.printStackTrace();
         }
+        FacesContext facesContext = FacesContext.getCurrentInstance();
+        ExternalContext externalContext = facesContext.getExternalContext();
+
+        
+        try {
+            externalContext.redirect("project.xhtml"); 
+        } catch (IOException e) {
+            // Handle the IOException
+            e.printStackTrace();
+        }
+            
+            
     }
+    
     public void copyFile(String fileName, InputStream in) {
         fileName = sanitizeFilename(fileName);
         HttpSession session = request.getSession();
@@ -89,6 +113,8 @@ public class FileUploadController {
         if (activeProject == null) {
             // Generate a new project
             activeProject = new Project();
+            activeProject.setName("New Project");
+            activeProject.setPostedDate(new Date());
             em.persist(activeProject);
             em.flush();
         }
@@ -129,6 +155,12 @@ public class FileUploadController {
             String command = String.format("asiSheetMetalExe %s %s/out.json -image %s/image.png -asm -imagesForParts -gltf -flat -expandCompounds -onlyCuttingLines -gltfWithColors -step -profile -weldings", (destination + fileName), destination, destination);
             Process pr = rt.exec(command);
             try {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+                String line;
+                System.out.println("Process Output:");
+                while ((line = reader.readLine()) != null) {
+                    System.out.println(line);
+                }
                 pr.waitFor();
             } catch (InterruptedException ex) {
                 System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
@@ -153,6 +185,8 @@ public class FileUploadController {
             JsonArray parts = json.getJsonArray("parts");
 
             // Iterate through each part object
+            Map<String, Part> partmap = new HashMap<String, Part>();
+            
             for (JsonObject p : parts.getValuesAs(JsonObject.class)) {
                 
                 JsonArray bodies = p.getJsonArray("bodies");
@@ -160,16 +194,72 @@ public class FileUploadController {
                 for (JsonObject b : bodies.getValuesAs(JsonObject.class)) {
                     
                     String id = p.getString("id");
-                    System.out.println("Part ID: " + id);
-                    /*
+                    System.out.println("Part XDEID: " + id+ " Type: "+b.getString("type"));                    
                     Part part = new Part();
-                    part.setNid(p.getString("id"));
+                    part.setCadfile(f);
+                    part.setPersid(p.getString("id"));
+                    
                     part.setName(p.getString("name"));
-                    */
-
+                    String type = b.getString("type");
+                    part.setType(type);
+                    if (type.equals("SHEET_METAL_FOLDED") || type.equals("SHEET_METAL_FLAT")) {
+                        part.setGauge(b.getJsonNumber("thickness").doubleValue());
+                    }
+                    em.persist(part);
+                    partmap.put(p.getString("id"), part);                    
                 }
-
             }
+            em.flush();
+            
+            // Now obtain the instances, for each instance check the prototype
+            
+            JsonObject sceneTree = json.getJsonObject("sceneTree");
+            JsonArray instances = sceneTree.getJsonArray("instances");
+            JsonObject prototypes = sceneTree.getJsonObject("prototypes");
+            JsonArray protoParts = prototypes.getJsonArray("parts");
+            Map<JsonNumber,JsonString> pps = new HashMap<JsonNumber,JsonString>();
+            for (JsonObject p : protoParts.getValuesAs(JsonObject.class)) {
+                pps.put(p.getJsonNumber("id"), p.getJsonString("persistentId"));
+            }
+            
+            System.out.println("pps contains:");
+            for (Map.Entry<JsonNumber, JsonString> entry : pps.entrySet()) {
+                System.out.println("Protopart: "+entry.getKey()+" : "+entry.getValue());
+            }
+            
+
+            System.out.println("The Part Map has: ");
+            for (Map.Entry<String,Part> entry : partmap.entrySet()) {
+                System.out.println("Part:"+entry.getValue().getPersid()+" Part ID: "+entry.getValue().getId());
+            }
+                    
+            for (JsonObject inst : instances.getValuesAs(JsonObject.class)) {
+                System.out.println("Instance Prototype: "+inst.getJsonNumber("prototype"));
+                JsonArray rotation = inst.getJsonArray("rotation");
+                JsonArray translation = inst.getJsonArray("translation");
+                
+                Instance instance = new Instance();
+                JsonString persid = pps.get(inst.getJsonNumber("prototype"));
+
+                if (persid != null) {
+                    System.out.println("Finding persid: "+persid+" inside the part map");
+
+                    
+                    Part part = partmap.get(persid.getString());
+                    System.out.println("Found part "+part.getPersid());
+                    System.out.println("The part found has id: "+part.getId());
+                    instance.setPart(part);
+
+                    instance.setRotx(rotation.getJsonNumber(0).doubleValue());
+                    instance.setTransx(translation.getJsonNumber(0).longValue());
+                    instance.setCadfile(f);
+
+                    em.persist(instance);
+                    em.flush();
+                }
+            }
+            
+            
             
         }   catch (IOException ex) {
                 System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);

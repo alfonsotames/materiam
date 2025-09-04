@@ -1,0 +1,163 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                template="./fetemplate.xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:p="primefaces"
+                xmlns:f="jakarta.faces.core">
+
+
+    <ui:define name="top">
+        
+    </ui:define>
+
+    <ui:define name="content">
+
+        <br/><br/><center><h1>Project #{projectcontroller.project.name}</h1></center><br/><br/>
+         
+        
+                <div style="
+
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
+                    grid-template-rows: auto; /* Allows row height to adjust to content */
+                    justify-content: center; /* Centers the grid horizontally within its parent */
+                    align-items: start; /* Centers items vertically within their cells */
+                    
+                    
+                    ">
+                        
+                    <div style="color: white;"><div id="viewport" style="width: 402px; height: 402px;" /></div>
+                    <div style="color: white;"> 
+                        <div style="width: 400px;">
+                            <h:form id="form">
+                                <p:dataView var="part" value="#{projectcontroller.parts}" rows="12" paginator="true"
+                                            rowsPerPageTemplate="6,12,16"
+                                            paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                            gridIcon="pi pi-th-large" listIcon="pi pi-bars">
+
+
+                                    <p:dataViewListItem>
+                                        <div class="product-list-item">
+                                            <img style="width:200px;" src="#{request.contextPath}/imageserver?cadfile=#{part.cadfile.id}&amp;persid=#{part.persid}" />
+                                                                                                 
+                                            <div class="product-list-detail">
+                                                <div>#{part.name}</div>
+                                                <div>Thickness: #{part.gauge} mm</div>
+                                                <div>#{part.comments}</div>
+
+                                            </div>
+                                            <div class="product-list-action">
+
+                                                <p:commandButton type="button"
+                                                                 value="Add To Cart"
+                                                                 icon="pi pi-shopping-cart"
+                                                                 >
+                                                </p:commandButton>
+
+                                            </div>
+                                        </div>
+                                    </p:dataViewListItem>
+                                </p:dataView>
+                            </h:form>
+            
+                        </div>
+                    </div>
+                </div>
+        
+
+        
+
+        
+
+        
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script>
+        
+        const container = document.getElementById( 'viewport' );
+        //document.body.appendChild( container );
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 5);
+
+        // Renderer setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(400, 400);
+        container.appendChild( renderer.domElement );
+
+        // Orbit controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        const color = 0xFFFFFF;
+        const intensity = 1;
+        const light = new THREE.AmbientLight(color, intensity);
+        scene.add(light);
+        
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 3);
+        directionalLight1.position.set(5, 5, 5);
+        scene.add(directionalLight1);
+
+        const directionalLight2= new THREE.DirectionalLight(0xffffff, 3);
+        directionalLight2.position.set(-5, -5, -5);
+        scene.add(directionalLight2);
+        
+        // GLB Loader
+        const loader = new THREE.GLTFLoader();
+        loader.load(
+            // Replace with your .glb file path
+            'http://localhost:8080/materiam/images/test.glb',
+            (gltf) => {
+                scene.add(gltf.scene);
+                // Center and scale the model
+                const box = new THREE.Box3().setFromObject(gltf.scene);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 2.0 / maxDim;
+                gltf.scene.scale.set(scale, scale, scale);
+                gltf.scene.position.sub(center.multiplyScalar(scale));
+            },
+            (xhr) => {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            (error) => {
+                console.error('Error loading GLB:', error);
+            }
+        );
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            //renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(402, 402);
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+            
+        }
+        animate();
+    </script>
+    
+
+    </ui:define>
+
+    <ui:define name="bottom">
+        bottom
+    </ui:define>
+
+</ui:composition>

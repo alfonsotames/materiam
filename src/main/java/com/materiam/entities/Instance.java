@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import java.io.Serializable;
 
 /**
@@ -21,9 +22,12 @@ public class Instance implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @ManyToOne
+    private CADFile cadfile;
+    @ManyToOne
     private Part part;
-    private long rotx;
-    private long transx;
+    private double rotx;
+    private double transx;
     
 
     public Long getId() {
@@ -74,31 +78,48 @@ public class Instance implements Serializable {
     }
 
     /**
+     * @return the cadfile
+     */
+    public CADFile getCadfile() {
+        return cadfile;
+    }
+
+    /**
+     * @param cadfile the cadfile to set
+     */
+    public void setCadfile(CADFile cadfile) {
+        this.cadfile = cadfile;
+    }
+
+    /**
      * @return the rotx
      */
-    public long getRotx() {
+    public double getRotx() {
         return rotx;
     }
 
     /**
      * @param rotx the rotx to set
      */
-    public void setRotx(long rotx) {
+    public void setRotx(double rotx) {
         this.rotx = rotx;
     }
 
     /**
      * @return the transx
      */
-    public long getTransx() {
+    public double getTransx() {
         return transx;
     }
 
     /**
      * @param transx the transx to set
      */
-    public void setTransx(long transx) {
+    public void setTransx(double transx) {
         this.transx = transx;
     }
+
+
+
     
 }

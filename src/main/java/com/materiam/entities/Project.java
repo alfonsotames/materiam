@@ -24,6 +24,20 @@ import java.util.Set;
 @Entity
 public class Project implements Serializable {
 
+    /**
+     * @return the name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @param name the name to set
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
+
 
 
     private static final long serialVersionUID = 1L;
@@ -32,11 +46,11 @@ public class Project implements Serializable {
     private Long id;
     
     @OneToMany(mappedBy = "project")
-    private Set<CADFile> files;
+    private Set<CADFile> cadfiles;
     
-    @Temporal(TemporalType.DATE)
+    @Temporal(TemporalType.TIMESTAMP)
     private Date postedDate;
-    
+    private String name;
     private boolean saved;
     
     
@@ -103,6 +117,20 @@ public class Project implements Serializable {
      */
     public void setSaved(boolean saved) {
         this.saved = saved;
+    }
+
+    /**
+     * @return the cadfiles
+     */
+    public Set<CADFile> getCadfiles() {
+        return cadfiles;
+    }
+
+    /**
+     * @param cadfiles the cadfiles to set
+     */
+    public void setCadfiles(Set<CADFile> cadfiles) {
+        this.cadfiles = cadfiles;
     }
     
 }

@@ -4,12 +4,15 @@
  */
 package com.materiam.entities;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import java.io.Serializable;
 import java.util.Set;
 
@@ -20,19 +23,7 @@ import java.util.Set;
 @Entity
 public class Part implements Serializable {
 
-    /**
-     * @return the file
-     */
-    public CADFile getFile() {
-        return file;
-    }
 
-    /**
-     * @param file the file to set
-     */
-    public void setFile(CADFile file) {
-        this.file = file;
-    }
 
 
 
@@ -45,23 +36,19 @@ public class Part implements Serializable {
     private String name;
     @ManyToOne
     private Material material;
-    private String nid;
-    private CADFile file;
+    private String persid;
+    private String prototype;
+    private String type;
+    private double gauge;
+    @Lob
+    private String comments;
+    @ManyToOne
+    private CADFile cadfile;
 
     
-    /**
-     * @return The native id of the part defined in the STEP file
-     */
-    public String getNid() {
-        return nid;
-    }
 
-    /**
-     * @param nid The native id of the part defined in the STEP file
-     */
-    public void setNid(String nid) {
-        this.nid = nid;
-    }
+    
+
     
     public Long getId() {
         return id;
@@ -125,6 +112,93 @@ public class Part implements Serializable {
     public void setMaterial(Material material) {
         this.material = material;
     }
+
+
+
+
+    /**
+     * @return the prototype
+     */
+    public String getPrototype() {
+        return prototype;
+    }
+
+    /**
+     * @param prototype the prototype to set
+     */
+    public void setPrototype(String prototype) {
+        this.prototype = prototype;
+    }
+
+    /**
+     * @return the persid
+     */
+    public String getPersid() {
+        return persid;
+    }
+
+    /**
+     * @param persid the persid to set
+     */
+    public void setPersid(String persid) {
+        this.persid = persid;
+    }
+
+    /**
+     * @return the type
+     */
+    public String getType() {
+        return type;
+    }
+
+    /**
+     * @param type the type to set
+     */
+    public void setType(String type) {
+        this.type = type;
+    }
+    /**
+     * @return the gauge
+     */
+    public double getGauge() {
+        return gauge;
+    }
+
+    /**
+     * @param gauge the gauge to set
+     */
+    public void setGauge(double gauge) {
+        this.gauge = gauge;
+    }
+
+    /**
+     * @return the comments
+     */
+    public String getComments() {
+        return comments;
+    }
+
+    /**
+     * @param comments the comments to set
+     */
+    public void setComments(String comments) {
+        this.comments = comments;
+    }
+
+    /**
+     * @return the cadfile
+     */
+    public CADFile getCadfile() {
+        return cadfile;
+    }
+
+    /**
+     * @param cadfile the cadfile to set
+     */
+    public void setCadfile(CADFile cadfile) {
+        this.cadfile = cadfile;
+    }
+
 
     
 }

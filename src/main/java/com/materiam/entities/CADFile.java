@@ -8,6 +8,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import java.io.Serializable;
 import java.util.Set;
 
@@ -24,8 +26,11 @@ public class CADFile implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
+    @ManyToOne
     private Project project;
+    @OneToMany(mappedBy = "cadfile")
     private Set<Part> parts;
+    @OneToMany(mappedBy = "cadfile")
     private Set<Instance>instances;
     
 

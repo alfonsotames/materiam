@@ -14,11 +14,12 @@
 
     <ui:define name="content">
 
-        <br/><br/><center><h1>Project #{projectcontroller.project.name}</h1></center><br/><br/>
+        <br/><br/><center><!--<img style="width:200px;" src="#{request.contextPath}/projectimage" />--><h1>Project #{projectcontroller.project.name}</h1></center><br/><br/>
          
         
                 <div style="
-
+                    width: 100%;
+                   
                     display: grid;
                     grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
                     grid-template-rows: auto; /* Allows row height to adjust to content */
@@ -28,28 +29,36 @@
                     
                     ">
                         
-                    <div style="color: white;"><div id="viewport" style="width: 402px; height: 402px;" /></div>
-                    <div style="color: white;"> 
-                        <div style="width: 400px;">
+                    <div style="color: white;"><div id="viewport" style="width: 50%; height: 50%; " /></div>
+                    <div style="color: white; width: 100%;overflow-y: scroll; max-height: 450px;"> 
+                        <div><div style="background-color: white; color: black;"><span style="margin-left: 10px; font-family: Materiam; font-size: 24px;">Part List</span></div>
                             <h:form id="form">
-                                <p:dataView var="part" value="#{projectcontroller.parts}" rows="12" paginator="true"
+                                <p:dataView var="part" value="#{projectcontroller.parts}" rows="12" paginator="false"
                                             rowsPerPageTemplate="6,12,16"
                                             paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
                                             gridIcon="pi pi-th-large" listIcon="pi pi-bars">
-
-
+                                    
                                     <p:dataViewListItem>
-                                        <div class="product-list-item">
-                                            <img style="width:200px;" src="#{request.contextPath}/imageserver?cadfile=#{part.cadfile.id}&amp;persid=#{part.persid}" />
-                                                                                                 
-                                            <div class="product-list-detail">
-                                                <div>#{part.name}</div>
-                                                <div>Thickness: #{part.gauge} mm</div>
+                                        
+                                        <div style="width: 100%;
+                                            display: grid;
+                                            grid-template-columns: repeat(3, 1fr); /* Creates 2 columns of equal width */
+                                            grid-template-rows: auto; /* Allows row height to adjust to content */
+                                            justify-content: center; /* Centers the grid horizontally within its parent */
+                                            align-items: start; /* Centers items vertically within their cells */">
+                                            <div style="margin: 10px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px;">
+                                                <img style="width:120px;" src="#{request.contextPath}/imageserver?cadfile=#{part.cadfile.id}&amp;persid=#{part.persid}" />
+                                            </div>                                                     
+                                            <div style="margin: 10px;">
+                                                <div ><B>#{part.name}</B></div>
+                                                <div class="product-description">Thickness: #{part.gauge} mm</div>
                                                 <div>#{part.comments}</div>
 
                                             </div>
-                                            <div class="product-list-action">
-
+                                            <div style="margin: 10px;">
+                                                <div>                        <h:outputText value="#{((part.flatObbLength/1000)*(part.flatObbWidth/1000)*(part.gauge/1000)*7850)*1.17}" styleClass="product-price">
+                            <f:convertNumber currencySymbol="$" type="currency"/>
+                        </h:outputText></div>
                                                 <p:commandButton type="button"
                                                                  value="Add To Cart"
                                                                  icon="pi pi-shopping-cart"
@@ -90,7 +99,7 @@
 
         // Renderer setup
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(400, 400);
+        renderer.setSize(window.innerWidth/2, window.innerHeight/2);
         container.appendChild( renderer.domElement );
 
         // Orbit controls
@@ -140,7 +149,8 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             //renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setSize(402, 402);
+            renderer.setSize(window.innerWidth/2, window.innerHeight/2);
+            //renderer.setSize(402, 402);
         });
 
         // Animation loop

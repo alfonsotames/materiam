@@ -183,3 +183,9 @@ input[type="text"]:focus, input[type="password"]:focus {
       display: none;
   }
   
+
+  
+  .product-list-item {
+      background-color: #555555;
+      color: white;
+  }

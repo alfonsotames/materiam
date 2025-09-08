@@ -44,11 +44,13 @@ public class Part implements Serializable {
     private String comments;
     @ManyToOne
     private CADFile cadfile;
-
-    
-
-    
-
+    private Double dimX;
+    private Double dimY;
+    private Double dimZ;
+    private Long timesRepeated;
+    private Double flatTotalContourLength;
+    private Double flatObbLength;
+    private Double flatObbWidth;
     
     public Long getId() {
         return id;
@@ -197,6 +199,104 @@ public class Part implements Serializable {
      */
     public void setCadfile(CADFile cadfile) {
         this.cadfile = cadfile;
+    }
+
+    /**
+     * @return the dimX
+     */
+    public double getDimX() {
+        return dimX;
+    }
+
+    /**
+     * @param dimX the dimX to set
+     */
+    public void setDimX(double dimX) {
+        this.dimX = dimX;
+    }
+
+    /**
+     * @return the dimY
+     */
+    public double getDimY() {
+        return dimY;
+    }
+
+    /**
+     * @param dimY the dimY to set
+     */
+    public void setDimY(double dimY) {
+        this.dimY = dimY;
+    }
+
+    /**
+     * @return the dimZ
+     */
+    public double getDimZ() {
+        return dimZ;
+    }
+
+    /**
+     * @param dimZ the dimZ to set
+     */
+    public void setDimZ(double dimZ) {
+        this.dimZ = dimZ;
+    }
+
+    /**
+     * @return the timesRepeated
+     */
+    public Long getTimesRepeated() {
+        return timesRepeated;
+    }
+
+    /**
+     * @param timesRepeated the timesRepeated to set
+     */
+    public void setTimesRepeated(Long timesRepeated) {
+        this.timesRepeated = timesRepeated;
+    }
+
+    /**
+     * @return the flatTotalContourLength
+     */
+    public Double getFlatTotalContourLength() {
+        return flatTotalContourLength;
+    }
+
+    /**
+     * @param flatTotalContourLength the flatTotalContourLength to set
+     */
+    public void setFlatTotalContourLength(Double flatTotalContourLength) {
+        this.flatTotalContourLength = flatTotalContourLength;
+    }
+
+    /**
+     * @return the flatObbLength
+     */
+    public Double getFlatObbLength() {
+        return flatObbLength;
+    }
+
+    /**
+     * @param flatObbLength the flatObbLength to set
+     */
+    public void setFlatObbLength(Double flatObbLength) {
+        this.flatObbLength = flatObbLength;
+    }
+
+    /**
+     * @return the flatObbWidth
+     */
+    public Double getFlatObbWidth() {
+        return flatObbWidth;
+    }
+
+    /**
+     * @param flatObbWidth the flatObbWidth to set
+     */
+    public void setFlatObbWidth(Double flatObbWidth) {
+        this.flatObbWidth = flatObbWidth;
     }
 
 

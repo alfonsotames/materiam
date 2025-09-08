@@ -17,10 +17,21 @@ import java.io.Serializable;
 @Entity
 public class Material implements Serializable {
 
+
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String code;
+    private String name;
+    private String description;
+    private Double thickness;
+    private Double density;
+    private Double pricePerKg;
+    private Double cuttingSpeed;
+    private Process process;
+    
+    
 
     public Long getId() {
         return id;
@@ -53,6 +64,117 @@ public class Material implements Serializable {
     @Override
     public String toString() {
         return "com.materiam.entities.Material[ id=" + id + " ]";
+    }
+    /**
+     * @return the code
+     */
+    public String getCode() {
+        return code;
+    }
+
+    /**
+     * @param code the code to set
+     */
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    /**
+     * @return the name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @param name the name to set
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    /**
+     * @return the description
+     */
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * @param description the description to set
+     */
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    /**
+     * @return the thickness
+     */
+    public Double getThickness() {
+        return thickness;
+    }
+
+    /**
+     * @param thickness the thickness to set
+     */
+    public void setThickness(Double thickness) {
+        this.thickness = thickness;
+    }
+
+    /**
+     * @return the density
+     */
+    public Double getDensity() {
+        return density;
+    }
+
+    /**
+     * @param density the density to set
+     */
+    public void setDensity(Double density) {
+        this.density = density;
+    }
+
+    /**
+     * @return the pricePerKg
+     */
+    public Double getPricePerKg() {
+        return pricePerKg;
+    }
+
+    /**
+     * @param pricePerKg the pricePerKg to set
+     */
+    public void setPricePerKg(Double pricePerKg) {
+        this.pricePerKg = pricePerKg;
+    }
+
+    /**
+     * @return the cuttingSpeed
+     */
+    public Double getCuttingSpeed() {
+        return cuttingSpeed;
+    }
+
+    /**
+     * @param cuttingSpeed the cuttingSpeed to set
+     */
+    public void setCuttingSpeed(Double cuttingSpeed) {
+        this.cuttingSpeed = cuttingSpeed;
+    }
+
+    /**
+     * @return the process
+     */
+    public Process getProcess() {
+        return process;
+    }
+
+    /**
+     * @param process the process to set
+     */
+    public void setProcess(Process process) {
+        this.process = process;
     }
     
 }

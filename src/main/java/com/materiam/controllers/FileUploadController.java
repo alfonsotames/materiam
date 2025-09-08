@@ -165,8 +165,8 @@ public class FileUploadController {
             } catch (InterruptedException ex) {
                 System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
-            
-
+            command = String.format("mogrify %s*.png -transparent white %s*.png",destination, destination);
+            pr = rt.exec(command);
             
             
         } catch (IOException e) {
@@ -198,12 +198,27 @@ public class FileUploadController {
                     Part part = new Part();
                     part.setCadfile(f);
                     part.setPersid(p.getString("id"));
-                    
+                    part.setTimesRepeated(p.getJsonNumber("numOccurrences").longValue());
                     part.setName(p.getString("name"));
                     String type = b.getString("type");
+                    part.setDimX(b.getJsonNumber("bboxDx").doubleValue());
+                    part.setDimY(b.getJsonNumber("bboxDy").doubleValue());
+                    part.setDimZ(b.getJsonNumber("bboxDz").doubleValue());
+                    part.setFlatObbWidth(b.getJsonNumber("flatAabbWidth").doubleValue());
+                    part.setFlatObbLength(b.getJsonNumber("flatAabbLength").doubleValue());
+                    
+                    
                     part.setType(type);
+                    // TODO: Define routing and BOM data structures
+                    /*
+                    If it indeed is a Sheet Metal part, then we can define the manufacturing process.
+                    This will help in our manufacturing application. We need to define basic routing
+                    (1. laser cut, 2. bending) then the client defines material (BOM) and finishes
+                    (additional routing stops).
+                    */
                     if (type.equals("SHEET_METAL_FOLDED") || type.equals("SHEET_METAL_FLAT")) {
                         part.setGauge(b.getJsonNumber("thickness").doubleValue());
+                        part.setFlatTotalContourLength(b.getJsonNumber("flatTotalContourLength").doubleValue());
                     }
                     em.persist(part);
                     partmap.put(p.getString("id"), part);                    

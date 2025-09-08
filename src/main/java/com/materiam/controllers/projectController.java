@@ -4,6 +4,7 @@
  */
 package com.materiam.controllers;
 
+import com.materiam.entities.Material;
 import com.materiam.entities.Part;
 import com.materiam.entities.Project;
 import jakarta.faces.view.ViewScoped;
@@ -40,6 +41,10 @@ public class projectController implements Serializable {
     
     public Project getProject() {
         return (Project)request.getSession().getAttribute("activeProject");
+    }
+    
+    public Material getMaterialByThickness(Double thickness) {
+        return (Material)em.createQuery("select m from Material m where m.thickness=:thickness").setParameter("thickness", thickness).getSingleResult();
     }
     
 }

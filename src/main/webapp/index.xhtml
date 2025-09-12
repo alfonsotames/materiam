@@ -103,7 +103,35 @@
             background-position: center center;">
             <h2>we build</h2>
         </div>
-        
+        <script type="text/javascript">
+            var wsUri = "ws://" + document.location.host + document.location.pathname.replace(/\/[^\/]+?\.[^\/]+?$/, '/') + "notifier";
+            var websocket = new WebSocket(wsUri);
+            
+            websocket.onerror = function (evt) {
+                console.log(evt.data);
+            };
+            websocket.onopen = function (evt) {
+                console.log("Connected to "+wsUri);
+                
+                console.log(evt.data);
+             
+            };
+            
+            websocket.onmessage = function (evt) {
+                console.log("Message received "+evt.data);
+                if (evt.data.startsWith("SESSIONID:")) {
+                    
+                    var wsSessionId = event.data.substring(10);
+
+                    // put it into the hidden input
+                    document.getElementById("myForm:wsid").value = wsSessionId;
+
+                    console.log("Stored WebSocket session id:", wsSessionId);
+                }                  
+                document.getElementById("liveText").innerText = event.data;
+            };
+            
+        </script>
     </ui:define>
 
     <ui:define name="bottom">

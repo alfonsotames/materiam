@@ -28,8 +28,8 @@ public class Material implements Serializable {
     private Double thickness;
     private Double density;
     private Double pricePerKg;
-    private Double cuttingSpeed;
-    private Process process;
+    private Double cuttingSpeed; // !!! remove from here
+    private Process process;// !!! remove from here
     
     
 

@@ -22,7 +22,7 @@ public class Process implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
-    private Double hourPrice;
+    private Double priceph;
 
     public Long getId() {
         return id;
@@ -71,18 +71,19 @@ public class Process implements Serializable {
         this.name = name;
     }
 
+
     /**
-     * @return the hourPrice
+     * @return the priceph
      */
-    public Double getHourPrice() {
-        return hourPrice;
+    public Double getPriceph() {
+        return priceph;
     }
 
     /**
-     * @param hourPrice the hourPrice to set
+     * @param priceph the priceph to set
      */
-    public void setHourPrice(Double hourPrice) {
-        this.hourPrice = hourPrice;
+    public void setPriceph(Double priceph) {
+        this.priceph = priceph;
     }
     
 }

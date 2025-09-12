@@ -8,14 +8,13 @@ import com.materiam.entities.CADFile;
 import com.materiam.entities.Instance;
 import com.materiam.entities.Part;
 import com.materiam.entities.Project;
-import org.primefaces.PrimeFaces;
+import events.EventQualifier;
+import events.ImportUpdate;
 import org.primefaces.event.FileUploadEvent;
-import org.primefaces.event.FilesUploadEvent;
 import org.primefaces.model.file.UploadedFile;
-import org.primefaces.model.file.UploadedFiles;
-import org.primefaces.util.EscapeUtils;
 
 import jakarta.enterprise.context.RequestScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.ExternalContext;
 import jakarta.faces.context.FacesContext;
@@ -27,7 +26,6 @@ import jakarta.json.JsonNumber;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 import jakarta.json.JsonString;
-import jakarta.json.JsonValue;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,11 +47,6 @@ import java.nio.file.Paths;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
-
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 
@@ -70,12 +63,17 @@ public class FileUploadController {
     
     @Inject
     private HttpServletRequest request;
+
+    @Inject
+    @EventQualifier
+    Event<ImportUpdate> importUpdate;    
         
     @PersistenceContext(unitName = "materiam")
     private EntityManager em;
     private String destination = "/home/mufufu/Downloads/materiam/data/projects/";
+    //private String destination = "/Users/mufufu/Downloads/materiam/data/projects/";
 
-        
+    private String wsid;   
 
     public void upload(FileUploadEvent event) {
         FacesMessage msg = new FacesMessage("Success! ", event.getFile().getFileName() + " is uploaded.");
@@ -165,8 +163,8 @@ public class FileUploadController {
             } catch (InterruptedException ex) {
                 System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
-            command = String.format("mogrify %s*.png -transparent white %s*.png",destination, destination);
-            pr = rt.exec(command);
+            //command = String.format("mogrify %s*.png -transparent white %s*.png",destination, destination);
+            //pr = rt.exec(command);
             
             
         } catch (IOException e) {
@@ -308,6 +306,22 @@ public class FileUploadController {
 
         return sanitized;
     }
+
+    /**
+     * @return the wsid
+     */
+    public String getWsid() {
+        return wsid;
+    }
+
+    /**
+     * @param wsid the wsid to set
+     */
+    public void setWsid(String wsid) {
+        this.wsid = wsid;
+    }
+
+
     
     
 }

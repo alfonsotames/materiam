@@ -204,8 +204,7 @@ public class FileUploadController {
                     part.setDimX(b.getJsonNumber("bboxDx").doubleValue());
                     part.setDimY(b.getJsonNumber("bboxDy").doubleValue());
                     part.setDimZ(b.getJsonNumber("bboxDz").doubleValue());
-                    part.setFlatObbWidth(b.getJsonNumber("flatAabbWidth").doubleValue());
-                    part.setFlatObbLength(b.getJsonNumber("flatAabbLength").doubleValue());
+
                     
                     
                     part.setType(type);
@@ -217,6 +216,8 @@ public class FileUploadController {
                     (additional routing stops).
                     */
                     if (type.equals("SHEET_METAL_FOLDED") || type.equals("SHEET_METAL_FLAT")) {
+                        part.setFlatObbWidth(b.getJsonNumber("flatAabbWidth").doubleValue());
+                        part.setFlatObbLength(b.getJsonNumber("flatAabbLength").doubleValue());
                         part.setGauge(b.getJsonNumber("thickness").doubleValue());
                         part.setFlatTotalContourLength(b.getJsonNumber("flatTotalContourLength").doubleValue());
                     }

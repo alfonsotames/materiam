@@ -28,8 +28,8 @@ public class Material implements Serializable {
     private Double thickness;
     private Double density;
     private Double pricePerKg;
-    private Double cuttingSpeed; // !!! remove from here
-    private Process process;// !!! remove from here
+    private Double laserCuttingSpeed; 
+    private Double wjCuttingSpeed;
     
     
 
@@ -149,32 +149,35 @@ public class Material implements Serializable {
         this.pricePerKg = pricePerKg;
     }
 
+
+
+
     /**
-     * @return the cuttingSpeed
+     * @return the laserCuttingSpeed
      */
-    public Double getCuttingSpeed() {
-        return cuttingSpeed;
+    public Double getLaserCuttingSpeed() {
+        return laserCuttingSpeed;
     }
 
     /**
-     * @param cuttingSpeed the cuttingSpeed to set
+     * @param laserCuttingSpeed the laserCuttingSpeed to set
      */
-    public void setCuttingSpeed(Double cuttingSpeed) {
-        this.cuttingSpeed = cuttingSpeed;
+    public void setLaserCuttingSpeed(Double laserCuttingSpeed) {
+        this.laserCuttingSpeed = laserCuttingSpeed;
     }
 
     /**
-     * @return the process
+     * @return the wjCuttingSpeed
      */
-    public Process getProcess() {
-        return process;
+    public Double getWjCuttingSpeed() {
+        return wjCuttingSpeed;
     }
 
     /**
-     * @param process the process to set
+     * @param wjCuttingSpeed the wjCuttingSpeed to set
      */
-    public void setProcess(Process process) {
-        this.process = process;
+    public void setWjCuttingSpeed(Double wjCuttingSpeed) {
+        this.wjCuttingSpeed = wjCuttingSpeed;
     }
     
 }

@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Set;
 
 /**
@@ -24,11 +25,6 @@ import java.util.Set;
 public class Part implements Serializable {
 
 
-
-
-
-
-
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,21 +32,32 @@ public class Part implements Serializable {
     private String name;
     @ManyToOne
     private Material material;
-    private String persid;
-    private String prototype;
-    private String type;
-    private double gauge;
+    private String persid; // Persistance ID (from STEP spec)
+    private String prototype; // (from STEP spec)
+    @ManyToOne
+    private PartType partType; // see PartType
+    @Column(precision = 8, scale = 2) //999,999.99 mm
+    private BigDecimal thickness;
+
+
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal dimX;
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal dimY;
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal dimZ;
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal flatTotalContourLength;
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal flatObbLength;
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal flatObbWidth;
+    private Long timesRepeated;
+    @ManyToOne
+    private CADFile cadfile;    
     @Lob
     private String comments;
-    @ManyToOne
-    private CADFile cadfile;
-    private Double dimX;
-    private Double dimY;
-    private Double dimZ;
-    private Long timesRepeated;
-    private Double flatTotalContourLength;
-    private Double flatObbLength;
-    private Double flatObbWidth;
+    
     
     public Long getId() {
         return id;
@@ -59,33 +66,6 @@ public class Part implements Serializable {
     public void setId(Long id) {
         this.id = id;
     }
-
-    @Override
-    public int hashCode() {
-        int hash = 0;
-        hash += (id != null ? id.hashCode() : 0);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        // TODO: Warning - this method won't work in the case the id fields are not set
-        if (!(object instanceof Part)) {
-            return false;
-        }
-        Part other = (Part) object;
-        if ((this.id == null && other.id != null) || (this.id != null && !this.id.equals(other.id))) {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public String toString() {
-        return "com.materiam.entities.Part[ id=" + id + " ]";
-    }
-
-
 
     /**
      * @return the name
@@ -115,8 +95,19 @@ public class Part implements Serializable {
         this.material = material;
     }
 
+    /**
+     * @return the persid
+     */
+    public String getPersid() {
+        return persid;
+    }
 
-
+    /**
+     * @param persid the persid to set
+     */
+    public void setPersid(String persid) {
+        this.persid = persid;
+    }
 
     /**
      * @return the prototype
@@ -133,114 +124,115 @@ public class Part implements Serializable {
     }
 
     /**
-     * @return the persid
+     * @return the partType
      */
-    public String getPersid() {
-        return persid;
+    public PartType getPartType() {
+        return partType;
     }
 
     /**
-     * @param persid the persid to set
+     * @param partType the partType to set
      */
-    public void setPersid(String persid) {
-        this.persid = persid;
+    public void setPartType(PartType partType) {
+        this.partType = partType;
     }
 
     /**
-     * @return the type
+     * @return the thickness
      */
-    public String getType() {
-        return type;
+    public BigDecimal getThickness() {
+        return thickness;
     }
 
     /**
-     * @param type the type to set
+     * @param thickness the thickness to set
      */
-    public void setType(String type) {
-        this.type = type;
-    }
-    /**
-     * @return the gauge
-     */
-    public double getGauge() {
-        return gauge;
-    }
-
-    /**
-     * @param gauge the gauge to set
-     */
-    public void setGauge(double gauge) {
-        this.gauge = gauge;
-    }
-
-    /**
-     * @return the comments
-     */
-    public String getComments() {
-        return comments;
-    }
-
-    /**
-     * @param comments the comments to set
-     */
-    public void setComments(String comments) {
-        this.comments = comments;
-    }
-
-    /**
-     * @return the cadfile
-     */
-    public CADFile getCadfile() {
-        return cadfile;
-    }
-
-    /**
-     * @param cadfile the cadfile to set
-     */
-    public void setCadfile(CADFile cadfile) {
-        this.cadfile = cadfile;
+    public void setThickness(BigDecimal thickness) {
+        this.thickness = thickness;
     }
 
     /**
      * @return the dimX
      */
-    public double getDimX() {
+    public BigDecimal getDimX() {
         return dimX;
     }
 
     /**
      * @param dimX the dimX to set
      */
-    public void setDimX(double dimX) {
+    public void setDimX(BigDecimal dimX) {
         this.dimX = dimX;
     }
 
     /**
      * @return the dimY
      */
-    public double getDimY() {
+    public BigDecimal getDimY() {
         return dimY;
     }
 
     /**
      * @param dimY the dimY to set
      */
-    public void setDimY(double dimY) {
+    public void setDimY(BigDecimal dimY) {
         this.dimY = dimY;
     }
 
     /**
      * @return the dimZ
      */
-    public double getDimZ() {
+    public BigDecimal getDimZ() {
         return dimZ;
     }
 
     /**
      * @param dimZ the dimZ to set
      */
-    public void setDimZ(double dimZ) {
+    public void setDimZ(BigDecimal dimZ) {
         this.dimZ = dimZ;
+    }
+
+    /**
+     * @return the flatTotalContourLength
+     */
+    public BigDecimal getFlatTotalContourLength() {
+        return flatTotalContourLength;
+    }
+
+    /**
+     * @param flatTotalContourLength the flatTotalContourLength to set
+     */
+    public void setFlatTotalContourLength(BigDecimal flatTotalContourLength) {
+        this.flatTotalContourLength = flatTotalContourLength;
+    }
+
+    /**
+     * @return the flatObbLength
+     */
+    public BigDecimal getFlatObbLength() {
+        return flatObbLength;
+    }
+
+    /**
+     * @param flatObbLength the flatObbLength to set
+     */
+    public void setFlatObbLength(BigDecimal flatObbLength) {
+        this.flatObbLength = flatObbLength;
+    }
+
+    /**
+     * @return the flatObbWidth
+     */
+    public BigDecimal getFlatObbWidth() {
+        return flatObbWidth;
+    }
+
+    /**
+     * @param flatObbWidth the flatObbWidth to set
+     */
+    public void setFlatObbWidth(BigDecimal flatObbWidth) {
+        this.flatObbWidth = flatObbWidth;
     }
 
     /**
@@ -258,46 +250,63 @@ public class Part implements Serializable {
     }
 
     /**
-     * @return the flatTotalContourLength
+     * @return the cadfile
      */
-    public Double getFlatTotalContourLength() {
-        return flatTotalContourLength;
+    public CADFile getCadfile() {
+        return cadfile;
     }
 
     /**
-     * @param flatTotalContourLength the flatTotalContourLength to set
+     * @param cadfile the cadfile to set
      */
-    public void setFlatTotalContourLength(Double flatTotalContourLength) {
-        this.flatTotalContourLength = flatTotalContourLength;
+    public void setCadfile(CADFile cadfile) {
+        this.cadfile = cadfile;
     }
 
     /**
-     * @return the flatObbLength
+     * @return the comments
      */
-    public Double getFlatObbLength() {
-        return flatObbLength;
+    public String getComments() {
+        return comments;
     }
 
     /**
-     * @param flatObbLength the flatObbLength to set
+     * @param comments the comments to set
      */
-    public void setFlatObbLength(Double flatObbLength) {
-        this.flatObbLength = flatObbLength;
+    public void setComments(String comments) {
+        this.comments = comments;
     }
 
-    /**
-     * @return the flatObbWidth
-     */
-    public Double getFlatObbWidth() {
-        return flatObbWidth;
+    
+    
+    
+    
+    
+    @Override
+    public int hashCode() {
+        int hash = 0;
+        hash += (id != null ? id.hashCode() : 0);
+        return hash;
     }
 
-    /**
-     * @param flatObbWidth the flatObbWidth to set
-     */
-    public void setFlatObbWidth(Double flatObbWidth) {
-        this.flatObbWidth = flatObbWidth;
+    @Override
+    public boolean equals(Object object) {
+        // TODO: Warning - this method won't work in the case the id fields are not set
+        if (!(object instanceof Part)) {
+            return false;
+        }
+        Part other = (Part) object;
+        if ((this.id == null && other.id != null) || (this.id != null && !this.id.equals(other.id))) {
+            return false;
+        }
+        return true;
     }
+
+    @Override
+    public String toString() {
+        return "com.materiam.entities.Part[ id=" + id + " ]";
+    }
+
 
 
     

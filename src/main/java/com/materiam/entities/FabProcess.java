@@ -9,20 +9,21 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 /**
  *
  * @author mufufu
  */
 @Entity
-public class Process implements Serializable {
+public class FabProcess implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
-    private Double priceph;
+    private BigDecimal priceph;
 
     public Long getId() {
         return id;
@@ -42,10 +43,10 @@ public class Process implements Serializable {
     @Override
     public boolean equals(Object object) {
         // TODO: Warning - this method won't work in the case the id fields are not set
-        if (!(object instanceof Process)) {
+        if (!(object instanceof FabProcess)) {
             return false;
         }
-        Process other = (Process) object;
+        FabProcess other = (FabProcess) object;
         if ((this.id == null && other.id != null) || (this.id != null && !this.id.equals(other.id))) {
             return false;
         }
@@ -71,19 +72,20 @@ public class Process implements Serializable {
         this.name = name;
     }
 
-
     /**
      * @return the priceph
      */
-    public Double getPriceph() {
+    public BigDecimal getPriceph() {
         return priceph;
     }
 
     /**
      * @param priceph the priceph to set
      */
-    public void setPriceph(Double priceph) {
+    public void setPriceph(BigDecimal priceph) {
         this.priceph = priceph;
     }
+
+
     
 }

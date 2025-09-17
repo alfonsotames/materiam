@@ -6,7 +6,9 @@ package com.materiam.controllers;
 
 import com.materiam.entities.CADFile;
 import com.materiam.entities.Instance;
+import com.materiam.entities.Material;
 import com.materiam.entities.Part;
+import com.materiam.entities.PartType;
 import com.materiam.entities.Project;
 import events.EventQualifier;
 import events.ImportUpdate;
@@ -18,6 +20,7 @@ import jakarta.enterprise.event.Event;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.ExternalContext;
 import jakarta.faces.context.FacesContext;
+import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.json.Json;
@@ -48,7 +51,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
-
+import java.io.Serializable;
 
 
 /**
@@ -56,9 +59,9 @@ import java.util.regex.Pattern;
  * @author mufufu
  */
 @Named(value = "fileUploadController")
-@RequestScoped
+@ViewScoped
 @Transactional
-public class FileUploadController {
+public class FileUploadController implements Serializable {
     
     
     @Inject
@@ -73,16 +76,20 @@ public class FileUploadController {
     private String destination = "/home/mufufu/Downloads/materiam/data/projects/";
     //private String destination = "/Users/mufufu/Downloads/materiam/data/projects/";
 
-    private String wsid;   
+    private String wsid;
+    
+    public void submitwsid() {
+        System.out.println(">>>>>>>>>>>>>>>>>>> Submitwsid inkoked: "+wsid);
+    }
 
     public void upload(FileUploadEvent event) {
+        System.out.println("* - * - * * - * - * * - * - *  FileUpload Invoked with wsid: "+wsid+" * - * - *  * - * - * * - * - * ");
         FacesMessage msg = new FacesMessage("Success! ", event.getFile().getFileName() + " is uploaded.");
         FacesContext.getCurrentInstance().addMessage(null, msg);
         
         UploadedFile file = event.getFile();
         // Do what you want with the file
-        
-
+        importUpdate.fire(new ImportUpdate("Importing file...",wsid));
         
         try {
             copyFile(event.getFile().getFileName(), file.getInputStream());
@@ -158,13 +165,28 @@ public class FileUploadController {
                 System.out.println("Process Output:");
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
+                    importUpdate.fire(new ImportUpdate(line,wsid));
                 }
                 pr.waitFor();
             } catch (InterruptedException ex) {
                 System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
-            //command = String.format("mogrify %s*.png -transparent white %s*.png",destination, destination);
-            //pr = rt.exec(command);
+            
+            command = String.format("mogrify %s*.png -transparent white %s*.png",destination, destination);
+            System.out.println("Executing mogrify: "+command);
+            pr = rt.exec(command);
+            try {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+                String line;
+                System.out.println("Process Output:");
+                while ((line = reader.readLine()) != null) {
+                    System.out.println(line);
+                    importUpdate.fire(new ImportUpdate(line,wsid));
+                }
+                pr.waitFor();
+            } catch (InterruptedException ex) {
+                System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            }
             
             
         } catch (IOException e) {
@@ -199,13 +221,13 @@ public class FileUploadController {
                     part.setTimesRepeated(p.getJsonNumber("numOccurrences").longValue());
                     part.setName(p.getString("name"));
                     String type = b.getString("type");
-                    part.setDimX(b.getJsonNumber("bboxDx").doubleValue());
-                    part.setDimY(b.getJsonNumber("bboxDy").doubleValue());
-                    part.setDimZ(b.getJsonNumber("bboxDz").doubleValue());
+                    part.setDimX(b.getJsonNumber("bboxDx").bigDecimalValue());
+                    part.setDimY(b.getJsonNumber("bboxDy").bigDecimalValue());
+                    part.setDimZ(b.getJsonNumber("bboxDz").bigDecimalValue());
 
                     
-                    
-                    part.setType(type);
+                    PartType pt = (PartType)em.createQuery("select pt from PartType pt where pt.type=:type").setParameter("type", type).getSingleResult();
+                    part.setPartType(pt);
                     // TODO: Define routing and BOM data structures
                     /*
                     If it indeed is a Sheet Metal part, then we can define the manufacturing process.
@@ -214,10 +236,13 @@ public class FileUploadController {
                     (additional routing stops).
                     */
                     if (type.equals("SHEET_METAL_FOLDED") || type.equals("SHEET_METAL_FLAT")) {
-                        part.setFlatObbWidth(b.getJsonNumber("flatAabbWidth").doubleValue());
-                        part.setFlatObbLength(b.getJsonNumber("flatAabbLength").doubleValue());
-                        part.setGauge(b.getJsonNumber("thickness").doubleValue());
-                        part.setFlatTotalContourLength(b.getJsonNumber("flatTotalContourLength").doubleValue());
+                        part.setFlatObbWidth(b.getJsonNumber("flatAabbWidth").bigDecimalValue());
+                        part.setFlatObbLength(b.getJsonNumber("flatAabbLength").bigDecimalValue());
+                        part.setThickness(b.getJsonNumber("thickness").bigDecimalValue());
+                        part.setFlatTotalContourLength(b.getJsonNumber("flatTotalContourLength").bigDecimalValue());
+                        // Assign Material id:1 as default
+                        Material m = em.find(Material.class, 1L);
+                        part.setMaterial(m);
                     }
                     em.persist(part);
                     partmap.put(p.getString("id"), part);                    
@@ -264,8 +289,8 @@ public class FileUploadController {
                     System.out.println("The part found has id: "+part.getId());
                     instance.setPart(part);
 
-                    instance.setRotx(rotation.getJsonNumber(0).doubleValue());
-                    instance.setTransx(translation.getJsonNumber(0).longValue());
+                    instance.setRotx(rotation.getJsonNumber(0).bigDecimalValue());
+                    instance.setTransx(translation.getJsonNumber(0).bigDecimalValue());
                     instance.setCadfile(f);
 
                     em.persist(instance);

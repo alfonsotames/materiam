@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 /**
  *
@@ -26,8 +27,8 @@ public class Instance implements Serializable {
     private CADFile cadfile;
     @ManyToOne
     private Part part;
-    private double rotx;
-    private double transx;
+    private BigDecimal rotx;
+    private BigDecimal transx;
     
 
     public Long getId() {
@@ -94,30 +95,32 @@ public class Instance implements Serializable {
     /**
      * @return the rotx
      */
-    public double getRotx() {
+    public BigDecimal getRotx() {
         return rotx;
     }
 
     /**
      * @param rotx the rotx to set
      */
-    public void setRotx(double rotx) {
+    public void setRotx(BigDecimal rotx) {
         this.rotx = rotx;
     }
 
     /**
      * @return the transx
      */
-    public double getTransx() {
+    public BigDecimal getTransx() {
         return transx;
     }
 
     /**
      * @param transx the transx to set
      */
-    public void setTransx(double transx) {
+    public void setTransx(BigDecimal transx) {
         this.transx = transx;
     }
+
+
 
 
 

@@ -50,7 +50,7 @@ public class Notifier {
         Session s = sessions.get(iu.getWsid());
         try {
             System.out.println("Sending message to session "+s.getId());
-            s.getBasicRemote().sendText(iu.getMsg()+" "+s.getId());
+            s.getBasicRemote().sendText(iu.getMsg());
         } catch (java.lang.IllegalStateException | IOException e) {
             Logger.getLogger(Notifier.class.getName()).log(Level.SEVERE, "Carefully removing disconnected client {0}", s.getId());
             sessions.remove(iu.getWsid());

@@ -24,7 +24,7 @@ public class Operation implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @OneToMany
     private Set<Part> parts;
-    private Process process;
+    private FabProcess process;
     private Material material;
     private Station station;
 
@@ -47,14 +47,14 @@ public class Operation implements Serializable {
     /**
      * @return the process
      */
-    public Process getProcess() {
+    public FabProcess getProcess() {
         return process;
     }
 
     /**
      * @param process the process to set
      */
-    public void setProcess(Process process) {
+    public void setProcess(FabProcess process) {
         this.process = process;
     }
 

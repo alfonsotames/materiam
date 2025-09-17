@@ -4,6 +4,7 @@
  */
 package com.materiam.controllers;
 
+import com.materiam.entities.FabProcess;
 import com.materiam.entities.Material;
 import com.materiam.entities.Part;
 import com.materiam.entities.Project;
@@ -14,6 +15,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -39,6 +43,50 @@ public class projectController implements Serializable {
         return parts;
     }
     
+    public List<QuotedPart> getQuotedParts() {
+        List<QuotedPart> qps = new ArrayList<>();
+        List<Part> parts = em.createQuery("SELECT p FROM Part p, CADFile cf, Project pr  where pr=:project and cf.project=pr and p.cadfile=cf").setParameter("project", getProject()).getResultList();
+        for (Part p : parts) {
+            System.out.println("Part id: "+p.getId());
+            QuotedPart qp = new QuotedPart();
+            if (p.getPartType().getType().equals("SHEET_METAL_FLAT") || p.getPartType().getType().equals("SHEET_METAL_FOLDED")) {
+            BigDecimal price = new BigDecimal(0.00);
+            
+            qp.setPart(p);
+            
+            price = p.getFlatObbLength().divide(BigDecimal.valueOf(1000)).multiply(p.getFlatObbWidth().divide(BigDecimal.valueOf(1000)));
+
+            System.out.println("Price 1: "+price);
+            price = price.multiply(p.getThickness().divide(BigDecimal.valueOf(1000)));
+            System.out.println("Price 2: "+price);
+            price = price.multiply(p.getMaterial().getDensity());
+            System.out.println("Price 3: "+price);
+            price = price.multiply(p.getMaterial().getPricePerKg());
+            
+            
+            
+            // TODO: Determine the cutting process by thickness and max min for each material / process
+            FabProcess fp = (FabProcess)em.find(FabProcess.class, 1L);
+            
+            // get process time
+            System.out.println("p.getFlatTotalContourLength()"+p.getFlatTotalContourLength());
+            System.out.println("p.getMaterial().getLaserCuttingSpeed()"+p.getMaterial().getLaserCuttingSpeed());
+            BigDecimal pPrice =  p.getFlatTotalContourLength().divide(p.getMaterial().getLaserCuttingSpeed(), 2, RoundingMode.HALF_UP);
+            System.out.println("Process Time in Seconds: "+pPrice);
+            pPrice = pPrice.multiply((fp.getPriceph().divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)));
+            
+            System.out.println("Process price: "+pPrice);
+            price = price.add(pPrice);
+            qp.setPrice(price);
+            
+            } else {
+                qp.setPrice(new BigDecimal(0));
+            }
+            qps.add(qp);
+        }        
+        return qps;
+    }
+    
     public Project getProject() {
         return (Project)request.getSession().getAttribute("activeProject");
     }
@@ -47,4 +95,43 @@ public class projectController implements Serializable {
         return (Material)em.createQuery("select m from Material m where m.thickness=:thickness").setParameter("thickness", thickness).getSingleResult();
     }
     
+    public void deleteProject() {
+        
+    }
+    
+    
+    
+    public class QuotedPart {
+        private Part part;
+        private BigDecimal price;
+        /**
+         * @return the part
+         */
+        public Part getPart() {
+            return part;
+        }
+
+        /**
+         * @param part the part to set
+         */
+        public void setPart(Part part) {
+            this.part = part;
+        }
+
+        /**
+         * @return the price
+         */
+        public BigDecimal getPrice() {
+            return price;
+        }
+
+        /**
+         * @param price the price to set
+         */
+        public void setPrice(BigDecimal price) {
+            this.price = price;
+        }  
+    }
+    
 }
+

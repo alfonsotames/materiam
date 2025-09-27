@@ -13,7 +13,7 @@
     <security-constraint>
         <web-resource-collection>
             <web-resource-name>Admin Area</web-resource-name>
-            <url-pattern>/secured/admin.xhtml</url-pattern>
+            <url-pattern>/admin/*</url-pattern>
         </web-resource-collection>
         <auth-constraint>
             <role-name>ADMIN</role-name>

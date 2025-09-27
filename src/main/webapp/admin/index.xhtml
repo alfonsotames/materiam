@@ -1,0 +1,94 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                template="../fetemplate.xhtml"
+                xmlns:p="http://primefaces.org/ui"
+                xmlns:f="jakarta.faces.core">
+
+    <ui:define name="top">
+        
+    </ui:define>
+
+    <ui:define name="content">
+        <div  style="font-family: Materiam; font-size: 18px; width: 100%; background-color: white;"><center>ADMIN #{loginController.user.name}</center></div>
+        <div style="display: grid;
+                    grid-template-columns: auto auto auto;
+                    background-color: dodgerblue;
+                    padding: 10px;">
+            <div>
+                <div onclick="location.href='materials.xhtml';" style="cursor: pointer; margin: 10px; box-shadow: 2px 2px 1px 1px rgba(0, 0, 0, 0.2); width: 200px;"
+                     ><div style="      background-color: white;
+                                       
+                                        color: black;
+                                        width: 200px;
+                                        height: 0200px;
+                                        place-items: center;
+                                        font-family: Materiam;
+                                        font-size: 20px;
+                                        
+                                        ">
+                        <div style="margin-top: 20px;"><img style="margin-top: 20px; width: 200px; height: 80px;" src="#{request.contextPath}/images/materials.png" /></div>
+                        <div style="margin-top: 10px; width:100%; word-wrap: normal;"><center>MATERIALS</center></div>                        
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div style="cursor: pointer; margin: 10px; box-shadow: 2px 2px 1px 1px rgba(0, 0, 0, 0.2); width: 200px;"
+                     ><div style="      background-color: white;
+                                        
+                                        color: black;
+                                        width: 200px;
+                                        height: 0200px;
+                                        place-items: center;
+                                        font-family: Materiam;
+                                        font-size: 20px;
+                                        
+                                        ">
+                        <div style="margin-top: 20px;"><img style="margin-top: 20px; width: 200px; height: 80px;" src="#{request.contextPath}/images/inventory.png" /></div>
+                        <div style="margin-top: 10px; width:100%; word-wrap: normal;"><center>INVENTORY</center></div>                        
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div style="cursor: pointer; margin: 10px; box-shadow: 2px 2px 1px 1px rgba(0, 0, 0, 0.2); width: 200px;"
+                     ><div style="      background-color: white;
+                                        
+                                        color: black;
+                                        width: 200px;
+                                        height: 0200px;
+                                        place-items: center;
+                                        font-family: Materiam;
+                                        font-size: 20px;
+                                        
+                                        ">
+                        <div style="margin-top: 20px;"><img style="margin-top: 20px; width: 200px; height: 80px;" src="#{request.contextPath}/images/inventory.png" /></div>
+                        <div style="margin-top: 10px; width:100%; word-wrap: normal;"><center>Manufacturing Orders</center></div>                        
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div style="cursor: pointer; margin: 10px; box-shadow: 2px 2px 1px 1px rgba(0, 0, 0, 0.2); width: 200px;"
+                     ><div style="      background-color: white;
+                                        
+                                        color: black;
+                                        width: 200px;
+                                        height: 0200px;
+                                        place-items: center;
+                                        font-family: Materiam;
+                                        font-size: 20px;
+                                        
+                                        ">
+                        <div style="margin-top: 20px;"><img style="margin-top: 20px; width: 200px; height: 80px;" src="#{request.contextPath}/images/inventory.png" /></div>
+                        <div style="margin-top: 10px; width:100%; word-wrap: normal;"><center>Projects</center></div>                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ui:define>
+
+    <ui:define name="bottom">
+        bottom
+    </ui:define>
+
+</ui:composition>

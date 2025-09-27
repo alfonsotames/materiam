@@ -3,9 +3,9 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.materiam</groupId>
     <artifactId>materiam</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <packaging>war</packaging>
-    <name>materiam-1.0-SNAPSHOT</name>
+    <name>materiam-1.0</name>
     
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

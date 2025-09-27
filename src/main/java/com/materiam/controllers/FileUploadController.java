@@ -31,6 +31,7 @@ import jakarta.json.JsonReader;
 import jakarta.json.JsonString;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
@@ -52,6 +53,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.io.Serializable;
+import java.math.MathContext;
+import java.math.RoundingMode;
 
 
 /**
@@ -235,14 +238,46 @@ public class FileUploadController implements Serializable {
                     (1. laser cut, 2. bending) then the client defines material (BOM) and finishes
                     (additional routing stops).
                     */
+                    
+                    
+                  
+                    
+                    
                     if (type.equals("SHEET_METAL_FOLDED") || type.equals("SHEET_METAL_FLAT")) {
                         part.setFlatObbWidth(b.getJsonNumber("flatAabbWidth").bigDecimalValue());
                         part.setFlatObbLength(b.getJsonNumber("flatAabbLength").bigDecimalValue());
                         part.setThickness(b.getJsonNumber("thickness").bigDecimalValue());
                         part.setFlatTotalContourLength(b.getJsonNumber("flatTotalContourLength").bigDecimalValue());
+                        part.setVolume(b.getJsonNumber("volume").bigDecimalValue());
+                        part.setTotalArea(b.getJsonNumber("totalArea").bigDecimalValue());
                         // Assign Material id:1 as default
                         Material m = em.find(Material.class, 1L);
                         part.setMaterial(m);
+
+                    } else if (type.equals("TUBE_RECTANGULAR")) {
+                        part.setSectionWidth(b.getJsonNumber("sectionWidth").bigDecimalValue());
+                        part.setSectionHeight(b.getJsonNumber("sectionHeight").bigDecimalValue());
+                        part.setPartLength(b.getJsonNumber("partLength").bigDecimalValue());
+                        part.setThickness(b.getJsonNumber("thickness").bigDecimalValue());
+                        part.setVolume(b.getJsonNumber("volume").bigDecimalValue());
+                        part.setTotalArea(b.getJsonNumber("totalArea").bigDecimalValue());
+                        /*
+                        Query q = em.createQuery("select m from Material m where m.width=:width and m.height=:height and m.thickness=:thickness")
+                                                            .setParameter("width", b.getJsonNumber("sectionWidth").bigDecimalValue())
+                                                            .setParameter("height", b.getJsonNumber("sectionHeight").bigDecimalValue())
+                                                            .setParameter("thickness", b.getJsonNumber("partLength").bigDecimalValue());
+                        */
+                        System.out.println("Section Width: "+b.getJsonNumber("sectionWidth").bigDecimalValue().setScale(2, RoundingMode.HALF_UP));
+                        
+                        Query q = em.createQuery("select m from Material m where m.type='TUBE_RECTANGULAR' and m.width=:w and m.height=:h and m.thickness=:t")
+                                .setParameter("w", b.getJsonNumber("sectionWidth").bigDecimalValue().setScale(2, RoundingMode.HALF_UP))
+                                .setParameter("h", b.getJsonNumber("sectionHeight").bigDecimalValue().setScale(2, RoundingMode.HALF_UP))
+                                .setParameter("t", b.getJsonNumber("thickness").bigDecimalValue().setScale(2, RoundingMode.HALF_UP));
+                        
+                        
+                        System.out.println("Query: "+q.toString());
+                        Material m = (Material)q.getSingleResult();
+                        part.setMaterial(m); 
                     }
                     em.persist(part);
                     partmap.put(p.getString("id"), part);                    

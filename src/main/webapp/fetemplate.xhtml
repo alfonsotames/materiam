@@ -15,16 +15,15 @@
     </h:head>
 
     <h:body>
-
-            
-            
             <div id="top" >
                 <div class="grid_three">
                     <div onclick="location.href='#{request.contextPath}/'" style="cursor: pointer; font-family: Materiam; font-size: 38px; color: white; margin-left: 10px;">MATERIAM</div>
                     <div><ui:insert name="top">Top</ui:insert></div>
                     <div class="grid_three">
                         <div>
-                            <h:outputText id="username"  value="#{loginController.user.name}" rendered="#{loginController.user != null}" />
+                            <div><h:outputText id="username"  value="#{loginController.user.name}" rendered="#{loginController.user != null}" /></div>
+                            <div><h:outputLink id="admin"  value="#{request.contextPath}/admin" rendered="#{request.isUserInRole('ADMIN')}">ADMIN</h:outputLink></div>
+                
                             <h:panelGroup rendered="#{loginController.user == null}">
                                 <a href="login.xhtml">Login</a>
                             </h:panelGroup>
@@ -38,21 +37,15 @@
                     </div>   
                 </div>
             </div>
-
-            
             <div class="center_content" >
                 <ui:insert name="content">Content</ui:insert>
             </div>
-
-            
             <div  id="bottom" >
                 <ui:insert name="bottom"></ui:insert>
-                <img style="width:70px;" src="images/americansteel.png" />
-                <img style="width:70px;" src="images/americanaluminium.png" />
+                <img style="width:70px;" src="#{request.contextPath}/images/americansteel.png" />
+                <img style="width:70px;" src="#{request.contextPath}/images/americanaluminium.png" />
                 <span style="color:white; font-size: 24px">ISO9001:2015</span>
             </div>
-            
-
     </h:body>
 
 </html>

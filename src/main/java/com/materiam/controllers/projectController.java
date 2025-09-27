@@ -49,39 +49,49 @@ public class projectController implements Serializable {
         for (Part p : parts) {
             System.out.println("Part id: "+p.getId());
             QuotedPart qp = new QuotedPart();
-            if (p.getPartType().getType().equals("SHEET_METAL_FLAT") || p.getPartType().getType().equals("SHEET_METAL_FOLDED")) {
-            BigDecimal price = new BigDecimal(0.00);
-            
             qp.setPart(p);
-            
-            price = p.getFlatObbLength().divide(BigDecimal.valueOf(1000)).multiply(p.getFlatObbWidth().divide(BigDecimal.valueOf(1000)));
+            if (p.getPartType().getType().equals("SHEET_METAL_FLAT") || p.getPartType().getType().equals("SHEET_METAL_FOLDED")) {
+                BigDecimal price = new BigDecimal(0.00);
 
-            System.out.println("Price 1: "+price);
-            price = price.multiply(p.getThickness().divide(BigDecimal.valueOf(1000)));
-            System.out.println("Price 2: "+price);
-            price = price.multiply(p.getMaterial().getDensity());
-            System.out.println("Price 3: "+price);
-            price = price.multiply(p.getMaterial().getPricePerKg());
-            
-            
-            
-            // TODO: Determine the cutting process by thickness and max min for each material / process
-            FabProcess fp = (FabProcess)em.find(FabProcess.class, 1L);
-            
-            // get process time
-            System.out.println("p.getFlatTotalContourLength()"+p.getFlatTotalContourLength());
-            System.out.println("p.getMaterial().getLaserCuttingSpeed()"+p.getMaterial().getLaserCuttingSpeed());
-            BigDecimal pPrice =  p.getFlatTotalContourLength().divide(p.getMaterial().getLaserCuttingSpeed(), 2, RoundingMode.HALF_UP);
-            System.out.println("Process Time in Seconds: "+pPrice);
-            pPrice = pPrice.multiply((fp.getPriceph().divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)));
-            
-            System.out.println("Process price: "+pPrice);
-            price = price.add(pPrice);
-            qp.setPrice(price);
-            
-            } else {
-                qp.setPrice(new BigDecimal(0));
-            }
+                BigDecimal volumen;
+                volumen = p.getFlatObbLength().divide(BigDecimal.valueOf(1000)).multiply(p.getFlatObbWidth().divide(BigDecimal.valueOf(1000)));
+                volumen = volumen.multiply(p.getThickness().divide(BigDecimal.valueOf(1000)));
+                System.out.println("VOLUMEN: "+volumen);
+                
+                price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
+                System.out.println("Price 1: "+price);
+                price = price.multiply(p.getMaterial().getDensity());
+                System.out.println("Price 2: "+price);
+                price = price.multiply(p.getMaterial().getPricePerKg());
+
+
+
+                // TODO: Determine the cutting process by thickness and max min for each material / process
+                FabProcess fp = (FabProcess)em.find(FabProcess.class, 1L);
+
+                // get process time
+                System.out.println("p.getFlatTotalContourLength()"+p.getFlatTotalContourLength());
+                System.out.println("p.getMaterial().getLaserCuttingSpeed()"+p.getMaterial().getLaserCuttingSpeed());
+                BigDecimal pPrice =  p.getFlatTotalContourLength().divide(p.getMaterial().getLaserCuttingSpeed(), 2, RoundingMode.HALF_UP);
+                System.out.println("Process Time in Seconds: "+pPrice);
+                pPrice = pPrice.multiply((fp.getPriceph().divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)));
+
+                System.out.println("Process price: "+pPrice);
+                price = price.add(pPrice);
+                qp.setPrice(price);
+
+                } else if (p.getPartType().getType().equals("TUBE_RECTANGULAR") ) {
+                    BigDecimal price = new BigDecimal(0.00);
+                    System.out.println("Volume in mm3 of the tube: "+p.getVolume());
+                    price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
+                    System.out.println("Volume in m3: "+price);
+                    price = price.multiply(p.getMaterial().getDensity());
+                    System.out.println("Weight in Kg: "+price);
+                    price = price.multiply(p.getMaterial().getPricePerKg());
+                    qp.setPrice(price);
+                } else {
+                    qp.setPrice(new BigDecimal(0));
+                }
             qps.add(qp);
         }        
         return qps;

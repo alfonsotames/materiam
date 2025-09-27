@@ -1,14 +1,16 @@
 insert into role values (1,'ADMIN');
 insert into role values (2,'USER');
 insert into users values (1,'alfonso@tames.com','Alfonso Tames','PBKDF2WithHmacSHA256:2048:cbUqCt2A3d22mF9351bdCaHiiGGtKhl47+hxJEwD2Go=:vY5v3ilCCnCucdsA2FRqro/3y4edPjNc8HyMMCi4QgE=','',NULL);
+insert into users_role values (1,1);
 insert into users_role values (1,2);
-insert into fabprocess values (1,'Fiber Laser Cutting',47.33);
+insert into fabprocess values (1,'Fiber Laser Cutting',200);
 insert into fabprocess values (2,'Waterjet Cutting', 50);
 insert into fabprocess values (3,'Press Brake Bending',21.50);
 insert into fabprocess values (4,'MIG Welding',50);
 insert into fabprocess values (5,'TIG Welding',50);
 insert into fabprocess values (6,'Powder Coating',50);
-insert into fabprocess values (7,'Handling and Packaging',2);
+insert into fabprocess values (6,'Bandsaw Cutting',50);
+insert into fabprocess values (8,'Handling and Packaging',2);
 insert into materialfamily values (1,'FERROUS','Low Alloy Steel','Low Alloy Steel');
 insert into parttype values (1,'Generic Part','UNRECOGNIZED');
 insert into parttype values (2,'Flat Sheet Metal Part','SHEET_METAL_FLAT');
@@ -21,6 +23,5 @@ insert into parttype values (8,'Bent Wire','BENT_WIRE');
 insert into parttype values (9,'Wire','WIRE');
 insert into parttype values (10,'Other Tube','TUBE_OTHER');
 insert into parttype values (11,'Profile','PROFILE');
-
-insert into material values (1,'STEEL_1018',7850,'Cold Rolled',0,'11 Ga.',28.50,3050,'Sheet Metal Steel Cold Rolled 11ga',28.5,.6,3,1220,10,1);
-
+insert into material values (1,'SM_STEEL_1018_11GA',7850,'Cold Rolled Steel Sheet 11GA',0,'11 Ga.',3,28.50,3050,'Sheet Metal Steel Cold Rolled 11ga',28.5,.6,3,'SHEET_METAL',1220,10,1);
+insert into material values (2,'TR_4X4_.25_STEEL_1018',7850,'Rectangular Tube 4"x4" 1/4" 1018 Steel',0,'1/4 (3GA)',101.6,28.50,6000,'Rectangular Tube 4"x4" 1/4" 1018 Steel',28.5,.6,6.35,'TUBE_RECTANGULAR',101.6,10,1);

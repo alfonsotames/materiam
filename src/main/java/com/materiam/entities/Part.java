@@ -38,7 +38,18 @@ public class Part implements Serializable {
     private PartType partType; // see PartType
     @Column(precision = 8, scale = 2) //999,999.99 mm
     private BigDecimal thickness;
-
+    
+    @Column(precision = 15, scale = 2) //999,999,999,999.99 mm
+    private BigDecimal volume;
+    @Column(precision = 15, scale = 2) //999,999,999,999.99 mm
+    private BigDecimal totalArea;
+    
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal sectionWidth;
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal sectionHeight;
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal partLength;
 
     @Column(precision = 9, scale = 3) //999,999.999 mm
     private BigDecimal dimX;
@@ -149,6 +160,78 @@ public class Part implements Serializable {
      */
     public void setThickness(BigDecimal thickness) {
         this.thickness = thickness;
+    }
+
+    /**
+     * @return the volume
+     */
+    public BigDecimal getVolume() {
+        return volume;
+    }
+
+    /**
+     * @param volume the volume to set
+     */
+    public void setVolume(BigDecimal volume) {
+        this.volume = volume;
+    }
+
+    /**
+     * @return the totalArea
+     */
+    public BigDecimal getTotalArea() {
+        return totalArea;
+    }
+
+    /**
+     * @param totalArea the totalArea to set
+     */
+    public void setTotalArea(BigDecimal totalArea) {
+        this.totalArea = totalArea;
+    }
+
+
+
+    /**
+     * @return the sectionWidth
+     */
+    public BigDecimal getSectionWidth() {
+        return sectionWidth;
+    }
+
+    /**
+     * @param sectionWidth the sectionWidth to set
+     */
+    public void setSectionWidth(BigDecimal sectionWidth) {
+        this.sectionWidth = sectionWidth;
+    }
+
+    /**
+     * @return the sectionHeight
+     */
+    public BigDecimal getSectionHeight() {
+        return sectionHeight;
+    }
+
+    /**
+     * @param sectionHeight the sectionHeight to set
+     */
+    public void setSectionHeight(BigDecimal sectionHeight) {
+        this.sectionHeight = sectionHeight;
+    }
+
+    /**
+     * @return the partLength
+     */
+    public BigDecimal getPartLength() {
+        return partLength;
+    }
+
+    /**
+     * @param partLength the partLength to set
+     */
+    public void setPartLength(BigDecimal partLength) {
+        this.partLength = partLength;
     }
 
     /**

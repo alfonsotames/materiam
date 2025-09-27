@@ -30,6 +30,7 @@ public class Material implements Serializable {
     @ManyToOne
     private MaterialFamily materialFamily;
     private String name;
+    private String type;
     private String description;
     private String gauge;
     
@@ -38,6 +39,8 @@ public class Material implements Serializable {
     
     @Column(precision = 8, scale = 2) //999,999.99 mm
     private BigDecimal width;
+    @Column(precision = 8, scale = 2) //999,999.99 mm
+    private BigDecimal height;    
     @Column(precision = 8, scale = 2) //999,999.99 mm
     private BigDecimal length;
     
@@ -113,6 +116,20 @@ public class Material implements Serializable {
     }
 
     /**
+     * @return the type
+     */
+    public String getType() {
+        return type;
+    }
+
+    /**
+     * @param type the type to set
+     */
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    /**
      * @return the description
      */
     public String getDescription() {
@@ -166,6 +183,20 @@ public class Material implements Serializable {
      */
     public void setWidth(BigDecimal width) {
         this.width = width;
+    }
+
+    /**
+     * @return the height
+     */
+    public BigDecimal getHeight() {
+        return height;
+    }
+
+    /**
+     * @param height the height to set
+     */
+    public void setHeight(BigDecimal height) {
+        this.height = height;
     }
 
     /**

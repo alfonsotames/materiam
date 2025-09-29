@@ -4,17 +4,28 @@
                 xmlns:ui="jakarta.faces.facelets"
                 template="./fetemplate.xhtml"
                 xmlns:h="http://xmlns.jcp.org/jsf/html"
-                xmlns:p="http://primefaces.org/ui"
-                
-                    
+                xmlns:p="http://primefaces.org/ui"   
                 xmlns:f="jakarta.faces.core">
-
     <ui:define name="top">
     </ui:define>
-
     <ui:define name="content">
-
+    <script>
+        function dragging() {
+          const div = document.getElementById("statusimage");
+          div.style.backgroundImage = "url('images/plus.svg')";
+          
+        }
         
+        function dragout() {
+          const div = document.getElementById("statusimage");
+          div.style.backgroundImage = "url('images/sheetmetal.png')";
+        }
+        
+        function drop() {
+          const div = document.getElementById("statusimage");
+          div.style.backgroundImage = "url('images/spinner.svg')";
+        }
+    </script>
         <div style="position: relative; z-index: 0; 
             background-image: url('images/welder_dark.webp');
             background-size:     cover;                      
@@ -25,18 +36,15 @@
                     <div style="color: white; font-family: Lato Regular; width: 450px;">
                         <span style="font-size: 52px">A fabrication service that knows how you work</span>
                         <ul style="font-size: 16px;">
-
                             <li>Automatic quoting for sheet metal projects</li>
                             <li>Drop your files and get instant pricing</li>
                             <li>Lead time as little as 2 days</li>
                             <li>MIG &amp; TIG Welding available</li>
                             <li>Multiple finishes and coatings available</li>
-                            
-                            
                         </ul>
-
                     </div>
                     <div class="item1">
+                        
                         <h:form id="submitwsid">
                             <h:inputHidden id="wsid" value="#{fileUploadController.wsid}" />
                             <h:commandButton id="hiddenButton" action="#{fileUploadController.submitwsid}" style="display:none;">
@@ -50,8 +58,18 @@
                                 <center><span style="font-size: 14px;"><br/>Multiple .step files accepted<br/>Assemblies supported!</span></center>
                                 <br/><!-- comment -->
                                 <br/>
-                                <center><img style="width:180px;" src='images/sheetmetal.png' /></center>
-                                <div id="updates" style="align-content: center; width:100%"></div>
+                                <div id="statusimage" ondragover="dragging()" ondragleave="dragout()" ondrop="drop()" style="background-image: url('images/sheetmetal.png');
+                                    width:180px; height:150px;
+                                    
+                                    margin-left: 40px;
+                                    background-size:     200px 150px;                      
+                                    background-repeat:   no-repeat;
+                                    background-position: center center;  
+                                        ">
+                                        
+                                    <div id="updates" style="align-content: center; width:100%"></div>
+                                </div>
+                                
                                 <p:fileUpload listener="#{fileUploadController.upload}"
                                               dropZone="dropzone"
                                               mode="advanced"
@@ -63,8 +81,8 @@
                                 </p:fileUpload>
                                 <p:growl id="messages" showDetail="true" />          
                             </div>
-
                         </h:form> 
+                      
                     </div>
                 </div>
             </div>

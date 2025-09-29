@@ -17,14 +17,19 @@
                      }
              }
         </script>        
-        <script type="module" src="#{resource['scripts/cadview.js']}" />
+        <script type="module" src="#{resource['scripts/cadview_2.js']}" />
         
         
         
         
     </h:head>
     <h:body style="padding:0px; margin:0px;">
-<div id="viewport" />
+        <div id="viewport" style="
+               width: 100vw;
+                height: 100vh;
+                display: block;
+                position: relative;
+             " />
                 <div style="
                     width: 100%;
                     display: grid;

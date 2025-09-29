@@ -4,6 +4,16 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { ViewportGizmo } from "three-viewport-gizmo";
 
+
+var camera, scene, renderer, orbitControls;
+var meshes = [];
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+
+init();
+animate();
+
+
 const container = document.getElementById("viewport");
 
 const aspect = window.innerWidth / window.innerHeight;

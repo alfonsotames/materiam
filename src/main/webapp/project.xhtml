@@ -15,11 +15,12 @@
                  "imports": {
                      "three": "https://unpkg.com/three@0.180.0/build/three.module.js",
                      "three/addons/": "https://unpkg.com/three@0.180.0/examples/jsm/",
-                     "three-viewport-gizmo": "https://unpkg.com/three-viewport-gizmo@2.2.0/dist/three-viewport-gizmo.js"
+                     "three-viewport-gizmo": "https://unpkg.com/three-viewport-gizmo@2.2.0/dist/three-viewport-gizmo.js",
+                     "three.meshline": "https://unpkg.com/threejs-meshline@2.0.12/src/index.js"
                      }
              }
         </script>        
-        <script type="module" src="#{resource['scripts/cadview.js']}" />
+        <script type="module" src="#{resource['scripts/projectviewer.js']}" />
         
         
     </ui:define>
@@ -38,11 +39,14 @@
                     align-items: start; /* Centers items vertically within their cells */
                     ">
                         
-                    <div style="color: white;"><div id="viewport" style="width: 66%;   " /></div>
-                    <div style="width: 100%;">
-                        <div style="background-color: white; color: black;"><span style="margin-left: 10px; font-family: Materiam; font-size: 24px;">Project #{projectcontroller.project.name}</span></div>
+                    <div style="color: white; "><div id="viewport"  /></div>
+                    <div id="info" style="position: absolute;   position: absolute; 
+                            top: 10px;
+                            left: 10px;
+                            padding: 0px; width: 360px; height: 80%;">
+                        <div style="background-color: white; border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;"><span style="margin-left: 10px; font-family: Materiam; font-size: 24px;">Project #{projectcontroller.project.name}</span></div>
                         <div style="background-color: grey; color: white; padding-left: 10px;">Bill of Materials</div>
-                        <div style="color: white; overflow-y: scroll; max-height: 490px; ">
+                        <div style="color: white; overflow-y: scroll;  height: 100%;">
                             <h:form id="form">
                                 <p:dataView var="qp" value="#{projectcontroller.quotedParts}" rows="12" paginator="false"
                                             rowsPerPageTemplate="6,12,16"
@@ -51,18 +55,19 @@
                                     
                                     <p:dataViewListItem>
                                         
-                                        <div style="width: 100%;
+                                        <div style="
+                                             
                                             display: grid;
                                             grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
                                             grid-template-rows: auto; /* Allows row height to adjust to content */
                                             justify-content: center; /* Centers the grid horizontally within its parent */
                                             align-items: start; /* Centers items vertically within their cells */">
-                                            <div style="margin: 10px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 150px;">
-                                                <img style="width:150px; cursor: pointer; background-color: #fafafa;"
+                                            <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px;">
+                                                <img style="width:120px; cursor: pointer; background-color: #fafafa;"
                                                      src="#{request.contextPath}/imageserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}"
                                                      onclick="loadGLB('#{request.contextPath}/glbserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}');"/>
                                             </div>                                                     
-                                            <div style="margin: 10px;">
+                                            <div style="margin: 4px;  width:200px;">
                                                 <div style="font-size: 14px;"><B>#{qp.part.name}</B></div>
                                                 
                                                 <div style="font-size: 12px;">#{qp.part.material.name}</div>

@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html">
+    <h:head>
+        <title>CAD Viewer</title>
+        
+        <script crossorigin="anonymous" type="importmap">
+             {
+                 "imports": {
+                     "three": "https://unpkg.com/three@0.180.0/build/three.module.js",
+                     "three/addons/": "https://unpkg.com/three@0.180.0/examples/jsm/",
+                     "three-viewport-gizmo": "https://unpkg.com/three-viewport-gizmo@2.2.0/dist/three-viewport-gizmo.js"
+                     }
+             }
+        </script>        
+        <script type="module" src="#{resource['scripts/projectviewer.js']}" />
+
+    </h:head>
+    <h:body style="background-color: #555555; padding: 0px; margin: 0px;">
+        <div style="width:100%; height: 80px;">MATERIAM</div>
+
+        <div id="viewport" ></div>
+        <div id="info" style="position: absolute;   position: absolute;
+            top: 90px;
+            left: 20px;
+            background-color: lightcoral;
+            padding: 10px; width: 200px; height: 300px;"> Hola</div>
+        
+        <div style="width:100%; height: 80px;">BOTTOM</div>
+    </h:body>
+</html>

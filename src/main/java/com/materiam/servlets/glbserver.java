@@ -4,7 +4,9 @@
  */
 package com.materiam.servlets;
 
+import com.materiam.controllers.ProjectController;
 import com.materiam.entities.Project;
+import jakarta.inject.Inject;
 import jakarta.servlet.ServletContext;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -24,6 +26,9 @@ import java.io.OutputStream;
 @WebServlet(name = "glbserver", urlPatterns = {"/glbserver"})
 public class glbserver extends HttpServlet {
 
+    
+    @Inject
+    ProjectController projectController;
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -37,7 +42,7 @@ public class glbserver extends HttpServlet {
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
+
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
@@ -63,11 +68,13 @@ public class glbserver extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse resp) throws ServletException, IOException {
         // Get the absolute path of the image
         ServletContext sc = getServletContext();
-        String projectid = ((Project)request.getSession().getAttribute("activeProject")).getId().toString();
+        String projectid = projectController.getActiveProject().getId().toString();
         String cadfileid = request.getParameter("cadfile");
         String persid = request.getParameter("persid").replaceAll(":", "-");;
 
-        String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/out_"+persid+"_1_colored.glb";
+        //String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/out_"+persid+"_1_colored.glb";
+        String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/out_"+persid+"_1.glb";
+
         //String filename = "/Users/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/image_"+persid+"_1.png";
 
         /*    

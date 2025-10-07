@@ -21,9 +21,11 @@ import static jakarta.security.enterprise.authentication.mechanism.http.Authenti
 import jakarta.security.enterprise.credential.Credential;
 import jakarta.security.enterprise.credential.UsernamePasswordCredential;
 import jakarta.security.enterprise.identitystore.IdentityStoreHandler;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -31,22 +33,22 @@ import java.util.logging.Logger;
 /**
  *
  * @author mufufu
- * 
- * 
- * LoginController is sessionScoped in order to make the User bean available
- * to all jsf's and controllers. We could store the user in the FacesContext:
- *      
- *      FacesContext context = FacesContext.getCurrentInstance();
- *       context.getExternalContext().getSessionMap().put("user", current);
- * 
- * But it has a very deep hierarchy.
+
+
+UserController is sessionScoped in order to make the User bean available
+to all jsf's and controllers. We could store the user in the FacesContext:
+     
+     FacesContext context = FacesContext.getCurrentInstance();
+      context.getExternalContext().getSessionMap().put("user", current);
+
+But it has a very deep hierarchy.
  * 
  * 
  */
-@Named(value = "loginController")
+@Named(value = "userController")
 @SessionScoped
 @Transactional
-public class LoginController implements Serializable {
+public class UserController implements Serializable {
 
 
     
@@ -62,14 +64,29 @@ public class LoginController implements Serializable {
     private EntityManager em;
 
     @Inject
-    private IdentityStoreHandler identityStoreHandler;    
+    private IdentityStoreHandler identityStoreHandler; 
 
-
+    @Inject
+    private ProjectController projectController;
   
     private String loginEmail;
     private String loginPassw;
     private User user = null;
 
+    public String logout() {
+        try {
+            request.logout();
+        } catch (ServletException e) {
+            Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, "Can't logout: {0}", e.getMessage());
+        }
+        context.getExternalContext().invalidateSession();
+        try {
+            context.getExternalContext().redirect(request.getContextPath() + "/");
+        } catch (IOException ex) {
+            System.getLogger(UserController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
+        return null;
+    }
 
     public String login() {
         try {
@@ -95,6 +112,15 @@ public class LoginController implements Serializable {
                 
                 Logger.getLogger(this.getClass().getName()).log(Level.INFO,"* * * Setting user {0} * * * *", user.getName());
             } else if (status.equals(SUCCESS)) {
+                
+                if (projectController.getActiveProject() == null) {
+                    System.out.println(" >>>>>>>>>>>>>>>>>>>>>>>>>> activeProject is null!!!!!!!");
+                } else {
+                    projectController.getActiveProject().setSaved(true);
+                    user.getProjects().add(projectController.getActiveProject());
+                    
+                }
+                
                 
                 return "account/index.xhtml";
             } else if (status.equals(SEND_FAILURE)) {

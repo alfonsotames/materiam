@@ -16,26 +16,33 @@
 
     <h:body>
             <div id="top" >
-                <div class="grid_three">
-                    <div onclick="location.href='#{request.contextPath}/'" style="cursor: pointer; font-family: Materiam; font-size: 38px; color: white; margin-left: 10px;">MATERIAM</div>
-                    <div><ui:insert name="top">Top</ui:insert></div>
-                    <div class="grid_three">
-                        <div>
-                            <div><h:outputText id="username"  value="#{loginController.user.name}" rendered="#{loginController.user != null}" /></div>
-                            <div><h:outputLink id="admin"  value="#{request.contextPath}/admin" rendered="#{request.isUserInRole('ADMIN')}">ADMIN</h:outputLink></div>
-                
-                            <h:panelGroup rendered="#{loginController.user == null}">
-                                <a href="login.xhtml">Login</a>
-                            </h:panelGroup>
-                        </div>
-                        <div>
-                            <div>Mis Pedidos</div>
-                            <div>Mis Proyectos</div>
-                        </div>    
-                        <div>
-                        </div>
-                    </div>   
-                </div>
+                <h:form id="headerform">
+                    <div class="grid_three" >
+                        <div onclick="location.href='#{request.contextPath}/'" style="cursor: pointer; font-family: Materiam; font-size: 38px; color: white; margin-left: 10px;">MATERIAM</div>
+                        <div><!-- Sessionid: #{request.session.id} --><ui:insert name="top"></ui:insert></div>
+                        <div class="grid_four">
+                            <div style="width:160px; ">
+                                <div><h:outputText id="username"  value="Welcome #{userController.user.name}" rendered="#{userController.user != null}" /></div>
+                                <div><h:outputLink id="admin"  value="#{request.contextPath}/admin" rendered="#{request.isUserInRole('ADMIN')}">ADMIN</h:outputLink></div>
+
+                                <h:panelGroup rendered="#{userController.user == null}">
+                                    <a href="login.xhtml">Login</a>
+                                </h:panelGroup>
+                                
+                            </div>
+                            <div style="width:100px; ">
+                                <div><h:outputLink value="#{request.contextPath}/project.xhtml">Active Project</h:outputLink></div>
+                            </div>
+                                
+                            <div>
+                                <div><h:outputLink value="#{request.contextPath}/account">Account</h:outputLink></div>
+                            </div>
+                            <div>
+                                <div><h:commandLink value="Logout" action="#{userController.logout}" rendered="#{userController.user != null}" /></div>
+                            </div>                                
+                        </div>   
+                    </div>
+                </h:form>    
             </div>
             <div class="center_content" >
                 <ui:insert name="content">Content</ui:insert>

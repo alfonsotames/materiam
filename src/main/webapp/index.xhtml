@@ -7,6 +7,7 @@
                 xmlns:p="http://primefaces.org/ui"   
                 xmlns:f="jakarta.faces.core">
     <ui:define name="top">
+        
     </ui:define>
     <ui:define name="content">
     <script>
@@ -43,22 +44,22 @@
                             <li>Multiple finishes and coatings available</li>
                         </ul>
                     </div>
-                    <div class="item1">
+                    <div class="item1" ondragover="dragging()" ondragleave="dragout()" ondrop="drop()">
                         
                         <h:form id="submitwsid">
-                            <h:inputHidden id="wsid" value="#{fileUploadController.wsid}" />
-                            <h:commandButton id="hiddenButton" action="#{fileUploadController.submitwsid}" style="display:none;">
+                            <h:inputHidden id="wsid" value="#{projectcontroller.wsid}" />
+                            <h:commandButton id="hiddenButton" action="#{projectcontroller.submitwsid}" style="display:none;">
                                 <f:ajax execute="@form" render="submitwsid" />
                             </h:commandButton>                            
                         </h:form>
                         <h:form id="dropzone"  enctype="multipart/form-data">
-                            <h:inputHidden id="wsid" value="#{fileUploadController.wsid}" />
+                            <h:inputHidden id="wsid" value="#{projectcontroller.wsid}" />
                             <div class="block" style="color: white; padding: 20px;">
                                 <center><span style="font-size: 20px;">Drag &amp; drop your files here!</span></center>
                                 <center><span style="font-size: 14px;"><br/>Multiple .step files accepted<br/>Assemblies supported!</span></center>
                                 <br/><!-- comment -->
                                 <br/>
-                                <div id="statusimage" ondragover="dragging()" ondragleave="dragout()" ondrop="drop()" style="background-image: url('images/sheetmetal.png');
+                                <div id="statusimage"  style="background-image: url('images/sheetmetal.png');
                                     width:180px; height:150px;
                                     
                                     margin-left: 40px;
@@ -70,7 +71,7 @@
                                     <div id="updates" style="align-content: center; width:100%"></div>
                                 </div>
                                 
-                                <p:fileUpload listener="#{fileUploadController.upload}"
+                                <p:fileUpload listener="#{projectcontroller.upload}"
                                               dropZone="dropzone"
                                               mode="advanced"
                                               auto="true" 
@@ -149,7 +150,7 @@
             websocket.onopen = function (evt) {
                 console.log("Connected to "+wsUri);
                 
-                console.log(evt.data);
+                //console.log(evt.data);
              
             };
             
@@ -163,7 +164,7 @@
                     document.getElementById("dropzone:wsid").value = wsSessionId;
                     document.getElementById("submitwsid:wsid").value = wsSessionId;
 
-                    console.log("Stored WebSocket session id:", wsSessionId);
+                    console.log("Stored WebSocket id:", wsSessionId);
                     document.getElementById('submitwsid:hiddenButton').click();
                 } else {                 
                     document.getElementById("updates").innerText = event.data;

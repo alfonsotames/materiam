@@ -11,7 +11,10 @@
     </ui:define>
 
     <ui:define name="content">
-        Welcome to your account #{loginController.user.name} !!!
+        <span style="color: white;">
+        Welcome to your account #{loginController.user.name} !!!<br/>
+        Project: #{projectcontroller.activeProject.name}
+        </span>
         <div>
             <p:card style="width: 240px">
                 <f:facet name="header">

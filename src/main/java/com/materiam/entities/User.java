@@ -47,7 +47,7 @@ public class User implements Serializable {
     
 //    @ManyToMany(mappedBy = "users")
     @OneToMany
-    private List<Part> parts;
+    private List<Project> projects;
     
     @OneToMany
     private List<Address> addresses;
@@ -57,7 +57,6 @@ public class User implements Serializable {
     
     public User() {
         roles = new LinkedList<>();
-        parts = new LinkedList<>();
     }
     
     public String encodePassword(String pass) {
@@ -93,7 +92,7 @@ public class User implements Serializable {
 
     @Override
     public boolean equals(Object object) {
-        // TODO: Warning - this method won't work in the case the id fields are not set
+
         if (!(object instanceof User)) {
             return false;
         }
@@ -194,19 +193,6 @@ public class User implements Serializable {
         this.organization = organization;
     }
 
-    /**
-     * @return the parts
-     */
-    public List<Part> getParts() {
-        return parts;
-    }
-
-    /**
-     * @param parts the parts to set
-     */
-    public void setParts(List<Part> parts) {
-        this.parts = parts;
-    }
 
     /**
      * @return the addresses
@@ -220,6 +206,20 @@ public class User implements Serializable {
      */
     public void setAddresses(List<Address> addresses) {
         this.addresses = addresses;
+    }
+
+    /**
+     * @return the projects
+     */
+    public List<Project> getProjects() {
+        return projects;
+    }
+
+    /**
+     * @param projects the projects to set
+     */
+    public void setProjects(List<Project> projects) {
+        this.projects = projects;
     }
     
 }

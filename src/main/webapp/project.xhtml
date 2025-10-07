@@ -30,6 +30,8 @@
 
     <ui:define name="content">
        
+
+            
                 <div style="
                     width: 100%;
                     display: grid;
@@ -40,59 +42,171 @@
                     ">
                         
                     <div style="color: white; "><div id="viewport"  /></div>
-                    <div id="info" style="position: absolute;   position: absolute; 
+                    <div id="info" style="position: absolute;   position: absolute; height: 400px;
                             top: 10px;
                             left: 10px;
-                            padding: 0px; width: 360px; height: 80%;">
-                        <div style="background-color: white; border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;"><span style="margin-left: 10px; font-family: Materiam; font-size: 24px;">Project #{projectcontroller.project.name}</span></div>
-                        <div style="background-color: grey; color: white; padding-left: 10px;">Bill of Materials</div>
-                        <div style="color: white; overflow-y: scroll;  height: 100%;">
-                            <h:form id="form">
-                                <p:dataView var="qp" value="#{projectcontroller.quotedParts}" rows="12" paginator="false"
-                                            rowsPerPageTemplate="6,12,16"
-                                            paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
-                                            gridIcon="pi pi-th-large" listIcon="pi pi-bars">
+                            padding: 0px; width: 360px; ">
+                        <h:form id="form" onkeypress="if (event.keyCode == 13) { saver(); event.preventDefault();}" style="margin-bottom: 0px;">
+                            <p:remoteCommand name="saver" actionListener="#{projectcontroller.save()}" update="nombre"  />
+                            <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;">
+                                <span style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
+                                    <p:inplace id="nombre" editor="true">
+                                        <p:inputText  value="#{projectcontroller.activeProject.name}" required="true" label="text"/>
+
+                                        <p:ajax event="save" listener="#{projectcontroller.save}" update="nombre"/>
+                                    </p:inplace>
+                                </span>
+                            </div>
+                        </h:form>
+                        
+       
+                        <div ondragover="dragging()" ondragleave="dragout()" ondrop="drop()" style="background-color: white;  padding: 0px;">
+                            <h:form id="submitwsid" style="margin-top: 0px; margin-bottom: 0px;">
+
+                                <h:inputHidden id="wsid" value="#{projectcontroller.wsid}" />
+                                <h:commandButton id="hiddenButton" action="#{projectcontroller.submitwsid}" style="display:none;">
+                                    <f:ajax execute="@form" render="submitwsid" />
+                                </h:commandButton>                            
+                            </h:form>
+
+                            <h:form id="dropzone"  enctype="multipart/form-data" style="margin-top: 0px; margin-bottom: 0px;">
+                                <h:inputHidden id="wsid" value="#{projectcontroller.wsid}" />
+
+                                <div style=" padding: 5px;">
+
                                     
-                                    <p:dataViewListItem>
-                                        
-                                        <div style="
-                                             
-                                            display: grid;
-                                            grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
-                                            grid-template-rows: auto; /* Allows row height to adjust to content */
-                                            justify-content: center; /* Centers the grid horizontally within its parent */
-                                            align-items: start; /* Centers items vertically within their cells */">
-                                            <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px;">
-                                                <img style="width:120px; cursor: pointer; background-color: #fafafa;"
-                                                     src="#{request.contextPath}/imageserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}"
-                                                     onclick="loadGLB('#{request.contextPath}/glbserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}');"/>
-                                            </div>                                                     
-                                            <div style="margin: 4px;  width:200px;">
-                                                <div style="font-size: 14px;"><B>#{qp.part.name}</B></div>
-                                                
-                                                <div style="font-size: 12px;">#{qp.part.material.name}</div>
-                                                
-                                                <!--<div class="product-description">Thickness: #{qp.part.thickness} mm</div>-->
-                                                <div>#{qp.part.comments}</div>
-                                                <div style="margin-top:5px;">
-                                                    <h:outputText style="font-weight: bold;" value="#{qp.price}" styleClass="product-price">
-                                                        <f:convertNumber currencySymbol="USD$" type="currency"/>
-                                                    </h:outputText>
+                                    <div class="grid_two" style="border:1px dashed grey; margin-bottom: 5px;">    
+                                        <div id="statusimage"  style="background-image: url('images/sheetmetal.png'); 
+                                            width:90px; height:50px;
+
+                                            margin-left: 40px;
+                                            background-size:     80px 55px;                      
+                                            background-repeat:   no-repeat;
+                                            background-position: center center;  
+                                                ">
+
+                                            <div id="updates" style="align-content: center; width:100%"></div>
+                                        </div>
+                                        <div style="margin-top:10px;">Drag &amp; drop additional files to project.</div>
+                                    </div>
+                                    <p:fileUpload listener="#{projectcontroller.upload}"
+                                                  dropZone="dropzone"
+                                                  mode="advanced"
+                                                  auto="true" 
+                                                  multiple="true"
+                                                  process="@all @form wsid"
+                                                  >
+
+                                    </p:fileUpload>
+                                    <p:growl id="messages" showDetail="true" />   
+
+                                </div>
+
+                            </h:form> 
+
+                        </div>              
+                        
+                        
+                        <h:form id="formparts" style="margin-top:0px;">
+                     
+                            <div style="background-color: grey; color: white; padding-left: 10px;">Bill of Materials contains #{projectcontroller.quotedParts.size()} parts.</div>
+                            <div style="color: white; overflow-y: scroll;  height: 100%;">
+
+                                <p:dataView id="dataview" var="qp" value="#{projectcontroller.quotedParts}" paginator="false"
+                                                rowsPerPageTemplate="6,12,16"
+                                                paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                gridIcon="pi pi-th-large" listIcon="pi pi-bars">
+
+                                        <p:dataViewListItem>
+
+                                            <div style="
+
+                                                display: grid;
+                                                grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
+                                                grid-template-rows: auto; /* Allows row height to adjust to content */
+                                                justify-content: center; /* Centers the grid horizontally within its parent */
+                                                align-items: start; /* Centers items vertically within their cells */">
+                                                <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 100px;">
+                                                    <img style="width:100px; cursor: pointer; background-color: #fafafa;"
+                                                         src="#{request.contextPath}/imageserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}"
+                                                         onclick="loadGLB('#{request.contextPath}/glbserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}');"/>
+                                                </div>                                                     
+                                                <div style="margin: 4px;  width:220px; word-break: break-all;">
+                                                    <div style="font-size: 14px; "><B>#{qp.part.name}</B></div>
+
+                                                    <div style="font-size: 12px;">#{qp.part.material.name}</div>
+
+                                                    <!--<div class="product-description">Thickness: #{qp.part.thickness} mm</div>-->
+                                                    <div>#{qp.part.comments}</div>
+                                                    <div style="margin-top:5px;">
+                                                        <h:outputText style="font-weight: bold;" value="#{qp.price}" styleClass="product-price" rendered="#{qp.price ne 0}">
+                                                            <f:convertNumber currencySymbol="USD$" type="currency"/>
+                                                        </h:outputText>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </p:dataViewListItem>
-                                </p:dataView>
-                            </h:form>
-            
-                        </div>
+                                        </p:dataViewListItem>
+                                    </p:dataView>
+                            </div>
+
+                            <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-bottom-right-radius: 8px; border-bottom-left-radius: 8px; color: black;">
+                                <span style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
+                                    Total: $ 563.67
+                                </span>
+                            </div>
+                        </h:form>   
                     </div>
                 </div>
         
-            
-                       
 
-    
+        <script type="text/javascript">
+            var wsUri = "ws://" + document.location.host + document.location.pathname.replace(/\/[^\/]+?\.[^\/]+?$/, '/') + "notifier";
+            var websocket = new WebSocket(wsUri);
+            
+            websocket.onerror = function (evt) {
+                console.log(evt.data);
+            };
+            websocket.onopen = function (evt) {
+                console.log("Connected to "+wsUri);
+                
+                //console.log(evt.data);
+             
+            };
+            
+            websocket.onmessage = function (evt) {
+                //console.log("Message received "+evt.data);
+                if (evt.data.startsWith("SESSIONID:")) {
+                    
+                    var wsSessionId = event.data.substring(10);
+
+                    // put it into the hidden input
+                    document.getElementById("dropzone:wsid").value = wsSessionId;
+                    document.getElementById("submitwsid:wsid").value = wsSessionId;
+
+                    console.log("Stored WebSocket id:", wsSessionId);
+                    document.getElementById('submitwsid:hiddenButton').click();
+                } else {                 
+                    document.getElementById("updates").innerText = event.data;
+                    //console.log("Finalmente el wsid tiene: "+document.getElementById("dropzone:wsid").value);
+                }
+            };
+            
+            function dragging() {
+              const div = document.getElementById("statusimage");
+              div.style.backgroundImage = "url('images/plusiconblack.png')";
+
+            }
+
+            function dragout() {
+              const div = document.getElementById("statusimage");
+              div.style.backgroundImage = "url('images/sheetmetal.png')";
+            }
+
+            function drop() {
+              const div = document.getElementById("statusimage");
+              div.style.backgroundImage = "url('images/spinner.svg')";
+            }            
+        </script>
 
     </ui:define>
 

@@ -51,7 +51,7 @@ import java.util.logging.Logger;
 public class CreateUserController implements Serializable {
     
     @Inject
-    private LoginController loginController;
+    private UserController loginController;
 
     @PersistenceContext(unitName = "materiam")
     private EntityManager em;

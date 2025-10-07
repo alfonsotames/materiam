@@ -21,6 +21,7 @@ var compHeight = 250;
 var points = [];
 let line;
 var clicks=0;
+var weldingpointing=false;
 
 init();
 
@@ -295,48 +296,51 @@ function init() {
 }
 
 function onMouseDown(event){
-    var canvasBounds = renderer.domElement.getBoundingClientRect();
-    mouse.x = ( ( event.clientX - canvasBounds.left ) / ( canvasBounds.right - canvasBounds.left ) ) * 2 - 1;
-    mouse.y = - ( ( event.clientY - canvasBounds.top ) / ( canvasBounds.bottom - canvasBounds.top) ) * 2 + 1;
-    raycaster.setFromCamera( mouse, camera );
-    var intersects = raycaster.intersectObjects( scene.children, true );
-    if(intersects.length > 0){
-        for ( var i = 0; i < intersects.length; i++ ) {
-                console.log(intersects[i].point);
-        }
-        
-        //intersects[ 0 ].object.material.color.set( 0xff0000 );
-        clicks++;
-        if (clicks < 2) {
-            console.log("Clicks: "+clicks);
-             points[0] = intersects[0].point;
-        }
-        if (clicks > 1) {
-            console.log("Clicks: "+clicks);
-            points[1] = intersects[0].point;
-            clicks=0;
-            
-
-            console.log("Making a line with points: "+points[0].x+" and "+points[1]);
-
-            const path = new THREE.LineCurve3(points[0], points[1]);
-            const geometry = new THREE.TubeGeometry(path, 1, 0.05, 8, false);
-            const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-            const tube = new THREE.Mesh(geometry, material);
-            scene.add(tube);
-
-            points = [];
-            renderer.render( scene, camera );
-        }
-        
-        
-    }
     
-    else { 
-        console.log("clicked outside the mesh");
+    if (weldingpointing) {
+        var canvasBounds = renderer.domElement.getBoundingClientRect();
+        mouse.x = ( ( event.clientX - canvasBounds.left ) / ( canvasBounds.right - canvasBounds.left ) ) * 2 - 1;
+        mouse.y = - ( ( event.clientY - canvasBounds.top ) / ( canvasBounds.bottom - canvasBounds.top) ) * 2 + 1;
+        raycaster.setFromCamera( mouse, camera );
+        var intersects = raycaster.intersectObjects( scene.children, true );
+        if(intersects.length > 0){
+            for ( var i = 0; i < intersects.length; i++ ) {
+                    console.log(intersects[i].point);
+            }
+
+            //intersects[ 0 ].object.material.color.set( 0xff0000 );
+            clicks++;
+            if (clicks < 2) {
+                console.log("Clicks: "+clicks);
+                 points[0] = intersects[0].point;
+            }
+            if (clicks > 1) {
+                console.log("Clicks: "+clicks);
+                points[1] = intersects[0].point;
+                clicks=0;
+
+
+                console.log("Making a line with points: "+points[0].x+" and "+points[1]);
+
+                const path = new THREE.LineCurve3(points[0], points[1]);
+                const geometry = new THREE.TubeGeometry(path, 1, 0.05, 8, false);
+                const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+                const tube = new THREE.Mesh(geometry, material);
+                scene.add(tube);
+
+                points = [];
+                renderer.render( scene, camera );
+            }
+
+
+        }
+
+        else { 
+            console.log("clicked outside the mesh");
+        }
+        window.addEventListener('mousemove', onMouseMove, false);
+        window.addEventListener('mouseup', onMouseUp, false);
     }
-    window.addEventListener('mousemove', onMouseMove, false);
-    window.addEventListener('mouseup', onMouseUp, false);
 }
 
 

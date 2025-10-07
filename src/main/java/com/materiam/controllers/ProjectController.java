@@ -5,6 +5,7 @@
 package com.materiam.controllers;
 
 import com.materiam.entities.CADFile;
+import com.materiam.entities.FabProcess;
 import com.materiam.entities.Instance;
 import com.materiam.entities.Material;
 import com.materiam.entities.Part;
@@ -12,15 +13,11 @@ import com.materiam.entities.PartType;
 import com.materiam.entities.Project;
 import events.EventQualifier;
 import events.ImportUpdate;
-import org.primefaces.event.FileUploadEvent;
-import org.primefaces.model.file.UploadedFile;
-
-import jakarta.enterprise.context.RequestScoped;
+import jakarta.enterprise.context.SessionScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.ExternalContext;
 import jakarta.faces.context.FacesContext;
-import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.json.Json;
@@ -42,49 +39,141 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.io.StringReader;
-
-
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.io.Serializable;
-import java.math.MathContext;
-import java.math.RoundingMode;
-
+import org.primefaces.event.FileUploadEvent;
+import org.primefaces.model.file.UploadedFile;
 
 /**
  *
  * @author mufufu
  */
-@Named(value = "fileUploadController")
-@ViewScoped
+
+// TODO: ProjectController must have a list of active uploads 
+// Each upload must send status messages starting with an identifying string- projectid:99|||cafdile:23|||Message
+
+@Named(value = "projectcontroller")
+@SessionScoped
 @Transactional
-public class FileUploadController implements Serializable {
-    
-    
+public class ProjectController implements Serializable {
     @Inject
     private HttpServletRequest request;
-
-    @Inject
-    @EventQualifier
-    Event<ImportUpdate> importUpdate;    
         
     @PersistenceContext(unitName = "materiam")
     private EntityManager em;
+    
+    private Project activeProject;
+    
+    
+    
     private String destination = "/home/mufufu/Downloads/materiam/data/projects/";
     //private String destination = "/Users/mufufu/Downloads/materiam/data/projects/";
-
-    private String wsid;
+        
+        
+    @Inject
+    @EventQualifier
+    Event<ImportUpdate> importUpdate;    
     
-    public void submitwsid() {
-        System.out.println(">>>>>>>>>>>>>>>>>>> Submitwsid inkoked: "+wsid);
-    }
+    /**
+     * wsid is the websocket id, it changes every time a user loads or refreshes a page
+     */    
+    private String wsid;
 
+    /**
+     * The wsid is already assigned by the form submission
+     */       
+    public void submitwsid() {
+        System.out.println(">>>>>>>>>>>>>>>>>>> ✅  Submitwsid inkoked: "+wsid);
+    }
+    
+    
+    
+    public void save() {
+        System.out.println("************* -------- Persistiendo el activeproject... ----------- ***************"+activeProject.getName());
+        em.merge(activeProject);
+    }
+    
+    public List<Part> getParts() {
+        System.out.println("Retrieving parts...");
+        List<Part> parts = em.createQuery("SELECT p FROM Part p, CADFile cf, Project pr  where pr=:project and cf.project=pr and p.cadfile=cf")
+                                                .setParameter("project", activeProject).getResultList();
+        for (Part p : parts) {
+            System.out.println("Part id: "+p.getId());
+        }
+        return parts;
+    }
+    
+    public List<QuotedPart> getQuotedParts() {
+        List<QuotedPart> qps = new ArrayList<>();
+        List<Part> parts = em.createQuery("SELECT p FROM Part p, CADFile cf, Project pr  where pr=:project and cf.project=pr and p.cadfile=cf")
+                                                .setParameter("project", activeProject).getResultList();
+        for (Part p : parts) {
+            System.out.println("Part id: "+p.getId());
+            QuotedPart qp = new QuotedPart();
+            qp.setPart(p);
+            if (p.getPartType().getType().equals("SHEET_METAL_FLAT") || p.getPartType().getType().equals("SHEET_METAL_FOLDED")) {
+                BigDecimal price = new BigDecimal(0.00);
+
+                BigDecimal volumen;
+                volumen = p.getFlatObbLength().divide(BigDecimal.valueOf(1000)).multiply(p.getFlatObbWidth().divide(BigDecimal.valueOf(1000)));
+                volumen = volumen.multiply(p.getThickness().divide(BigDecimal.valueOf(1000)));
+                System.out.println("VOLUMEN: "+volumen);
+                
+                price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
+                System.out.println("Price 1: "+price);
+                price = price.multiply(p.getMaterial().getDensity());
+                System.out.println("Price 2: "+price);
+                price = price.multiply(p.getMaterial().getPricePerKg());
+
+
+
+                // TODO: Determine the cutting process by thickness and max min for each material / process
+                FabProcess fp = (FabProcess)em.find(FabProcess.class, 1L);
+
+                // get process time
+                System.out.println("p.getFlatTotalContourLength()"+p.getFlatTotalContourLength());
+                System.out.println("p.getMaterial().getLaserCuttingSpeed()"+p.getMaterial().getLaserCuttingSpeed());
+                BigDecimal pPrice =  p.getFlatTotalContourLength().divide(p.getMaterial().getLaserCuttingSpeed(), 2, RoundingMode.HALF_UP);
+                System.out.println("Process Time in Seconds: "+pPrice);
+                pPrice = pPrice.multiply((fp.getPriceph().divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)));
+
+                System.out.println("Process price: "+pPrice);
+                price = price.add(pPrice);
+                qp.setPrice(price);
+
+                } else if (p.getPartType().getType().equals("TUBE_RECTANGULAR") ) {
+                    BigDecimal price = new BigDecimal(0.00);
+                    System.out.println("Volume in mm3 of the tube: "+p.getVolume());
+                    price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
+                    System.out.println("Volume in m3: "+price);
+                    price = price.multiply(p.getMaterial().getDensity());
+                    System.out.println("Weight in Kg: "+price);
+                    price = price.multiply(p.getMaterial().getPricePerKg());
+                    qp.setPrice(price);
+                } else {
+                    qp.setPrice(new BigDecimal(0));
+                }
+            qps.add(qp);
+        }        
+        return qps;
+    }
+    
+
+    // TODO: Make this method Asynchronous
+    // Inform the user when the upload is complete so he can close the window
+    // keep sending status messages
+    
     public void upload(FileUploadEvent event) {
         System.out.println("* - * - * * - * - * * - * - *  FileUpload Invoked with wsid: "+wsid+" * - * - *  * - * - * * - * - * ");
         FacesMessage msg = new FacesMessage("Success! ", event.getFile().getFileName() + " is uploaded.");
@@ -102,7 +191,7 @@ public class FileUploadController implements Serializable {
         FacesContext facesContext = FacesContext.getCurrentInstance();
         ExternalContext externalContext = facesContext.getExternalContext();
 
-        
+        // TODO: Do not redirect if it is the same page!!!
         try {
             externalContext.redirect("project.xhtml"); 
         } catch (IOException e) {
@@ -113,31 +202,35 @@ public class FileUploadController implements Serializable {
             
     }
     
+    
+
+
+    
     public void copyFile(String fileName, InputStream in) {
         fileName = sanitizeFilename(fileName);
         HttpSession session = request.getSession();
-        Project activeProject = null;
-        activeProject = (Project) session.getAttribute("activeProject");
-        if (activeProject == null) {
+        
+
+        if (getActiveProject() == null) {
             // Generate a new project
-            activeProject = new Project();
-            activeProject.setName("New Project");
-            activeProject.setPostedDate(new Date());
-            em.persist(activeProject);
+            setActiveProject(new Project());
+            getActiveProject().setName("New Project");
+            getActiveProject().setPostedDate(new Date());
+            em.persist(getActiveProject());
             em.flush();
         }
-        System.out.println("Created Project: "+activeProject.getId());
-        session.setAttribute("activeProject", activeProject);
+        System.out.println("Active Project: "+getActiveProject().getId());
+
         
         CADFile f = new CADFile();
         f.setName(fileName);
-        f.setProject(activeProject);
+        f.setProject(getActiveProject());
         em.persist(f);
         em.flush();
         
 
-        destination = destination.concat(activeProject.getId()+"/"+f.getId()+"/");
-        Path path = Paths.get(destination);
+        String filedest = destination.concat(getActiveProject().getId()+"/"+f.getId()+"/");
+        Path path = Paths.get(filedest);
         try {
             
             Files.createDirectories(path);
@@ -145,7 +238,7 @@ public class FileUploadController implements Serializable {
                     
                     
             // write the inputStream to a FileOutputStream
-            OutputStream out = new FileOutputStream(new File(destination + fileName));
+            OutputStream out = new FileOutputStream(new File(filedest + fileName));
             int read = 0;
             byte[] bytes = new byte[1024];
             while ((read = in.read(bytes)) != -1) {
@@ -154,28 +247,34 @@ public class FileUploadController implements Serializable {
             in.close();
             out.flush();
             out.close();
-            System.out.println("New file uploaded: " + (destination + fileName));
+            System.out.println("New file uploaded: " + (filedest + fileName));
             
             
 
             Runtime rt = Runtime.getRuntime();
             
-            String command = String.format("asiSheetMetalExe %s %s/out.json -image %s/image.png -asm -imagesForParts -gltf -flat -expandCompounds -onlyCuttingLines -gltfWithColors -step -profile -weldings", (destination + fileName), destination, destination);
+            //String command = String.format("asiSheetMetalExe %s %s/out.json -image %s/image.png -asm -imagesForParts -gltf -flat -expandCompounds -onlyCuttingLines -gltfWithColors -step -profile -weldings", (filedest + fileName), filedest, filedest);
+            String command = String.format("asiSheetMetalExe %s %s/out.json -image %s/image.png -asm -imagesForParts -gltf -flat -expandCompounds -step -profile ", (filedest + fileName), filedest, filedest);
+
             Process pr = rt.exec(command);
+            importUpdate.fire(new ImportUpdate("Reading STEP file...",wsid));
             try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
                 String line;
                 System.out.println("Process Output:");
                 while ((line = reader.readLine()) != null) {
+                    
                     System.out.println(line);
-                    importUpdate.fire(new ImportUpdate(line,wsid));
+                    if (line.startsWith("******") || line.contains("info")) {
+                        importUpdate.fire(new ImportUpdate(line,wsid));
+                    }
                 }
                 pr.waitFor();
             } catch (InterruptedException ex) {
-                System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
             
-            command = String.format("mogrify %s*.png -transparent white %s*.png",destination, destination);
+            command = String.format("mogrify %s*.png -transparent white %s*.png",filedest, filedest);
             System.out.println("Executing mogrify: "+command);
             pr = rt.exec(command);
             try {
@@ -188,7 +287,7 @@ public class FileUploadController implements Serializable {
                 }
                 pr.waitFor();
             } catch (InterruptedException ex) {
-                System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
             
             
@@ -196,7 +295,7 @@ public class FileUploadController implements Serializable {
             System.out.println(e.getMessage());
         }
         
-        try (JsonReader jsonReader = Json.createReader(new StringReader(Files.readString(Paths.get(destination+"out.json"))))) {
+        try (JsonReader jsonReader = Json.createReader(new StringReader(Files.readString(Paths.get(filedest+"out.json"))))) {
 
             JsonObject json = jsonReader.readObject();
             System.out.println("JsonObject toString output:");
@@ -227,7 +326,7 @@ public class FileUploadController implements Serializable {
                     part.setDimX(b.getJsonNumber("bboxDx").bigDecimalValue());
                     part.setDimY(b.getJsonNumber("bboxDy").bigDecimalValue());
                     part.setDimZ(b.getJsonNumber("bboxDz").bigDecimalValue());
-
+                    
                     
                     PartType pt = (PartType)em.createQuery("select pt from PartType pt where pt.type=:type").setParameter("type", type).getSingleResult();
                     part.setPartType(pt);
@@ -336,16 +435,16 @@ public class FileUploadController implements Serializable {
             
             
         }   catch (IOException ex) {
-                System.getLogger(FileUploadController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
         
     }
     
     
-        private static final Pattern INVALID_FILENAME_CHARS = 
-        Pattern.compile("[^a-zA-Z0-9\\.\\-_]"); // Allows alphanumeric, dot, hyphen, underscore
+    private static final Pattern INVALID_FILENAME_CHARS = 
+    Pattern.compile("[^a-zA-Z0-9\\.\\-_]"); // Allows alphanumeric, dot, hyphen, underscore
 
-        public static String sanitizeFilename(String filename) {
+    public static String sanitizeFilename(String filename) {
         if (filename == null || filename.trim().isEmpty()) {
             return "default_filename"; // Or throw an IllegalArgumentException
         }
@@ -367,6 +466,34 @@ public class FileUploadController implements Serializable {
         return sanitized;
     }
 
+        
+        
+        
+        
+        
+    
+    public Material getMaterialByThickness(Double thickness) {
+        return (Material)em.createQuery("select m from Material m where m.thickness=:thickness").setParameter("thickness", thickness).getSingleResult();
+    }
+    
+    public void deleteProject() {
+        
+    }
+
+    /**
+     * @return the activeProject
+     */
+    public Project getActiveProject() {
+        return activeProject;
+    }
+
+    /**
+     * @param activeProject the activeProject to set
+     */
+    public void setActiveProject(Project activeProject) {
+        this.activeProject = activeProject;
+    }
+
     /**
      * @return the wsid
      */
@@ -380,8 +507,40 @@ public class FileUploadController implements Serializable {
     public void setWsid(String wsid) {
         this.wsid = wsid;
     }
-
-
     
+    
+    
+    public class QuotedPart {
+        private Part part;
+        private BigDecimal price;
+        /**
+         * @return the part
+         */
+        public Part getPart() {
+            return part;
+        }
+
+        /**
+         * @param part the part to set
+         */
+        public void setPart(Part part) {
+            this.part = part;
+        }
+
+        /**
+         * @return the price
+         */
+        public BigDecimal getPrice() {
+            return price;
+        }
+
+        /**
+         * @param price the price to set
+         */
+        public void setPrice(BigDecimal price) {
+            this.price = price;
+        }  
+    }
     
 }
+

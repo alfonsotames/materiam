@@ -47,13 +47,13 @@
                     <div class="item1" ondragover="dragging()" ondragleave="dragout()" ondrop="drop()">
                         
                         <h:form id="submitwsid">
-                            <h:inputHidden id="wsid" value="#{projectcontroller.wsid}" />
-                            <h:commandButton id="hiddenButton" action="#{projectcontroller.submitwsid}" style="display:none;">
+                            <h:inputHidden id="wsid" value="#{projectController.wsid}" />
+                            <h:commandButton id="hiddenButton" action="#{projectController.submitwsid}" style="display:none;">
                                 <f:ajax execute="@form" render="submitwsid" />
                             </h:commandButton>                            
                         </h:form>
                         <h:form id="dropzone"  enctype="multipart/form-data">
-                            <h:inputHidden id="wsid" value="#{projectcontroller.wsid}" />
+                            <h:inputHidden id="wsid" value="#{projectController.wsid}" />
                             <div class="block" style="color: white; padding: 20px;">
                                 <center><span style="font-size: 20px;">Drag &amp; drop your files here!</span></center>
                                 <center><span style="font-size: 14px;"><br/>Multiple .step files accepted<br/>Assemblies supported!</span></center>
@@ -71,7 +71,7 @@
                                     <div id="updates" style="align-content: center; width:100%"></div>
                                 </div>
                                 
-                                <p:fileUpload listener="#{projectcontroller.upload}"
+                                <p:fileUpload listener="#{projectController.upload}"
                                               dropZone="dropzone"
                                               mode="advanced"
                                               auto="true" 

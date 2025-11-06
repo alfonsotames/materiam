@@ -23,6 +23,10 @@ let line;
 var clicks=0;
 var weldingpointing=false;
 
+
+
+
+
 init();
 
 
@@ -44,7 +48,7 @@ function init() {
     );
 
     // Match position from perspective camera
-    camera.position.set(5, 5, 5);
+    camera.position.set(1,1,1);
     camera.lookAt(0, 0, 0);
     scene = new THREE.Scene();
     //loadGLB('http://localhost:8080/materiam/images/test.glb');
@@ -380,8 +384,25 @@ function loadGLB(url) {
     loader.load(
         url,
         (gltf) => {
+            /*
+            var material = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
+            gltf.scene.traverse(function (child) {
+                if (child.isMesh) {
+                    const edges = new THREE.EdgesGeometry(child.geometry);
+                    const line = new THREE.LineSegments(
+                        edges,
+                        new THREE.LineBasicMaterial({ color: 0x000000 })
+                    );
+                    child.add(line); // Add edges as a child of the mesh, so they move together
+                }
+            });
+          */
+                       
             scene.add(gltf.scene);
+           
+            
             // Center and scale the model
+            
             var box = new THREE.Box3().setFromObject(gltf.scene);
             var center = box.getCenter(new THREE.Vector3());
             var size = box.getSize(new THREE.Vector3());
@@ -389,6 +410,8 @@ function loadGLB(url) {
             var scale = 2.0 / maxDim;
             gltf.scene.scale.set(scale, scale, scale);
             gltf.scene.position.sub(center.multiplyScalar(scale));
+
+           
         },
         (xhr) => {
             console.log((xhr.loaded / xhr.total * 100) + '% loaded');

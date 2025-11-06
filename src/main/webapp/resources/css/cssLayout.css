@@ -11,15 +11,15 @@
 }
 
 #bottom {
-
+    z-index: -10;
     padding: 5px;
     margin: 0px 0px 0px 0px;
 
     background-color: #2c2c49;
     border-top: 1px solid grey;
-    margin-top: 80px;
-
-opacity: 0.9;
+    margin-top: 100px;
+    width:100%;
+    opacity: 0.9;
     
 }
 
@@ -92,4 +92,82 @@ opacity: 0.9;
   text-decoration : underline;
 }
 
+.ui-datatable-even  {
+    background-color: #5f5f5f !important;
+    color: white;
+}
+.ui-datatable-odd {
+    background-color: #525252 !important;
+    color: white;
+}
+.ui-datatable-data td {
+    font-size: 12px; /* Example: Set font size to 12 pixels */
+}
 
+.ui-editable-column {
+    color: white;
+}
+
+
+.ui-cell-editor-output {
+    font-family: Roboto Regular;
+    font-size: 12px;
+}
+
+.ui-cell-editor-input {
+    font-family: Roboto Regular;
+    font-size: 12px;
+}
+
+.ui-cell-editor {
+    font-family: Roboto Regular;
+    font-size: 12px;
+}
+
+.ui-selectonemenu .ui-selectonemenu-label {
+    font-size: 12px;
+}
+
+.ui-selectonemenu .ui-selectonemenu-item.ui-state-hover {
+    background-color: red;
+}
+.ui-selectonemenu-items-wrapper .ui-selectonemenu-item {
+    font-size: 12px; /* Adjust the desired font size */
+}
+
+
+.ui-selectonemenu{
+     width: 100% !important;
+     
+}
+.ui-selectonemenu-label{
+     width: 100% !important;
+     
+}  
+
+.ui-panel .ui-panel-title {
+    font-size: 12px; /* Adjust the value as needed */
+}
+
+
+th {
+    font-size: 12px; /* Adjust the desired font size */
+    padding: 0px;
+    margin: 0px;
+}
+
+.formfield {
+    width:100%; font-size: 12px !important; padding: 2px !important; margin: 0px !important;
+    border-radius: 2px  !important;
+}
+
+/*
+.minitable thead th { 
+    border: none !important; 
+    background: none !important; 
+}
+*/
+
+.minitable thead {
+    display: none;
+}

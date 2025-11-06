@@ -10,12 +10,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Set;
 
 /**
  *
@@ -24,18 +21,36 @@ import java.util.Set;
 @Entity
 public class Part implements Serializable {
 
+    /**
+     * @return the bends
+     */
+    public Long getBends() {
+        return bends;
+    }
+
+    /**
+     * @param bends the bends to set
+     */
+    public void setBends(Long bends) {
+        this.bends = bends;
+    }
+
 
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
+    // TODO: Delete this property 
     @ManyToOne
     private Material material;
+    
+    
+    
     private String persid; // Persistance ID (from STEP spec)
     private String prototype; // (from STEP spec)
     @ManyToOne
-    private PartType partType; // see PartType
+    private MaterialFormat partType; // see MaterialFormat
     @Column(precision = 8, scale = 2) //999,999.99 mm
     private BigDecimal thickness;
     
@@ -63,6 +78,7 @@ public class Part implements Serializable {
     private BigDecimal flatObbLength;
     @Column(precision = 9, scale = 3) //999,999.999 mm
     private BigDecimal flatObbWidth;
+    private Long bends;
     private Long timesRepeated;
     @ManyToOne
     private CADFile cadfile;    
@@ -137,14 +153,14 @@ public class Part implements Serializable {
     /**
      * @return the partType
      */
-    public PartType getPartType() {
+    public MaterialFormat getPartType() {
         return partType;
     }
 
     /**
      * @param partType the partType to set
      */
-    public void setPartType(PartType partType) {
+    public void setPartType(MaterialFormat partType) {
         this.partType = partType;
     }
 

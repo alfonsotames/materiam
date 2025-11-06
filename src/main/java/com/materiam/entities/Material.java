@@ -4,6 +4,7 @@
  */
 package com.materiam.entities;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,7 +13,9 @@ import java.io.Serializable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  *
@@ -21,17 +24,17 @@ import java.math.BigDecimal;
 @Entity
 public class Material implements Serializable {
 
-
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @SequenceGenerator(name = "sequenceGenerator",  sequenceName = "id")
     private Long id;
     private String code;
     @ManyToOne
-    private MaterialFamily materialFamily;
+    private MaterialType materialType;
     private String name;
-    private String type;
-    private String description;
+    private MaterialFormat materialFormat;
+
     private String gauge;
     
     @Column(precision = 8, scale = 2) //999,999.99 mm
@@ -52,13 +55,11 @@ public class Material implements Serializable {
     
     @Column(precision = 10, scale = 6) // $1.543234 Kg x 20 tons: $30,864.68
     private BigDecimal pricePerKg;
-    @Column(precision = 6, scale = 2) // 28.5 mm/s
-    private BigDecimal laserCuttingSpeed;
-    @Column(precision = 6, scale = 2) // 28.5 mm/s
-    private BigDecimal wjCuttingSpeed;
-    @Column(precision = 6, scale = 2) // 28.5 mm/s
-    private BigDecimal plasmaCuttingSpeed;
+    
 
+    @OneToMany(mappedBy = "material", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<CuttingSpeed> cuttingSpeeds;
+    
     /**
      * @return the id
      */
@@ -88,20 +89,6 @@ public class Material implements Serializable {
     }
 
     /**
-     * @return the materialFamily
-     */
-    public MaterialFamily getMaterialFamily() {
-        return materialFamily;
-    }
-
-    /**
-     * @param materialFamily the materialFamily to set
-     */
-    public void setMaterialFamily(MaterialFamily materialFamily) {
-        this.materialFamily = materialFamily;
-    }
-
-    /**
      * @return the name
      */
     public String getName() {
@@ -115,33 +102,8 @@ public class Material implements Serializable {
         this.name = name;
     }
 
-    /**
-     * @return the type
-     */
-    public String getType() {
-        return type;
-    }
 
-    /**
-     * @param type the type to set
-     */
-    public void setType(String type) {
-        this.type = type;
-    }
 
-    /**
-     * @return the description
-     */
-    public String getDescription() {
-        return description;
-    }
-
-    /**
-     * @param description the description to set
-     */
-    public void setDescription(String description) {
-        this.description = description;
-    }
 
     /**
      * @return the gauge
@@ -255,50 +217,7 @@ public class Material implements Serializable {
         this.pricePerKg = pricePerKg;
     }
 
-    /**
-     * @return the laserCuttingSpeed
-     */
-    public BigDecimal getLaserCuttingSpeed() {
-        return laserCuttingSpeed;
-    }
 
-    /**
-     * @param laserCuttingSpeed the laserCuttingSpeed to set
-     */
-    public void setLaserCuttingSpeed(BigDecimal laserCuttingSpeed) {
-        this.laserCuttingSpeed = laserCuttingSpeed;
-    }
-
-    /**
-     * @return the wjCuttingSpeed
-     */
-    public BigDecimal getWjCuttingSpeed() {
-        return wjCuttingSpeed;
-    }
-
-    /**
-     * @param wjCuttingSpeed the wjCuttingSpeed to set
-     */
-    public void setWjCuttingSpeed(BigDecimal wjCuttingSpeed) {
-        this.wjCuttingSpeed = wjCuttingSpeed;
-    }
-
-    /**
-     * @return the plasmaCuttingSpeed
-     */
-    public BigDecimal getPlasmaCuttingSpeed() {
-        return plasmaCuttingSpeed;
-    }
-
-    /**
-     * @param plasmaCuttingSpeed the plasmaCuttingSpeed to set
-     */
-    public void setPlasmaCuttingSpeed(BigDecimal plasmaCuttingSpeed) {
-        this.plasmaCuttingSpeed = plasmaCuttingSpeed;
-    }
-
-
- 
     
     
     
@@ -326,5 +245,47 @@ public class Material implements Serializable {
     public String toString() {
         return "com.materiam.entities.Material[ id=" + getId() + " ]";
     }    
+
+    /**
+     * @return the materialType
+     */
+    public MaterialType getMaterialType() {
+        return materialType;
+    }
+
+    /**
+     * @param materialType the materialType to set
+     */
+    public void setMaterialType(MaterialType materialType) {
+        this.materialType = materialType;
+    }
+
+    /**
+     * @return the materialFormat
+     */
+    public MaterialFormat getMaterialFormat() {
+        return materialFormat;
+    }
+
+    /**
+     * @param materialFormat the materialFormat to set
+     */
+    public void setMaterialFormat(MaterialFormat materialFormat) {
+        this.materialFormat = materialFormat;
+    }
+
+    /**
+     * @return the cuttingSpeeds
+     */
+    public List<CuttingSpeed> getCuttingSpeeds() {
+        return cuttingSpeeds;
+    }
+
+    /**
+     * @param cuttingSpeeds the cuttingSpeeds to set
+     */
+    public void setCuttingSpeeds(List<CuttingSpeed> cuttingSpeeds) {
+        this.cuttingSpeeds = cuttingSpeeds;
+    }
     
 }

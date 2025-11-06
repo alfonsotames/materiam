@@ -1,0 +1,97 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                template="fetemplate.xhtml"
+                xmlns:p="http://primefaces.org/ui"
+                xmlns:f="jakarta.faces.core"
+                xmlns:h="jakarta.faces.html">
+
+    <ui:define name="top">
+        
+    </ui:define>
+
+    <ui:define name="content">
+        <div style="font-family: Materiam; font-size: 18px; width: 100%; background-color: white;"><center>THE MATERIALS</center></div>
+        <h:form id="form">
+            <p:growl id="msgs" showDetail="true"/>
+
+            <table>
+                <tr>
+                    <td><h:inputText value="#{productController.currentProduct.name}"/></td>
+                    <td><h:inputText value="#{productController.currentProduct.sku}"/></td>
+                    <td>
+                        <p:selectOneMenu value="#{productController.currentProduct.unit}">
+                            <f:selectItems value="#{productController.units}" var="unit" itemLabel="#{unit.name}  #{unit.symbol}" itemValue="#{unit}"/>
+                        </p:selectOneMenu>
+                    </td>
+                    <td>
+                        <p:selectManyMenu id="advanced" value="#{productController.selectedCategories}"
+                                            converter="#{categoryConverter}"
+                                            var="c" filter="true" filterMatchMode="contains" filterNormalize="true"
+                                            showCheckbox="true" styleClass="manymenu-advanced">
+                            <f:selectItems value="#{productController.categories}" var="category" itemLabel="#{category.value}"
+                                            itemValue="#{category}"/>
+
+
+
+                            <p:column>
+                                #{c.value}
+                            </p:column>
+                        </p:selectManyMenu>                        
+                    </td>
+                    <td>
+                        <p:commandButton value="Save" action="#{productController.save}" />
+                    </td>
+                </tr>
+            </table>
+           <p:dataTable id="materials" var="material" value="#{productController.products}" 
+                         widgetVar="cellMaterials" stripedRows="true">
+
+               
+                <p:column headerText="Name" width="140px; padding: 0px; margin: 0px; color:black;">
+                    <h:outputText style="color: white;" value="#{material.name}" />
+                </p:column>
+
+                <p:column headerText="SKU" width="80px; padding: 0px; margin: 0px; color:black;">
+                    <h:outputText style="color: white;" value="#{material.sku}" />
+                </p:column>
+                <p:column headerText="Unit" width="30px; padding: 0px; margin: 0px; color:black;">
+                    <h:outputText style="color: white;" value="#{material.unit.name}" />
+                </p:column>               
+                <p:column headerText="Categories" width="140px; padding: 0px; margin: 0px; color:black;">
+                    <span style="color: white;">
+                        <ui:repeat value="#{material.categories}" var="cat">
+                            #{cat.categoryType.name} : #{cat.value}<br/>
+                        </ui:repeat>
+                    </span>                 
+                </p:column>
+               
+                <p:column headerText="Properties" width="140px; padding: 0px; margin: 0px; color:black;">
+                    <span style="color: white;">
+                        <table style="color:white;">
+                            <ui:repeat value="#{material.properties}" var="prop">
+                                <tr>
+                                    <td>#{prop.propertyType.name}</td>
+                                    <td>
+                                        <h:outputText value="#{prop.value}" ><f:convertNumber minFractionDigits="2" /></h:outputText>
+                                    </td>
+                                    <td>#{prop.propertyType.unit.symbol}</td>
+                                </tr>
+                            </ui:repeat>
+                        </table>
+                    </span>
+                </p:column>
+             
+               
+            </p:dataTable>
+            
+            <p:commandButton actionListener="#{productController.test}" value="Add Product" />    
+        </h:form>
+    </ui:define>
+
+    <ui:define name="bottom">
+        
+    </ui:define>
+
+</ui:composition>

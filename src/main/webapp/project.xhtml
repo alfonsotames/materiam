@@ -29,58 +29,44 @@
     </ui:define>
 
     <ui:define name="content">
-       
-
-            
-                <div style="
-                    width: 100%;
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
-                    grid-template-rows: auto; /* Allows row height to adjust to content */
-                    justify-content: center; /* Centers the grid horizontally within its parent */
-                    align-items: start; /* Centers items vertically within their cells */
-                    ">
-                        
                     <div style="color: white; "><div id="viewport"  /></div>
-                    <div id="info" style="position: absolute;   position: absolute; height: 400px;
+                    <div id="info" style="position: absolute;   position: absolute;  z-index: 10;
                             top: 10px;
                             left: 10px;
                             padding: 0px; width: 360px; ">
                         <h:form id="form" onkeypress="if (event.keyCode == 13) { saver(); event.preventDefault();}" style="margin-bottom: 0px;">
-                            <p:remoteCommand name="saver" actionListener="#{projectcontroller.save()}" update="nombre"  />
+                            <p:remoteCommand name="saver" actionListener="#{projectController.save()}" update="nombre"  />
                             <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;">
                                 <span style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
                                     <p:inplace id="nombre" editor="true">
-                                        <p:inputText  value="#{projectcontroller.activeProject.name}" required="true" label="text"/>
+                                        <p:inputText  value="#{projectController.activeProject.name}" required="true" label="text"/>
 
-                                        <p:ajax event="save" listener="#{projectcontroller.save}" update="nombre"/>
+                                        <p:ajax event="save" listener="#{projectController.save}" update="nombre"/>
                                     </p:inplace>
                                 </span>
                             </div>
                         </h:form>
-                        
-       
-                        <div ondragover="dragging()" ondragleave="dragout()" ondrop="drop()" style="background-color: white;  padding: 0px;">
+                        <div ondragover="dragging()" ondragleave="dragout()" ondrop="drop()" style="background-color: white;  padding: 0px; ">
                             <h:form id="submitwsid" style="margin-top: 0px; margin-bottom: 0px;">
 
-                                <h:inputHidden id="wsid" value="#{projectcontroller.wsid}" />
-                                <h:commandButton id="hiddenButton" action="#{projectcontroller.submitwsid}" style="display:none;">
+                                <h:inputHidden id="wsid" value="#{projectController.wsid}" />
+                                <h:commandButton id="hiddenButton" action="#{projectController.submitwsid}" style="display:none;">
                                     <f:ajax execute="@form" render="submitwsid" />
                                 </h:commandButton>                            
                             </h:form>
 
                             <h:form id="dropzone"  enctype="multipart/form-data" style="margin-top: 0px; margin-bottom: 0px;">
-                                <h:inputHidden id="wsid" value="#{projectcontroller.wsid}" />
+                                <h:inputHidden id="wsid" value="#{projectController.wsid}" />
 
-                                <div style=" padding: 5px;">
+                                <div style=" padding: 5px; ">
 
                                     
                                     <div class="grid_two" style="border:1px dashed grey; margin-bottom: 5px;">    
                                         <div id="statusimage"  style="background-image: url('images/sheetmetal.png'); 
-                                            width:90px; height:50px;
+                                            width:60px; height:50px;
 
                                             margin-left: 40px;
-                                            background-size:     80px 55px;                      
+                                            background-size:     60px 40px;                      
                                             background-repeat:   no-repeat;
                                             background-position: center center;  
                                                 ">
@@ -89,7 +75,7 @@
                                         </div>
                                         <div style="margin-top:10px;">Drag &amp; drop additional files to project.</div>
                                     </div>
-                                    <p:fileUpload listener="#{projectcontroller.upload}"
+                                    <p:fileUpload listener="#{projectController.upload}"
                                                   dropZone="dropzone"
                                                   mode="advanced"
                                                   auto="true" 
@@ -109,10 +95,10 @@
                         
                         <h:form id="formparts" style="margin-top:0px;">
                      
-                            <div style="background-color: grey; color: white; padding-left: 10px;">Bill of Materials contains #{projectcontroller.quotedParts.size()} parts.</div>
-                            <div style="color: white; overflow-y: scroll;  height: 100%;">
+                            <div style="background-color: #5a5a5a; color: white; padding: 5px; font-size: 14px;">Manufacturing Order contains #{projectController.quotedParts.size()} parts:</div>
+                            <div style="color: white; overflow-y: scroll;  max-height: 50vh;">
 
-                                <p:dataView id="dataview" var="qp" value="#{projectcontroller.quotedParts}" paginator="false"
+                                <p:dataView id="dataview" var="qp" value="#{projectController.quotedParts}" paginator="false"
                                                 rowsPerPageTemplate="6,12,16"
                                                 paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
                                                 gridIcon="pi pi-th-large" listIcon="pi pi-bars">
@@ -126,23 +112,28 @@
                                                 grid-template-rows: auto; /* Allows row height to adjust to content */
                                                 justify-content: center; /* Centers the grid horizontally within its parent */
                                                 align-items: start; /* Centers items vertically within their cells */">
-                                                <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 100px;">
-                                                    <img style="width:100px; cursor: pointer; background-color: #fafafa;"
+                                                <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 80px;">
+                                                    <img style="width:80px; cursor: pointer; background-color: #fafafa;"
                                                          src="#{request.contextPath}/imageserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}"
                                                          onclick="loadGLB('#{request.contextPath}/glbserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}');"/>
                                                 </div>                                                     
-                                                <div style="margin: 4px;  width:220px; word-break: break-all;">
+                                                <div style="margin: 4px;  width:260px; word-break: break-all;">
                                                     <div style="font-size: 14px; "><B>#{qp.part.name}</B></div>
 
-                                                    <div style="font-size: 12px;">#{qp.part.material.name}</div>
-
-                                                    <!--<div class="product-description">Thickness: #{qp.part.thickness} mm</div>-->
+                                                    <div style="font-size: 14px;">#{qp.part.material.name}</div>
+                                                   
+                                                    <div style="font-size: 14px;">Thickness:
+                                                        <h:outputText value="#{qp.part.thickness}">
+                                                            <f:convertNumber maxFractionDigits="2" minFractionDigits="2" />
+                                                        </h:outputText>
+                                                          mm</div>
                                                     <div>#{qp.part.comments}</div>
                                                     <div style="margin-top:5px;">
                                                         <h:outputText style="font-weight: bold;" value="#{qp.price}" styleClass="product-price" rendered="#{qp.price ne 0}">
                                                             <f:convertNumber currencySymbol="USD$" type="currency"/>
                                                         </h:outputText>
                                                     </div>
+                                                     <div style="font-size: 14px;">Quantity: #{qp.part.timesRepeated}</div>
                                                 </div>
                                             </div>
                                         </p:dataViewListItem>
@@ -150,13 +141,22 @@
                             </div>
 
                             <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-bottom-right-radius: 8px; border-bottom-left-radius: 8px; color: black;">
-                                <span style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
-                                    Total: $ 563.67
-                                </span>
+                                <div class="grid_two">
+                                    <div style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
+                                            Total 
+
+                                    </div>
+                                 
+                                    <div style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
+                                        <h:outputText style="font-weight: bold;" value="#{projectController.total}" styleClass="product-price" >
+                                            <f:convertNumber currencySymbol="USD$" type="currency"/>
+                                        </h:outputText>                                           
+                                    </div>
+                                </div>
                             </div>
                         </h:form>   
                     </div>
-                </div>
+
         
 
         <script type="text/javascript">

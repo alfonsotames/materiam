@@ -51,6 +51,7 @@ But it has a very deep hierarchy.
 public class UserController implements Serializable {
 
 
+
     
     @Inject
     private SecurityContext securityContext;
@@ -120,7 +121,8 @@ public class UserController implements Serializable {
                     user.getProjects().add(projectController.getActiveProject());
                     
                 }
-                
+
+
                 
                 return "account/index.xhtml";
             } else if (status.equals(SEND_FAILURE)) {
@@ -190,6 +192,7 @@ public class UserController implements Serializable {
     public void setUser(User user) {
         this.user = user;
     }
+
 
     
 }

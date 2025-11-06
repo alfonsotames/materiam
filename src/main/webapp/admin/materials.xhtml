@@ -4,7 +4,8 @@
                 xmlns:ui="jakarta.faces.facelets"
                 template="../fetemplate.xhtml"
                 xmlns:p="http://primefaces.org/ui"
-                xmlns:f="jakarta.faces.core">
+                xmlns:f="jakarta.faces.core"
+                xmlns:h="jakarta.faces.html">
 
     <ui:define name="top">
         
@@ -12,11 +13,225 @@
 
     <ui:define name="content">
         <div style="font-family: Materiam; font-size: 18px; width: 100%; background-color: white;"><center>MATERIALS</center></div>
+        <h:form id="form">
+            <p:growl id="msgs" showDetail="true"/>
 
+            <p:dataTable id="materials" var="material" value="#{materialController.materials}" editable="true"
+                         editMode="cell" widgetVar="cellMaterials" stripedRows="true">
+                <p:ajax event="cellEdit" listener="#{materialController.onCellEdit}"  update=":form:msgs"/>
+
+                
+                <p:column headerText="Type" width="140px; padding: 0px; margin: 0px;">
+                    <f:facet name="header">
+                        <p:panel header="Material Format" style="padding: 2px;">
+                            <p:selectOneMenu style="width: 100px !important"  value="#{materialController.mfFilter}" converter="MaterialFormatConverter">
+                                <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems  var="mf" value="#{materialController.materialFormats}" itemLabel="#{mf.name}" itemValue="#{mf}" />
+                                <f:ajax event="change" render="form" listener="#{materialController.updateFilter}" />
+                            </p:selectOneMenu>                
+                        </p:panel>
+                    </f:facet>
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.materialFormat.name}" />
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:selectOneMenu style="width: 90px !important;" value="#{material.materialFormat}" converter="MaterialFormatConverter">
+                                <f:selectItems value="#{materialController.materialFormats}" 
+                                           var="mf" itemLabel="#{mf.name}" itemValue="#{mf}"/>
+                            </p:selectOneMenu>                            
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>                
+                
+                <p:column headerText="Alloy/Type" width="200px">
+                    <f:facet name="header">
+                        <p:panel header="Material Type" style="padding: 2px;">
+                            <p:selectOneMenu style="width: 160px !important"  value="#{materialController.mtFilter}" converter="MaterialTypeConverter">
+                                <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems  var="mt" value="#{materialController.materialTypes}" itemLabel="#{mt.name}" itemValue="#{mt}" />
+                                <f:ajax event="change" render="form" listener="#{materialController.updateFilter}" />
+                            </p:selectOneMenu>                
+                        </p:panel>
+                    </f:facet>
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.materialType.name}" />
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:selectOneMenu value="#{material.materialType}" converter="MaterialTypeConverter" >
+                            <f:selectItems value="#{materialController.materialTypes}"  
+                                           var="type" itemLabel="#{type.name}" itemValue="#{type}"/>
+                        </p:selectOneMenu>                            
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>
+                
+                <p:column headerText="Code" style="width: 150px;">
+                    <f:facet name="header">
+                        Code
+                        <p:inputText value="#{materialController.newMaterial.code}" styleClass="formfield"  label="Code"/>
+                    </f:facet>
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.code}" />
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText id="code" value="#{material.code}" styleClass="formfield" />
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>  
+                
+                
+                <p:column headerText="Name" style="width:240px;" >
+                    <f:facet name="header">
+                        Name
+                        <p:inputText value="#{materialController.newMaterial.name}" styleClass="formfield"  label="Name"/>
+                    </f:facet>                    
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.name}"/>
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText value="#{material.name}" styleClass="formfield"  label="Name"/>
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>
+                
+                
+                <p:column headerText="Gauge">
+                    <f:facet name="header">
+                        Gauge
+                        <p:inputText value="#{materialController.newMaterial.gauge}" styleClass="formfield"  label="Gauge"/>
+                    </f:facet>                        
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.gauge}"/>
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText id="gauge" value="#{material.gauge}" styleClass="formfield" />
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>              
+                <p:column headerText="Thickness">
+                    <f:facet name="header">
+                        Thickness
+                        <p:inputText value="#{materialController.newMaterial.thickness}" styleClass="formfield" label="Thickness"/>
+                    </f:facet>                     
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.thickness}"/>
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText id="thickness" value="#{material.thickness}" styleClass="formfield" />
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>
+                <p:column headerText="Length">
+                    <f:facet name="header">
+                        Length
+                        <p:inputText value="#{materialController.newMaterial.length}" styleClass="formfield"  label="Length"/>
+                    </f:facet>                     
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.length}"/>
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText id="length" value="#{material.length}" styleClass="formfield" />
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>                
+                <p:column headerText="Width">
+                    <f:facet name="header">
+                        Width
+                        <p:inputText value="#{materialController.newMaterial.width}" styleClass="formfield"  label="Width"/>
+                    </f:facet>                     
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.width}"/>
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText id="width" value="#{material.width}" styleClass="formfield" />
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>
+                <p:column headerText="Density">
+                    <f:facet name="header">
+                        Density
+                        <p:inputText value="#{materialController.newMaterial.density}" styleClass="formfield"  label="Density"/>
+                    </f:facet>                     
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.density}"/>
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText id="density" value="#{material.density}" styleClass="formfield" />
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>
+                <p:column headerText="Diameter">
+                    <f:facet name="header">
+                        Diameter
+                        <p:inputText value="#{materialController.newMaterial.diameter}" styleClass="formfield"  label="Diameter"/>
+                    </f:facet>                     
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.diameter}"/>
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText id="diameter" value="#{material.diameter}" styleClass="formfield" />
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>                
+                <p:column headerText="Height">
+                    <f:facet name="header">
+                        Height
+                        <p:inputText value="#{materialController.newMaterial.height}" styleClass="formfield"  label="Height"/>
+                    </f:facet>                     
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText value="#{material.height}"/>
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText id="height" value="#{material.height}" styleClass="formfield" />
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>
+                <p:column headerText="Price Per Kg">
+                    <f:facet name="header">
+                        $/Kg
+                        <p:inputText value="#{materialController.newMaterial.pricePerKg}" styleClass="formfield"  label="Price/Kg"/>
+                    </f:facet>                     
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText style="font-weight: bold;" value="#{material.pricePerKg}" styleClass="product-price" rendered="#{qp.price ne 0}">
+                                <f:convertNumber currencySymbol="$" type="currency"/>
+                            </h:outputText>                            
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText id="pricePerKg" value="#{material.pricePerKg}" styleClass="formfield" />
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>
+                <p:column headerText="Id" style="color: white; width:30px;">
+                    <f:facet name="header">
+                        <p:commandLink style="width: 50px;  padding: 0px;" id="add" actionListener="#{materialController.saveNewMaterial}" update="materials msgs"><i class="pi pi-save" style="color:black;" /></p:commandLink>
+                    </f:facet>
+                    
+                        <h:outputText value="#{material.id}"/>
+                  
+                </p:column>
+                    
+                <p:column headerText="">
+                    <p:commandLink style="width: 50px;  padding: 0px;"  actionListener="#{materialController.deleteMaterial(material)}" update="materials msgs"><i class="pi pi-trash" style="color:white;" /></p:commandLink>
+                </p:column>
+            </p:dataTable>
+
+        </h:form>
     </ui:define>
 
     <ui:define name="bottom">
-        bottom
+        
     </ui:define>
 
 </ui:composition>

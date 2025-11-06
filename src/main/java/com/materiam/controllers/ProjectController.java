@@ -5,11 +5,12 @@
 package com.materiam.controllers;
 
 import com.materiam.entities.CADFile;
+import com.materiam.entities.CuttingSpeed;
 import com.materiam.entities.FabProcess;
 import com.materiam.entities.Instance;
 import com.materiam.entities.Material;
 import com.materiam.entities.Part;
-import com.materiam.entities.PartType;
+import com.materiam.entities.MaterialFormat;
 import com.materiam.entities.Project;
 import events.EventQualifier;
 import events.ImportUpdate;
@@ -63,7 +64,17 @@ import org.primefaces.model.file.UploadedFile;
 // TODO: ProjectController must have a list of active uploads 
 // Each upload must send status messages starting with an identifying string- projectid:99|||cafdile:23|||Message
 
-@Named(value = "projectcontroller")
+/* TODO: Crea una clase ManufacturingOrder donde incluyas las partes que van a la orden con sus cantidades y un total
+       La base es QuotedParts!!! incluye shipping, shipping address, etc. Pon checkboxes prechecadas en las partes
+       manufacturables. En las que no (tornillos) sin el check y si le dan check un "will quote in separate order".
+*/
+
+/* TODO: Pon un icono de ojito en la esquina derecha superior de la imagen de la parte para incluirla en el assembly
+            y así ir haciendo pares para luego poner el selector de soldadura
+*/
+
+
+@Named(value = "projectController")
 @SessionScoped
 @Transactional
 public class ProjectController implements Serializable {
@@ -138,18 +149,40 @@ public class ProjectController implements Serializable {
 
 
 
-                // TODO: Determine the cutting process by thickness and max min for each material / process
+                /* TODO: Determine the cutting process by thickness and max min for each material / process.
+                         Right now it is hard set at Laser cutting.
+                */
                 FabProcess fp = (FabProcess)em.find(FabProcess.class, 1L);
 
                 // get process time
                 System.out.println("p.getFlatTotalContourLength()"+p.getFlatTotalContourLength());
-                System.out.println("p.getMaterial().getLaserCuttingSpeed()"+p.getMaterial().getLaserCuttingSpeed());
-                BigDecimal pPrice =  p.getFlatTotalContourLength().divide(p.getMaterial().getLaserCuttingSpeed(), 2, RoundingMode.HALF_UP);
+                
+                // get cutting speed
+                CuttingSpeed cs = (CuttingSpeed)em.createQuery(
+                        "select cs from CuttingSpeed cs where cs.material=:material and cs.fabProcess=:fabProcess")
+                        .setParameter("material", p.getMaterial())
+                        .setParameter("fabProcess", fp)
+                        .getSingleResult();
+                
+                System.out.println("Cutting speed: "+cs.getSpeed());
+                BigDecimal pPrice =  p.getFlatTotalContourLength().divide(cs.getSpeed(), 2, RoundingMode.HALF_UP);
                 System.out.println("Process Time in Seconds: "+pPrice);
                 pPrice = pPrice.multiply((fp.getPriceph().divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)));
 
                 System.out.println("Process price: "+pPrice);
                 price = price.add(pPrice);
+                
+                // Press break down curtain -> 10 segs
+                FabProcess fppb = (FabProcess)em.find(FabProcess.class, 3L);
+                BigDecimal ppb = (fppb.getPriceph()).divide(new BigDecimal(60),2, RoundingMode.HALF_UP);
+                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Price per minute of press breake: $ "+ppb);
+                ppb = ppb.divide(new BigDecimal(6), 2, RoundingMode.HALF_UP);
+                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Price per bend: $ "+ppb);
+                
+                if (p.getPartType().getType().equals("SHEET_METAL_FOLDED")) {
+                    price = price.add(ppb.multiply(new BigDecimal(qp.getPart().getBends())));
+                }
+                
                 qp.setPrice(price);
 
                 } else if (p.getPartType().getType().equals("TUBE_RECTANGULAR") ) {
@@ -167,6 +200,17 @@ public class ProjectController implements Serializable {
             qps.add(qp);
         }        
         return qps;
+    }
+    
+    public BigDecimal getTotal() {
+        BigDecimal total = new BigDecimal(0);
+        List<QuotedPart> parts = getQuotedParts();
+        for (QuotedPart q : getQuotedParts()) {
+
+                total = total.add(q.getPrice());
+
+        }
+        return total;
     }
     
 
@@ -214,7 +258,7 @@ public class ProjectController implements Serializable {
         if (getActiveProject() == null) {
             // Generate a new project
             setActiveProject(new Project());
-            getActiveProject().setName("New Project");
+            getActiveProject().setName(fileName);
             getActiveProject().setPostedDate(new Date());
             em.persist(getActiveProject());
             em.flush();
@@ -328,7 +372,7 @@ public class ProjectController implements Serializable {
                     part.setDimZ(b.getJsonNumber("bboxDz").bigDecimalValue());
                     
                     
-                    PartType pt = (PartType)em.createQuery("select pt from PartType pt where pt.type=:type").setParameter("type", type).getSingleResult();
+                    MaterialFormat pt = (MaterialFormat)em.createQuery("select mf from MaterialFormat mf where mf.type=:type").setParameter("type", type).getSingleResult();
                     part.setPartType(pt);
                     // TODO: Define routing and BOM data structures
                     /*
@@ -343,15 +387,19 @@ public class ProjectController implements Serializable {
                     
                     
                     if (type.equals("SHEET_METAL_FOLDED") || type.equals("SHEET_METAL_FLAT")) {
+                        if (type.equals("SHEET_METAL_FOLDED")) {
+                            JsonArray bends = b.getJsonArray("bends");
+                            part.setBends((long)bends.size());
+                        }
                         part.setFlatObbWidth(b.getJsonNumber("flatAabbWidth").bigDecimalValue());
                         part.setFlatObbLength(b.getJsonNumber("flatAabbLength").bigDecimalValue());
                         part.setThickness(b.getJsonNumber("thickness").bigDecimalValue());
                         part.setFlatTotalContourLength(b.getJsonNumber("flatTotalContourLength").bigDecimalValue());
                         part.setVolume(b.getJsonNumber("volume").bigDecimalValue());
                         part.setTotalArea(b.getJsonNumber("totalArea").bigDecimalValue());
-                        // Assign Material id:1 as default
-                        Material m = em.find(Material.class, 1L);
-                        part.setMaterial(m);
+                        
+                        //Material m = (Material)em.createQuery("select m from Material m order by abs(m.thickness - :thickness)").setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue()).setMaxResults(1).getSingleResult();
+                        //part.setMaterial(m);
 
                     } else if (type.equals("TUBE_RECTANGULAR")) {
                         part.setSectionWidth(b.getJsonNumber("sectionWidth").bigDecimalValue());
@@ -419,16 +467,18 @@ public class ProjectController implements Serializable {
 
                     
                     Part part = partmap.get(persid.getString());
-                    System.out.println("Found part "+part.getPersid());
-                    System.out.println("The part found has id: "+part.getId());
-                    instance.setPart(part);
+                    if (part != null) {
+                        System.out.println("Found part "+part.getPersid());
+                        System.out.println("The part found has id: "+part.getId());
+                        instance.setPart(part);
 
-                    instance.setRotx(rotation.getJsonNumber(0).bigDecimalValue());
-                    instance.setTransx(translation.getJsonNumber(0).bigDecimalValue());
-                    instance.setCadfile(f);
+                        instance.setRotx(rotation.getJsonNumber(0).bigDecimalValue());
+                        instance.setTransx(translation.getJsonNumber(0).bigDecimalValue());
+                        instance.setCadfile(f);
 
-                    em.persist(instance);
-                    em.flush();
+                        em.persist(instance);
+                        em.flush();
+                    }
                 }
             }
             
@@ -472,8 +522,8 @@ public class ProjectController implements Serializable {
         
         
     
-    public Material getMaterialByThickness(Double thickness) {
-        return (Material)em.createQuery("select m from Material m where m.thickness=:thickness").setParameter("thickness", thickness).getSingleResult();
+    public Material getMaterialByThickness(BigDecimal thickness) {
+        return (Material)em.createQuery("select m from Material m order by ABS(m.thickness - :thickness").setParameter("thickness", thickness).getSingleResult();
     }
     
     public void deleteProject() {

@@ -9,6 +9,7 @@ import com.materiam.entities.Category;
 import com.materiam.entities.Product;
 import com.materiam.entities.Property;
 import com.materiam.entities.PropertyType;
+import com.materiam.entities.Unit;
 import com.materiam.helpers.RawMaterial;
 import jakarta.annotation.PostConstruct;
 import jakarta.faces.application.FacesMessage;
@@ -23,6 +24,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -76,22 +78,33 @@ public class RawMaterialsController implements Serializable {
     */
     
     public void saveNewRawMaterial() {
-        
-        Product np = newRawMaterial.getProduct();
-        
-        Property w = newRawMaterial.getWidth();
-        Property l = newRawMaterial.getLength();
-        Property h = newRawMaterial.getHeight();
-        Property t = newRawMaterial.getThickness();
-        Property d = newRawMaterial.getDiameter();
-        Property den = newRawMaterial.getDensity();
-        Property ppk = newRawMaterial.getPriceperkg();
+        System.out.println("********** SAVE NEW RAW MATERIAL *************");
+        System.out.println("Filter Alloy: "+alloyFilter.getName());
+        System.out.println("Filter Shape: "+shapeFilter.getName());
+
+
         Category alloy = em.find(Category.class, alloyFilter.getId());
         Category shape = em.find(Category.class, shapeFilter.getId());
-
-
-        System.out.println("Persisting new product: "+np.getName());
         
+        
+        
+        newRawMaterial.setAlloy(alloy);
+        newRawMaterial.setShape(shape);
+        
+        Unit u = em.find(Unit.class, 1L);
+        newRawMaterial.getProduct().setUnit(u);
+
+        System.out.println("Persisting new product: "+newRawMaterial.getProduct().getName());
+        
+        Set<Category> cats = new HashSet<>();
+        cats.add(shape);
+        cats.add(alloy);
+        alloy.getProducts().add(newRawMaterial.getProduct());
+        shape.getProducts().add(newRawMaterial.getProduct());
+        
+        newRawMaterial.getProduct().setCategories(cats);
+        
+        /*
         np.getProperties().add(w);
         System.out.println("Mide "+np.getProperties().size());
         np.getProperties().add(l);
@@ -110,23 +123,24 @@ public class RawMaterialsController implements Serializable {
         //np.getCategories().add(shape);
         alloy.getProducts().add(np);
         shape.getProducts().add(np);
-        
+        */
         /* --- borrame --- */
         
         System.out.println("Properties and Categories !");
-        for (Property p : np.getProperties()) {
+        for (Property p : newRawMaterial.getProduct().getProperties()) {
             System.out.println(p.getPropertyType().getName()+" = "+p.getValue());
         }
         
-        for (Category c : np.getCategories()) {
+        for (Category c : newRawMaterial.getProduct().getCategories()) {
             System.out.println(c.getName());
         }
         
         /* --------------- */        
         
-        em.persist(np);
-        
-        
+        em.persist(newRawMaterial.getProduct());
+        em.merge(alloy);
+        em.merge(shape);
+        newRawMaterial=initNewRawMaterial();
         updateFilter();
         
     }
@@ -164,6 +178,7 @@ public class RawMaterialsController implements Serializable {
     
     public void updateFilter() {
         rawMaterials = new ArrayList<>();
+        
         String jpql = "select DISTINCT p, w, l, h, t, d, den, ppk, alloy, shape "
                 + " from Product p, Property w, Property l, Property h, "
                 + "Property t, Property d, Property den, Property ppk, Category alloy, Category shape, Category metal where "
@@ -220,17 +235,19 @@ public class RawMaterialsController implements Serializable {
             rm.setShape(shape);
             
             rawMaterials.add(rm);
-        }        
+        }
+    newRawMaterial.setAlloy(alloyFilter);
+    newRawMaterial.setShape(shapeFilter);
     }
     
     @PostConstruct
     public void init() {
-        initNewRawMaterial();
+        this.newRawMaterial = initNewRawMaterial();
         updateFilter();
     }
 
-    public void initNewRawMaterial() {
-        newRawMaterial = new RawMaterial();
+    public RawMaterial initNewRawMaterial() {
+        RawMaterial nrm = new RawMaterial();
         Property width  = initPropertyByType("WIDTH");
         Property length = initPropertyByType("LENGTH");
         Property height = initPropertyByType("HEIGHT");
@@ -239,15 +256,43 @@ public class RawMaterialsController implements Serializable {
         Property densit = initPropertyByType("DENSITY");
         Property prppkg = initPropertyByType("PRICEPERKG");
         
-        newRawMaterial.setProduct(new Product());
-        newRawMaterial.setWidth(width);
-        newRawMaterial.setLength(length);
-        newRawMaterial.setHeight(height);
-        newRawMaterial.setThickness(thickn);
-        newRawMaterial.setDiameter(diamet);
-        newRawMaterial.setDensity(densit);
-        newRawMaterial.setPriceperkg(prppkg);
+        Product p = new Product();
+
         
+        
+        nrm.setProduct(p);
+        
+        width.setProduct(p);
+        length.setProduct(p);
+        height.setProduct(p);
+        thickn.setProduct(p);
+        diamet.setProduct(p);
+        densit.setProduct(p);
+        prppkg.setProduct(p);
+        
+        
+        nrm.setWidth(width);
+        nrm.setLength(length);
+        nrm.setHeight(height);
+        nrm.setThickness(thickn);
+        nrm.setDiameter(diamet);
+        nrm.setDensity(densit);
+        nrm.setPriceperkg(prppkg);
+        
+        
+        nrm.getProduct().getProperties().add(width);
+        nrm.getProduct().getProperties().add(length);
+        nrm.getProduct().getProperties().add(height);
+        nrm.getProduct().getProperties().add(thickn);
+        nrm.getProduct().getProperties().add(diamet);
+        nrm.getProduct().getProperties().add(densit);
+        nrm.getProduct().getProperties().add(prppkg);
+        nrm.getProduct().getCategories().add(shapeFilter);
+        nrm.getProduct().getCategories().add(alloyFilter);
+        nrm.setShape(shapeFilter);
+        nrm.setAlloy(alloyFilter);
+        
+        return nrm;
     }
     
     public Property initPropertyByType(String type) {

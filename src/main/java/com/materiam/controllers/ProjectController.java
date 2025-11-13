@@ -5,13 +5,14 @@
 package com.materiam.controllers;
 
 import com.materiam.entities.CADFile;
-import com.materiam.entities.CuttingSpeed;
+import com.materiam.entities.Category;
 import com.materiam.entities.FabProcess;
 import com.materiam.entities.Instance;
 import com.materiam.entities.Material;
 import com.materiam.entities.Part;
-import com.materiam.entities.MaterialFormat;
+import com.materiam.entities.Product;
 import com.materiam.entities.Project;
+import com.materiam.entities.Property;
 import events.EventQualifier;
 import events.ImportUpdate;
 import jakarta.enterprise.context.SessionScoped;
@@ -133,7 +134,7 @@ public class ProjectController implements Serializable {
             System.out.println("Part id: "+p.getId());
             QuotedPart qp = new QuotedPart();
             qp.setPart(p);
-            if (p.getPartType().getType().equals("SHEET_METAL_FLAT") || p.getPartType().getType().equals("SHEET_METAL_FOLDED")) {
+            if (p.getShape().getKey().equals("SHEET_METAL_FLAT") || p.getShape().getKey().equals("SHEET_METAL_FOLDED")) {
                 BigDecimal price = new BigDecimal(0.00);
 
                 BigDecimal volumen;
@@ -143,9 +144,19 @@ public class ProjectController implements Serializable {
                 
                 price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
                 System.out.println("Price 1: "+price);
-                price = price.multiply(p.getMaterial().getDensity());
+                
+                // get material from new product relationship
+                
+                Property density = (Property)em.createQuery("select den from Property den where den.product=:product and den.propertyType.key='DENSITY'")
+                        .setParameter("product", p.getMaterial()).getSingleResult();
+                
+                price = price.multiply(density.getValue());
                 System.out.println("Price 2: "+price);
-                price = price.multiply(p.getMaterial().getPricePerKg());
+                
+                Property ppk = (Property)em.createQuery("select ppk from Property ppk where ppk.product=:product and ppk.propertyType.key='PRICEPERKG'")
+                        .setParameter("product", p.getMaterial()).getSingleResult();
+                
+                price = price.multiply(ppk.getValue());
 
 
 
@@ -158,41 +169,56 @@ public class ProjectController implements Serializable {
                 System.out.println("p.getFlatTotalContourLength()"+p.getFlatTotalContourLength());
                 
                 // get cutting speed
+                // TODO: integrate cutting speed
+                /*
                 CuttingSpeed cs = (CuttingSpeed)em.createQuery(
                         "select cs from CuttingSpeed cs where cs.material=:material and cs.fabProcess=:fabProcess")
                         .setParameter("material", p.getMaterial())
                         .setParameter("fabProcess", fp)
                         .getSingleResult();
-                
-                System.out.println("Cutting speed: "+cs.getSpeed());
-                BigDecimal pPrice =  p.getFlatTotalContourLength().divide(cs.getSpeed(), 2, RoundingMode.HALF_UP);
-                System.out.println("Process Time in Seconds: "+pPrice);
+                */
+                BigDecimal cs = new BigDecimal(28.5);
+                //System.out.println("Cutting speed: "+cs);
+                BigDecimal pPrice =  p.getFlatTotalContourLength().divide(cs, 2, RoundingMode.HALF_UP);
+                //System.out.println("Process Time in Seconds: "+pPrice);
                 pPrice = pPrice.multiply((fp.getPriceph().divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)));
 
-                System.out.println("Process price: "+pPrice);
+                //System.out.println("Process price: "+pPrice);
                 price = price.add(pPrice);
                 
                 // Press break down curtain -> 10 segs
                 FabProcess fppb = (FabProcess)em.find(FabProcess.class, 3L);
                 BigDecimal ppb = (fppb.getPriceph()).divide(new BigDecimal(60),2, RoundingMode.HALF_UP);
-                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Price per minute of press breake: $ "+ppb);
+                //System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Price per minute of press breake: $ "+ppb);
                 ppb = ppb.divide(new BigDecimal(6), 2, RoundingMode.HALF_UP);
-                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Price per bend: $ "+ppb);
+                //System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Price per bend: $ "+ppb);
                 
-                if (p.getPartType().getType().equals("SHEET_METAL_FOLDED")) {
+                if (p.getShape().getKey().equals("SHEET_METAL_FOLDED")) {
                     price = price.add(ppb.multiply(new BigDecimal(qp.getPart().getBends())));
                 }
                 
                 qp.setPrice(price);
 
-                } else if (p.getPartType().getType().equals("TUBE_RECTANGULAR") ) {
+                } else if (p.getShape().getKey().equals("TUBE_RECTANGULAR") ) {
+                    
+                    
+                    
+                Property density = (Property)em.createQuery("select den from Property den where "
+                        + "den.product=:product and den.propertyType.key='DENSITY'")
+                        .setParameter("product", p.getMaterial()).getSingleResult();
+                
+                Property ppk = (Property)em.createQuery("select ppk from Property ppk where "
+                        + "ppk.product=:product and ppk.propertyType.key='PRICEPERKG'")
+                        .setParameter("product", p.getMaterial()).getSingleResult();                    
+                    
+
                     BigDecimal price = new BigDecimal(0.00);
-                    System.out.println("Volume in mm3 of the tube: "+p.getVolume());
+                    //System.out.println("Volume in mm3 of the tube: "+p.getVolume());
                     price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
-                    System.out.println("Volume in m3: "+price);
-                    price = price.multiply(p.getMaterial().getDensity());
-                    System.out.println("Weight in Kg: "+price);
-                    price = price.multiply(p.getMaterial().getPricePerKg());
+                    //System.out.println("Volume in m3: "+price);
+                    price = price.multiply(density.getValue());
+                    //System.out.println("Weight in Kg: "+price);
+                    price = price.multiply(ppk.getValue());
                     qp.setPrice(price);
                 } else {
                     qp.setPrice(new BigDecimal(0));
@@ -317,6 +343,80 @@ public class ProjectController implements Serializable {
             } catch (InterruptedException ex) {
                 System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
+
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+        
+        try {
+            Runtime rt = Runtime.getRuntime();
+            String command = String.format("step2glb %s --outdir %s", (filedest + fileName), filedest);
+            System.out.println("* = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = Executing step2glb * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = ");
+            System.out.println("Executing step2glb: "+command);
+            Process pr = rt.exec(command);
+            importUpdate.fire(new ImportUpdate("Generating files...",wsid));
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+            String line;
+            System.out.println("Process Output:");
+            while ((line = reader.readLine()) != null) {
+
+                System.out.println(line);
+                if (line.startsWith("******") || line.contains("info")) {
+                    importUpdate.fire(new ImportUpdate(line,wsid));
+                }
+            }
+                pr.waitFor();
+            } catch (InterruptedException ex) {
+                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            } catch (IOException ex) {
+            System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
+
+            
+            
+        try {
+            Runtime rt = Runtime.getRuntime();
+            String command = String.format("mogrify %s*.png -transparent white %s*.png",filedest, filedest);
+            System.out.println("* = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = Executing mogrify * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = ");
+            System.out.println("Executing mogrify: "+command);
+            Process pr = rt.exec(command);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+            String line;
+            System.out.println("Process Output:");
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+                importUpdate.fire(new ImportUpdate(line,wsid));
+            }
+            pr.waitFor();
+            } catch (InterruptedException ex) {
+                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            } catch (IOException ex) {
+            System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
+        
+        /*
+        
+                    String step2glb = String.format("step2glb %s --outdir %s", (filedest + fileName), filedest);
+            pr = rt.exec(command);
+            importUpdate.fire(new ImportUpdate("Generating files...",wsid));
+            try {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+                String line;
+                System.out.println("Process Output:");
+                while ((line = reader.readLine()) != null) {
+                    
+                    System.out.println(line);
+                    if (line.startsWith("******") || line.contains("info")) {
+                        importUpdate.fire(new ImportUpdate(line,wsid));
+                    }
+                }
+                pr.waitFor();
+            } catch (InterruptedException ex) {
+                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            }
+
+            
             
             command = String.format("mogrify %s*.png -transparent white %s*.png",filedest, filedest);
             System.out.println("Executing mogrify: "+command);
@@ -333,11 +433,9 @@ public class ProjectController implements Serializable {
             } catch (InterruptedException ex) {
                 System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
-            
-            
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
+        */
+        
+        
         
         try (JsonReader jsonReader = Json.createReader(new StringReader(Files.readString(Paths.get(filedest+"out.json"))))) {
 
@@ -372,8 +470,10 @@ public class ProjectController implements Serializable {
                     part.setDimZ(b.getJsonNumber("bboxDz").bigDecimalValue());
                     
                     
-                    MaterialFormat pt = (MaterialFormat)em.createQuery("select mf from MaterialFormat mf where mf.type=:type").setParameter("type", type).getSingleResult();
-                    part.setPartType(pt);
+                    //MaterialFormat pt = (MaterialFormat)em.createQuery("select mf from MaterialFormat mf where mf.type=:type").setParameter("type", type).getSingleResult();
+                    
+                    Category shape = (Category)em.createQuery("select cat from Category cat where cat.key=:type").setParameter("type",type).getSingleResult();
+                    part.setShape(shape);
                     // TODO: Define routing and BOM data structures
                     /*
                     If it indeed is a Sheet Metal part, then we can define the manufacturing process.
@@ -400,6 +500,11 @@ public class ProjectController implements Serializable {
                         
                         //Material m = (Material)em.createQuery("select m from Material m order by abs(m.thickness - :thickness)").setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue()).setMaxResults(1).getSingleResult();
                         //part.setMaterial(m);
+                        
+                        Product m = (Product)em.createQuery("select p from Product p, Property t, Category shape "
+                                + "where t.product=p and t.propertyType.key='THICKNESS' and shape.key='SHEET_METAL_FLAT' and p.categories=shape order by abs(t.value - :thickness)")
+                                .setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue()).setMaxResults(1).getSingleResult();
+                        part.setMaterial(m);
 
                     } else if (type.equals("TUBE_RECTANGULAR")) {
                         part.setSectionWidth(b.getJsonNumber("sectionWidth").bigDecimalValue());
@@ -416,14 +521,62 @@ public class ProjectController implements Serializable {
                         */
                         System.out.println("Section Width: "+b.getJsonNumber("sectionWidth").bigDecimalValue().setScale(2, RoundingMode.HALF_UP));
                         
-                        Query q = em.createQuery("select m from Material m where m.type='TUBE_RECTANGULAR' and m.width=:w and m.height=:h and m.thickness=:t")
-                                .setParameter("w", b.getJsonNumber("sectionWidth").bigDecimalValue().setScale(2, RoundingMode.HALF_UP))
-                                .setParameter("h", b.getJsonNumber("sectionHeight").bigDecimalValue().setScale(2, RoundingMode.HALF_UP))
-                                .setParameter("t", b.getJsonNumber("thickness").bigDecimalValue().setScale(2, RoundingMode.HALF_UP));
+                        System.out.println(" ******************************************************************************************************************** ");
+                        System.out.println(" ************************ LOOKING FOR THE BEST FIT OF TUBE RECTANGUAR *********************************************** ");
+                        System.out.println("Tube Size (w,h): "+b.getJsonNumber("sectionWidth").bigDecimalValue()+","+b.getJsonNumber("sectionHeight").bigDecimalValue());
+                        System.out.println("Tube Length: "+b.getJsonNumber("partLength").bigDecimalValue());
+                        System.out.println("Tube Thickness: "+b.getJsonNumber("thickness").bigDecimalValue());
+                        
+                        BigDecimal x = b.getJsonNumber("sectionWidth").bigDecimalValue();
+                        BigDecimal y = b.getJsonNumber("sectionHeight").bigDecimalValue();
+                        
+                        BigDecimal width;
+                        BigDecimal height;
+                        
+                        if (x.compareTo(y) > 0) {
+                            width=x;
+                            height=y;
+                        } else {
+                            width=y;
+                            height=x;
+                        }
+                        
+                        /*        -------------------- TEST ---------------------    */
+                        List<Product> testp = em.createQuery("select p from Product p, Category shape, Property w, Property h, Property t "
+                                + "where shape.key='TUBE_RECTANGULAR' and shape.products=p and "
+                                + "w.propertyType.key='WIDTH'     and w.product=p and "
+                                + "h.propertyType.key='HEIGHT'    and h.product=p and "
+                                + "t.propertyType.key='THICKNESS' and t.product=p order by "
+                                + "abs(w.value - :width), "
+                                + "abs(h.value - :height), "
+                                + "abs(t.value - :thickness)")
+                                .setParameter("width", width.setScale(2, RoundingMode.HALF_UP))
+                                .setParameter("height", height.setScale(2, RoundingMode.HALF_UP))
+                                .setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue().setScale(2, RoundingMode.HALF_UP))
+                                .getResultList();
+                        for (Product tp : testp) {
+                            System.out.println("Product: "+tp.getName());
+                        }
+                        System.out.println(" ******************************************************************************************************************** ");
+                        
+                        /* --------------------------------------------------------- */
+                        
+                        Query q = em.createQuery("select p from Product p, Category shape, Property w, Property h, Property t "
+                                + "where shape.key='TUBE_RECTANGULAR' and shape.products=p and "
+                                + "w.propertyType.key='WIDTH'     and w.product=p and "
+                                + "h.propertyType.key='HEIGHT'    and h.product=p and "
+                                + "t.propertyType.key='THICKNESS' and t.product=p order by "
+                                + "abs(w.value - :width), "
+                                + "abs(h.value - :height), "
+                                + "abs(t.value - :thickness)")
+                                .setParameter("width", width.setScale(2, RoundingMode.HALF_UP))
+                                .setParameter("height", height.setScale(2, RoundingMode.HALF_UP))
+                                .setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue().setScale(2, RoundingMode.HALF_UP));
                         
                         
                         System.out.println("Query: "+q.toString());
-                        Material m = (Material)q.getSingleResult();
+                        
+                        Product m = (Product)q.setMaxResults(1).getSingleResult();
                         part.setMaterial(m); 
                     }
                     em.persist(part);

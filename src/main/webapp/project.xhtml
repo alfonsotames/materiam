@@ -33,7 +33,7 @@
                     <div id="info" style="position: absolute;   position: absolute;  z-index: 10;
                             top: 10px;
                             left: 10px;
-                            padding: 0px; width: 360px; ">
+                            padding: 0px; width: 400px; ">
                         <h:form id="form" onkeypress="if (event.keyCode == 13) { saver(); event.preventDefault();}" style="margin-bottom: 0px;">
                             <p:remoteCommand name="saver" actionListener="#{projectController.save()}" update="nombre"  />
                             <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;">
@@ -117,7 +117,7 @@
                                                          src="#{request.contextPath}/imageserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}"
                                                          onclick="loadGLB('#{request.contextPath}/glbserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}');"/>
                                                 </div>                                                     
-                                                <div style="margin: 4px;  width:260px; word-break: break-all;">
+                                                <div style="margin: 4px;  width:290px; word-break: break-all;">
                                                     <div style="font-size: 14px; "><B>#{qp.part.name}</B></div>
 
                                                     <div style="font-size: 14px;">#{qp.part.material.name}</div>

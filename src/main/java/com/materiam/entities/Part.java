@@ -43,14 +43,15 @@ public class Part implements Serializable {
     private String name;
     // TODO: Delete this property 
     @ManyToOne
-    private Material material;
+    private Product material;
+    
     
     
     
     private String persid; // Persistance ID (from STEP spec)
     private String prototype; // (from STEP spec)
     @ManyToOne
-    private MaterialFormat partType; // see MaterialFormat
+    private Category shape; //
     @Column(precision = 8, scale = 2) //999,999.99 mm
     private BigDecimal thickness;
     
@@ -108,19 +109,7 @@ public class Part implements Serializable {
         this.name = name;
     }
 
-    /**
-     * @return the material
-     */
-    public Material getMaterial() {
-        return material;
-    }
 
-    /**
-     * @param material the material to set
-     */
-    public void setMaterial(Material material) {
-        this.material = material;
-    }
 
     /**
      * @return the persid
@@ -150,19 +139,6 @@ public class Part implements Serializable {
         this.prototype = prototype;
     }
 
-    /**
-     * @return the partType
-     */
-    public MaterialFormat getPartType() {
-        return partType;
-    }
-
-    /**
-     * @param partType the partType to set
-     */
-    public void setPartType(MaterialFormat partType) {
-        this.partType = partType;
-    }
 
     /**
      * @return the thickness
@@ -404,6 +380,34 @@ public class Part implements Serializable {
     @Override
     public String toString() {
         return "com.materiam.entities.Part[ id=" + id + " ]";
+    }
+
+    /**
+     * @return the shape
+     */
+    public Category getShape() {
+        return shape;
+    }
+
+    /**
+     * @param shape the shape to set
+     */
+    public void setShape(Category shape) {
+        this.shape = shape;
+    }
+
+    /**
+     * @return the material
+     */
+    public Product getMaterial() {
+        return material;
+    }
+
+    /**
+     * @param material the material to set
+     */
+    public void setMaterial(Product material) {
+        this.material = material;
     }
 
 

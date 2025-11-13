@@ -70,7 +70,7 @@
                 
                 
                 
-                <p:column headerText="Name" width="240px">
+                <p:column headerText="Name" width="260px">
                     <f:facet name="header">
                         Name
                         <p:inputText value="#{rawMaterialController.newRawMaterial.product.name}" styleClass="formfield"  label="Name"/>
@@ -105,27 +105,15 @@
                     </f:facet>                      
                     <p:cellEditor>
                         <f:facet name="output">
-                            <h:outputText style="color: white;" value="#{material.width.value}" /> 
+                            <h:outputText style="color: white;" value="#{material.width.value}">
+                                <f:convertNumber maxFractionDigits="2" minFractionDigits="2" />
+                            </h:outputText>
                         </f:facet>
                         <f:facet name="input">
                             <p:inputText value="#{material.width.value}" styleClass="formfield"  label="width"/>
                         </f:facet>
                     </p:cellEditor>
                 </p:column>             
-                <p:column headerText="Length">
-                    <f:facet name="header">
-                        Length #{rawMaterialController.newRawMaterial.length.propertyType.unit.symbol}
-                        <p:inputText value="#{rawMaterialController.newRawMaterial.length.value}" styleClass="formfield"  label="Length"/>
-                    </f:facet>                     
-                    <p:cellEditor>
-                        <f:facet name="output">
-                            <h:outputText style="color: white;" value="#{material.length.value}" /> 
-                        </f:facet>
-                        <f:facet name="input">
-                            <p:inputText value="#{material.length.value}" styleClass="formfield"  label="length"/>
-                        </f:facet>
-                    </p:cellEditor>
-                </p:column>
                 <p:column headerText="Height">
                     <f:facet name="header">
                         Height #{rawMaterialController.newRawMaterial.height.propertyType.unit.symbol}
@@ -133,13 +121,31 @@
                     </f:facet>                      
                     <p:cellEditor>
                         <f:facet name="output">
-                            <h:outputText style="color: white;" value="#{material.height.value}" /> 
+                            <h:outputText style="color: white;" value="#{material.height.value}">
+                                <f:convertNumber minFractionDigits="2" maxFractionDigits="2" />
+                            </h:outputText>
                         </f:facet>
                         <f:facet name="input">
                             <p:inputText value="#{material.height.value}" styleClass="formfield"  label="height"/>
                         </f:facet>
                     </p:cellEditor>
                 </p:column>
+                <p:column headerText="Length">
+                    <f:facet name="header">
+                        Length #{rawMaterialController.newRawMaterial.length.propertyType.unit.symbol}
+                        <p:inputText value="#{rawMaterialController.newRawMaterial.length.value}" styleClass="formfield"  label="Length"/>
+                    </f:facet>                     
+                    <p:cellEditor>
+                        <f:facet name="output">
+                            <h:outputText style="color: white;" value="#{material.length.value}">
+                                <f:convertNumber minFractionDigits="2" maxFractionDigits="2" />
+                            </h:outputText>
+                        </f:facet>
+                        <f:facet name="input">
+                            <p:inputText value="#{material.length.value}" styleClass="formfield"  label="length"/>
+                        </f:facet>
+                    </p:cellEditor>
+                </p:column>                
                 <p:column headerText="Thickness">
                     <f:facet name="header">
                         Thickness #{rawMaterialController.newRawMaterial.thickness.propertyType.unit.symbol}
@@ -147,7 +153,9 @@
                     </f:facet>                    
                     <p:cellEditor>
                         <f:facet name="output">
-                            <h:outputText style="color: white;" value="#{material.thickness.value}" /> 
+                            <h:outputText style="color: white;" value="#{material.thickness.value}">
+                                <f:convertNumber minFractionDigits="2" maxFractionDigits="2" />
+                            </h:outputText>
                         </f:facet>
                         <f:facet name="input">
                             <p:inputText value="#{material.thickness.value}" styleClass="formfield"  label="thickness"/>

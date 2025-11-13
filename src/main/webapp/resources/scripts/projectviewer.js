@@ -60,27 +60,27 @@ function init() {
     
     
     //Light Setup
-    const light1 = new THREE.DirectionalLight(0xffffff, 1.5);
+    const light1 = new THREE.DirectionalLight(0xffffff, .6);
     light1.position.set(5, 5, 5);
     scene.add(light1);
 
     // Fill light (opposite side)
-    const light2 = new THREE.DirectionalLight(0xffffff, 1.5);
+    const light2 = new THREE.DirectionalLight(0xffffff, .6);
     light2.position.set(-5, -5, -5);
     scene.add(light2);
 
     // Fill light (opposite side)
-    const light3 = new THREE.DirectionalLight(0xffffff, 2);
+    const light3 = new THREE.DirectionalLight(0xffffff, 1);
     light3.position.set(-5, 5, -5);
     scene.add(light3);
 
     // Fill light (opposite side)
-    const light4 = new THREE.DirectionalLight(0xffffff, 1.5);
+    const light4 = new THREE.DirectionalLight(0xffffff, .6);
     light4.position.set(5, -5, 5);
     scene.add(light4);  
 
     // Add some ambient to soften contrast
-    const ambient = new THREE.AmbientLight(0xffffff, 15);
+    const ambient = new THREE.AmbientLight(0xffffff, 5);
     scene.add(ambient);
 
     //const grid = new THREE.GridHelper(10, 10, 0x303030, 0x303030);
@@ -430,6 +430,7 @@ function clearAllMeshes(scene) {
     scene.traverse((obj) => {
       if (obj.isMesh) {
         // Dispose geometry and material(s)
+        
         if (obj.geometry) obj.geometry.dispose();
 
         if (obj.material) {

@@ -424,32 +424,35 @@ function loadGLB(url) {
     );
 
 }
-
+// Clear meshes, lines, Line2, points, etc.
 function clearAllMeshes(scene) {
     const toRemove = [];
     scene.traverse((obj) => {
-      if (obj.isMesh) {
-        // Dispose geometry and material(s)
-        
-        if (obj.geometry) obj.geometry.dispose();
+        if (obj.isCamera || obj.isLight) return;
 
-        if (obj.material) {
-          if (Array.isArray(obj.material)) {
-            obj.material.forEach((m) => m.dispose());
-          } else {
-            obj.material.dispose();
-          }
+        const isRenderable =
+            obj.isMesh ||
+            obj.isLine ||
+            obj.isLineSegments ||
+            obj.isPoints ||
+            (obj instanceof Line2);
+
+        if (isRenderable) {
+            if (obj.geometry) obj.geometry.dispose();
+
+            if (obj.material) {
+                if (Array.isArray(obj.material)) {
+                    obj.material.forEach((m) => m.dispose?.());
+                } else {
+                    obj.material.dispose?.();
+                }
+            }
+
+            toRemove.push(obj);
         }
-        toRemove.push(obj); // mark for removal
-      }
     });
 
-    // Remove after traversal to avoid modifying the tree while iterating
-    toRemove.forEach((mesh) => {
-      if (mesh.parent) {
-        mesh.parent.remove(mesh);
-      }
-    });
+    toRemove.forEach((obj) => obj.parent?.remove(obj));
 }
 
 window.loadGLB = loadGLB;

@@ -1,17 +1,13 @@
-
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { ViewportGizmo } from "three-viewport-gizmo";
-
 
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 
-
-
-var camera, scene, renderer, orbitControls, gizmo, loader;
+var camera, scene, renderer, controls, gizmo, loader;
 var meshes = [];
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -20,347 +16,184 @@ var frustumSize = 3.5;
 var compHeight = 250;
 var points = [];
 let line;
-var clicks=0;
-var weldingpointing=false;
+var clicks = 0;
+var weldingpointing = false; // your logic toggles this
 
-
-
-
+// New pivot state variables
+let pendingPivot = null;
+let rotateStarted = false;
 
 init();
-
-
 animate();
-
-
 
 function init() {
 
     loader = new GLTFLoader();
-    
+
+    const aspect = window.innerWidth / (window.innerHeight - compHeight);
+
     camera = new THREE.OrthographicCamera(
-      (-frustumSize * (window.innerWidth / (window.innerHeight-compHeight))) / 2,  // left
-      (frustumSize * (window.innerWidth / (window.innerHeight-compHeight))) / 2,   // right
-      frustumSize / 2,              // top
-      -frustumSize / 2,             // bottom
-      0.1,                          // near
-      1000                          // far
+        (-frustumSize * aspect) / 2,
+        ( frustumSize * aspect) / 2,
+        frustumSize / 2,
+        -frustumSize / 2,
+        0.1,
+        1000
     );
 
-    // Match position from perspective camera
-    camera.position.set(1,1,1);
+    camera.position.set(1, 1, 1);
     camera.lookAt(0, 0, 0);
+
     scene = new THREE.Scene();
-    //loadGLB('http://localhost:8080/materiam/images/test.glb');
-    var geometry = new THREE.BoxGeometry( 0.2, 0.2, 0.2 );
+
+    // Test cube
+    var geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
     var material = new THREE.MeshNormalMaterial();
-    var mesh = new THREE.Mesh( geometry, material );
-    meshes.push( mesh ); 
-    scene.add( mesh );
-    
-    
-    //Light Setup
-    const light1 = new THREE.DirectionalLight(0xffffff, .2);
+    var mesh = new THREE.Mesh(geometry, material);
+    meshes.push(mesh);
+    scene.add(mesh);
+
+    // Lights
+    const light1 = new THREE.DirectionalLight(0xffffff, 0.2);
     light1.position.set(5, 5, 5);
     scene.add(light1);
 
-    // Fill light (opposite side)
-    const light2 = new THREE.DirectionalLight(0xffffff, .2);
+    const light2 = new THREE.DirectionalLight(0xffffff, 0.2);
     light2.position.set(-5, -5, -5);
     scene.add(light2);
 
-    // Fill light (opposite side)
-    const light3 = new THREE.DirectionalLight(0xffffff, .5);
+    const light3 = new THREE.DirectionalLight(0xffffff, 0.5);
     light3.position.set(-5, 5, -5);
     scene.add(light3);
 
-    // Fill light (opposite side)
-    const light4 = new THREE.DirectionalLight(0xffffff, .2);
+    const light4 = new THREE.DirectionalLight(0xffffff, 0.2);
     light4.position.set(5, -5, 5);
-    scene.add(light4);  
+    scene.add(light4);
 
-    // Add some ambient to soften contrast
     const ambient = new THREE.AmbientLight(0xffffff, 1);
     scene.add(ambient);
 
-    //const grid = new THREE.GridHelper(10, 10, 0x303030, 0x303030);
-    //scene.add(grid);
+    var container = document.getElementById('viewport');
 
-
-var container = document.getElementById('viewport');
-
-// Try WebGPU first (Option B)
-let useWebGPU = !!navigator.gpu;
-
-if (useWebGPU) {
-    renderer = new WebGPURenderer({
-        antialias: true,   // enables MSAA inside WebGPU
-        alpha: true
-    });
-    console.log('Using WebGPURenderer');
-} else {
+    // WebGL renderer with supersampling (SSAA)
     renderer = new THREE.WebGLRenderer({
         antialias: true,
         alpha: true
     });
-    console.log('Using WebGLRenderer fallback');
-}
 
-// High-quality AA: render internally at higher res (SSAA)
-const maxSSAA = 2.0;
-const SSAA = Math.min(window.devicePixelRatio * 1.5, maxSSAA);
-renderer.setPixelRatio(SSAA);
+    const maxSSAA = 2.0;
+    const SSAA = Math.min(window.devicePixelRatio * 1.5, maxSSAA);
+    renderer.setPixelRatio(SSAA);
+    renderer.setSize(window.innerWidth, window.innerHeight - compHeight);
 
-// Size
-renderer.setSize(window.innerWidth, window.innerHeight - compHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
 
-// Proper color / tone mapping (helps make AA look “natural”)
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+    if ('outputColorSpace' in renderer) {
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+    } else {
+        renderer.outputEncoding = THREE.sRGBEncoding;
+    }
 
-// Newer three.js:
-if ('outputColorSpace' in renderer) {
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-} else {
-    // Older three.js:
-    renderer.outputEncoding = THREE.sRGBEncoding;
-}
+    container.appendChild(renderer.domElement);
 
-container.appendChild(renderer.domElement);
-orbitControls = new OrbitControls(camera, renderer.domElement);
+    // TrackballControls
+    controls = new TrackballControls(camera, renderer.domElement);
+    controls.rotateSpeed = 3.0;
+    controls.zoomSpeed = 1.2;
+    controls.panSpeed = 0.8;
+    controls.noZoom = false;
+    controls.noPan = false;
+    controls.staticMoving = false;
+    controls.dynamicDampingFactor = 0.15;
+    controls.target.set(0, 0, 0);
+    controls.handleResize();
 
-
-    
+    // Gizmo
     gizmo = new ViewportGizmo(camera, renderer, {
-        "type": "sphere",
-        "size": 100,
-        "placement": "top-right",
-        "resolution": 64,
-        "lineWidth": 6.336,
-        "radius": 1,
-        "smoothness": 18,
-        "animated": true,
-        "speed": 1,
-        "background": {
-        "enabled": true,
-        "color": 16777215,
-        "opacity": 0,
-        "hover": {
-        "color": 16777215,
-        "opacity": 0.2
-        }
-        },
-        "font": {
-        "family": "sans-serif",
-        "weight": 700
-        },
-        "offset": {
-        "top": 90,
-        "left": 90,
-        "bottom": 0,
-        "right": 0
-        },
-        "corners": {
-        "enabled": false,
-        "color": 15915362,
-        "opacity": 1,
-        "scale": 0.15,
-        "radius": 1,
-        "smoothness": 18,
-        "hover": {
-        "color": 16777215,
-        "opacity": 1,
-        "scale": 0.2
-        }
-        },
-        "edges": {
-        "enabled": false,
-        "color": 15915362,
-        "opacity": 1,
-        "radius": 1,
-        "smoothness": 18,
-        "scale": 0.15,
-        "hover": {
-        "color": 16777215,
-        "opacity": 1,
-        "scale": 0.2
-        }
-        },
-        "x": {
-        "enabled": true,
-        "color": 9100032,
-        "opacity": 1,
-        "scale": 0.5,
-        "labelColor": 2236962,
-        "line": true,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        },
-        "hover": {
-        "color": 16777215,
-        "labelColor": 2236962,
-        "opacity": 1,
-        "scale": 0.7,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        }
-        },
-        "label": "Y"
-        },
-        "y": {
-        "enabled": true,
-        "color": 2920447,
-        "opacity": 1,
-        "scale": 0.5,
-        "labelColor": 2236962,
-        "line": true,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        },
-        "hover": {
-        "color": 16777215,
-        "labelColor": 2236962,
-        "opacity": 1,
-        "scale": 0.7,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        }
-        },
-        "label": "Z"
-        },
-        "z": {
-        "enabled": true,
-        "color": 16725587,
-        "opacity": 1,
-        "scale": 0.5,
-        "labelColor": 2236962,
-        "line": true,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        },
-        "hover": {
-        "color": 16777215,
-        "labelColor": 2236962,
-        "opacity": 1,
-        "scale": 0.7,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        }
-        },
-        "label": "X"
-        },
-        "nx": {
-        "line": false,
-        "scale": 0.45,
-        "hover": {
-        "scale": 0.5,
-        "color": 16777215,
-        "labelColor": 2236962,
-        "opacity": 1,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        }
-        },
-        "label": "",
-        "enabled": true,
-        "color": 16725587,
-        "opacity": 1,
-        "labelColor": 2236962,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        }
-        },
-        "ny": {
-        "line": false,
-        "scale": 0.45,
-        "hover": {
-        "scale": 0.5,
-        "color": 16777215,
-        "labelColor": 2236962,
-        "opacity": 1,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        }
-        },
-        "label": "",
-        "enabled": true,
-        "color": 9100032,
-        "opacity": 1,
-        "labelColor": 2236962,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        }
-        },
-        "nz": {
-        "line": false,
-        "scale": 0.45,
-        "hover": {
-        "scale": 0.5,
-        "color": 16777215,
-        "labelColor": 2236962,
-        "opacity": 1,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        }
-        },
-        "label": "",
-        "enabled": true,
-        "color": 2920447,
-        "opacity": 1,
-        "labelColor": 2236962,
-        "border": {
-        "size": 0,
-        "color": 14540253
-        }
-        },
-        "isSphere": true
+        type: "sphere",
+        size: 100,
+        placement: "top-right",
+        resolution: 64,
+        lineWidth: 6.336,
+        radius: 1,
+        smoothness: 18,
+        animated: true,
+        speed: 1,
+        background: { enabled: true, color: 16777215, opacity: 0 }
     });
 
+    gizmo.attachControls(controls);
+
+    // ============================================================
+    // NON-TELEPORTING SURFACE-LOCKED PIVOT
+    // ============================================================
+
+    // 1. RECORD pivot but do NOT apply it on pointerdown
+    renderer.domElement.addEventListener('pointerdown', function (event) {
+        if (event.button !== 0 || weldingpointing) return;
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        mouse.set(x, y);
+        raycaster.setFromCamera(mouse, camera);
+
+        const intersects = raycaster.intersectObjects(scene.children, true);
+
+        pendingPivot = (intersects.length > 0)
+            ? intersects[0].point.clone()
+            : null;
+
+        rotateStarted = false;
+    }, false);
 
 
-    gizmo.attachControls(orbitControls);    
-    window.addEventListener( 'resize', onWindowResize, false );
-    window.addEventListener( 'mousedown', onMouseDown, false);
-		 
+    // 2. APPLY pivot only *after rotation actually begins*
+    renderer.domElement.addEventListener('pointermove', function () {
+
+        // TrackballControls internal state:
+        // _state === 1 → ROTATE mode
+        if (controls._state === 1) {
+
+            if (!rotateStarted && pendingPivot) {
+                controls.target.copy(pendingPivot);
+                controls.update();
+
+                rotateStarted = true;
+                pendingPivot = null;
+            }
+
+        }
+    }, false);
+
+    // ============================================================
+
+    // Resize and welding handlers
+    window.addEventListener('resize', onWindowResize, false);
+    window.addEventListener('mousedown', onMouseDown, false);
 }
 
-function onMouseDown(event){
-    
+function onMouseDown(event) {
     if (weldingpointing) {
-        var canvasBounds = renderer.domElement.getBoundingClientRect();
-        mouse.x = ( ( event.clientX - canvasBounds.left ) / ( canvasBounds.right - canvasBounds.left ) ) * 2 - 1;
-        mouse.y = - ( ( event.clientY - canvasBounds.top ) / ( canvasBounds.bottom - canvasBounds.top) ) * 2 + 1;
-        raycaster.setFromCamera( mouse, camera );
-        var intersects = raycaster.intersectObjects( scene.children, true );
-        if(intersects.length > 0){
-            for ( var i = 0; i < intersects.length; i++ ) {
-                    console.log(intersects[i].point);
-            }
+        const canvasBounds = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - canvasBounds.left) / (canvasBounds.width)) * 2 - 1;
+        mouse.y = -((event.clientY - canvasBounds.top) / (canvasBounds.height)) * 2 + 1;
 
-            //intersects[ 0 ].object.material.color.set( 0xff0000 );
+        raycaster.setFromCamera(mouse, camera);
+        var intersects = raycaster.intersectObjects(scene.children, true);
+
+        if (intersects.length > 0) {
             clicks++;
-            if (clicks < 2) {
-                console.log("Clicks: "+clicks);
-                 points[0] = intersects[0].point;
+
+            if (clicks === 1) {
+                points[0] = intersects[0].point.clone();
             }
-            if (clicks > 1) {
-                console.log("Clicks: "+clicks);
-                points[1] = intersects[0].point;
-                clicks=0;
 
-
-                console.log("Making a line with points: "+points[0].x+" and "+points[1]);
+            if (clicks === 2) {
+                points[1] = intersects[0].point.clone();
+                clicks = 0;
 
                 const path = new THREE.LineCurve3(points[0], points[1]);
                 const geometry = new THREE.TubeGeometry(path, 1, 0.05, 8, false);
@@ -369,98 +202,69 @@ function onMouseDown(event){
                 scene.add(tube);
 
                 points = [];
-                renderer.render( scene, camera );
+                renderer.render(scene, camera);
             }
 
-
+        } else {
+            console.log("clicked outside mesh");
         }
-
-        else { 
-            console.log("clicked outside the mesh");
-        }
-        window.addEventListener('mousemove', onMouseMove, false);
-        window.addEventListener('mouseup', onMouseUp, false);
     }
 }
 
-
-  
-function onMouseMove(event){
-	//mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-	//mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;  
-}
-
-function onMouseUp(event){
-  window.removeEventListener('mousemove', onMouseMove);
-}
-
 function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.left   = (-frustumSize * (window.innerWidth / (window.innerHeight-compHeight))) / 2;
-    camera.right  = ( frustumSize * (window.innerWidth / (window.innerHeight-compHeight))) / 2;
+    const aspect = window.innerWidth / (window.innerHeight - compHeight);
+
+    camera.left   = (-frustumSize * aspect) / 2;
+    camera.right  = ( frustumSize * aspect) / 2;
     camera.top    = frustumSize / 2;
     camera.bottom = -frustumSize / 2;
     camera.updateProjectionMatrix();
-    renderer.setSize( window.innerWidth, window.innerHeight-compHeight );
+
+    const maxSSAA = 2.0;
+    const SSAA = Math.min(window.devicePixelRatio * 1.5, maxSSAA);
+    renderer.setPixelRatio(SSAA);
+    renderer.setSize(window.innerWidth, window.innerHeight - compHeight);
+
+    controls.handleResize();
     gizmo.update();
 }
 
 function animate() {
-    requestAnimationFrame( animate );
-    orbitControls.update();
-    raycaster.setFromCamera( mouse, camera );
-    renderer.render( scene, camera );
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
     gizmo.render();
 }
 
 function loadGLB(url) {
     clearAllMeshes(scene);
-    console.log("Attempting to load GLB, cadfile: "+url);
-    console.log('url: '+url);
+
     loader.load(
         url,
         (gltf) => {
-            /*
-            var material = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
-            gltf.scene.traverse(function (child) {
-                if (child.isMesh) {
-                    const edges = new THREE.EdgesGeometry(child.geometry);
-                    const line = new THREE.LineSegments(
-                        edges,
-                        new THREE.LineBasicMaterial({ color: 0x000000 })
-                    );
-                    child.add(line); // Add edges as a child of the mesh, so they move together
-                }
-            });
-          */
-                       
             scene.add(gltf.scene);
-           
-            
-            // Center and scale the model
-            
+
+            // Center & scale model
             var box = new THREE.Box3().setFromObject(gltf.scene);
             var center = box.getCenter(new THREE.Vector3());
             var size = box.getSize(new THREE.Vector3());
             var maxDim = Math.max(size.x, size.y, size.z);
             var scale = 2.0 / maxDim;
+
             gltf.scene.scale.set(scale, scale, scale);
             gltf.scene.position.sub(center.multiplyScalar(scale));
 
-           
+            // Initial pivot = model center
+            box.setFromObject(gltf.scene);
+            center = box.getCenter(new THREE.Vector3());
+            controls.target.copy(center);
+            controls.update();
         },
-        (xhr) => {
-            console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-            
-        },
-        (error) => {
-            console.error('Error loading GLB:', error);
-        }
-                
+        (xhr) => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+        (err) => console.error('Error loading GLB:', err)
     );
-
 }
-// Clear meshes, lines, Line2, points, etc.
+
 function clearAllMeshes(scene) {
     const toRemove = [];
     scene.traverse((obj) => {
@@ -474,7 +278,7 @@ function clearAllMeshes(scene) {
             (obj instanceof Line2);
 
         if (isRenderable) {
-            if (obj.geometry) obj.geometry.dispose();
+            if (obj.geometry) obj.geometry.dispose?.();
 
             if (obj.material) {
                 if (Array.isArray(obj.material)) {

@@ -60,40 +60,76 @@ function init() {
     
     
     //Light Setup
-    const light1 = new THREE.DirectionalLight(0xffffff, .6);
+    const light1 = new THREE.DirectionalLight(0xffffff, .2);
     light1.position.set(5, 5, 5);
     scene.add(light1);
 
     // Fill light (opposite side)
-    const light2 = new THREE.DirectionalLight(0xffffff, .6);
+    const light2 = new THREE.DirectionalLight(0xffffff, .2);
     light2.position.set(-5, -5, -5);
     scene.add(light2);
 
     // Fill light (opposite side)
-    const light3 = new THREE.DirectionalLight(0xffffff, 1);
+    const light3 = new THREE.DirectionalLight(0xffffff, .5);
     light3.position.set(-5, 5, -5);
     scene.add(light3);
 
     // Fill light (opposite side)
-    const light4 = new THREE.DirectionalLight(0xffffff, .6);
+    const light4 = new THREE.DirectionalLight(0xffffff, .2);
     light4.position.set(5, -5, 5);
     scene.add(light4);  
 
     // Add some ambient to soften contrast
-    const ambient = new THREE.AmbientLight(0xffffff, 5);
+    const ambient = new THREE.AmbientLight(0xffffff, 1);
     scene.add(ambient);
 
     //const grid = new THREE.GridHelper(10, 10, 0x303030, 0x303030);
     //scene.add(grid);
 
 
-    var container = document.getElementById( 'viewport' );
-    renderer = new THREE.WebGLRenderer( { antialias: true} );
-    renderer.setSize( window.innerWidth, window.innerHeight-compHeight);
-    renderer.setPixelRatio( window.devicePixelRatio );
+var container = document.getElementById('viewport');
 
-    container.appendChild( renderer.domElement );
-    orbitControls = new OrbitControls( camera, renderer.domElement );
+// Try WebGPU first (Option B)
+let useWebGPU = !!navigator.gpu;
+
+if (useWebGPU) {
+    renderer = new WebGPURenderer({
+        antialias: true,   // enables MSAA inside WebGPU
+        alpha: true
+    });
+    console.log('Using WebGPURenderer');
+} else {
+    renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true
+    });
+    console.log('Using WebGLRenderer fallback');
+}
+
+// High-quality AA: render internally at higher res (SSAA)
+const maxSSAA = 2.0;
+const SSAA = Math.min(window.devicePixelRatio * 1.5, maxSSAA);
+renderer.setPixelRatio(SSAA);
+
+// Size
+renderer.setSize(window.innerWidth, window.innerHeight - compHeight);
+
+// Proper color / tone mapping (helps make AA look “natural”)
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+// Newer three.js:
+if ('outputColorSpace' in renderer) {
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+} else {
+    // Older three.js:
+    renderer.outputEncoding = THREE.sRGBEncoding;
+}
+
+container.appendChild(renderer.domElement);
+orbitControls = new OrbitControls(camera, renderer.domElement);
+
+
     
     gizmo = new ViewportGizmo(camera, renderer, {
         "type": "sphere",

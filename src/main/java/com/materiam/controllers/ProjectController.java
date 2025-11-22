@@ -53,8 +53,11 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.file.UploadedFile;
@@ -137,9 +140,8 @@ public class ProjectController implements Serializable {
     }    
     
     public List<Project> getProjects() {
-        
-        return em.createQuery("select u.projects from User u where u=:user")
-                .setParameter("user", userController.getUser()).getResultList();
+        User u = em.find(User.class, userController.getUser().getId());
+        return u.getProjects();
     }
     
     public void openProject(Project pr) {
@@ -155,9 +157,13 @@ public class ProjectController implements Serializable {
     }
     
     public CADFile getFirstCADFileForProject(Project p) {
-        System.out.println("************* -------- getFirstCADFileForProject ----------- ***************"+p.getName());
+        
+
         
         CADFile cf = null;
+        if (p==null)
+            return cf;
+        System.out.println("************* -------- getFirstCADFileForProject ----------- ***************"+p.getName());        
         try {
             cf=  (CADFile)em.createQuery("select cf from CADFile cf where cf.project.id=:projectid order by cf.id")
                 .setParameter("projectid", p.getId()).setMaxResults(1).getSingleResult();
@@ -167,25 +173,37 @@ public class ProjectController implements Serializable {
         return cf;
     }
     
-    
+    public void closeProject() {
+        Project p = em.find(Project.class, activeProject.getId());
+        em.remove(p);
+        activeProject=null;
+    }
+
     public void save() {
-        System.out.println("************* -------- Persistiendo el activeproject... ----------- ***************"+activeProject.getName());
-        activeProject.setSaved(true);
-        em.merge(activeProject);
-        User u = em.find(User.class, userController.getUser().getId());
-        u.getProjects().add(activeProject);
+        
+        if (activeProject != null) {
+            System.out.println("************* -------- Saving name ----------- ***************"+activeProject.getName());
+            Project p = em.find(Project.class, activeProject.getId());
+            p.setName(activeProject.getName());
+        }
+
+        
     }
     
-    public List<Part> getParts(CADFile cf) {
-        System.out.println("Retrieving parts...");
-        List<Part> parts = em.createQuery("SELECT p FROM Part p, CADFile cf, Project pr  where pr=:project and cf.project=pr and p.cadfile=cf and cf=:cadfile ")
-                                                .setParameter("project", activeProject)
-                                                .setParameter("cadfile", cf)
-                                                .getResultList();
-        for (Part p : parts) {
+    public Set<Part> getParts(Long cfid) {
+        //System.out.println("Retrieving parts...");
+        
+        CADFile cf = em.find(CADFile.class, cfid);
+        
+        for (Part p : cf.getParts()) {
             System.out.println("Part id: "+p.getId());
         }
-        return parts;
+        return cf.getParts();
+    }
+    
+    public List<Instance> getInstances(Long cfid) {
+        CADFile cf = em.find(CADFile.class, cfid);
+        return cf.getInstances();
     }
     
     public List<CADFile> getCADFiles() {
@@ -299,6 +317,8 @@ public class ProjectController implements Serializable {
     }
     
     public BigDecimal getTotal() {
+        if (activeProject == null)
+            return BigDecimal.ZERO;
         BigDecimal total = new BigDecimal(0);
         for (CADFile cf : activeProject.getCadfiles()) {
 
@@ -350,34 +370,48 @@ public class ProjectController implements Serializable {
 
     
     public void copyFile(String fileName, InputStream in) {
+        
         fileName = sanitizeFilename(fileName);
         HttpSession session = request.getSession();
         
 
-        if (getActiveProject() == null) {
+        if (activeProject == null) {
+            System.out.println("⚠️ ⚠️ ⚠️ ActiveProject is null when copying file... ⚠️ ⚠️ ⚠️");
             // Generate a new project
-            setActiveProject(new Project());
-            getActiveProject().setName(fileName);
-            getActiveProject().setPostedDate(new Date());
+            activeProject = new Project();
+            activeProject.setCadfiles(new ArrayList<CADFile>());
+            activeProject.setName(fileName);
+            activeProject.setPostedDate(new Date());
+            UUID uuid = UUID.randomUUID();
+            getActiveProject().setUuid(uuid.toString());
             em.persist(getActiveProject());
-            em.flush();
+
+        } else {
+            System.out.println("⚠️ ⚠️ ⚠️ ActiveProject is NOT null when copying file... ⚠️ ⚠️ ⚠");
+            activeProject = em.find(Project.class, getActiveProject().getId());
         }
+
         if (userController.getUser() != null) {
             User u = em.find(User.class, userController.getUser().getId());
-            u.getProjects().add(activeProject);
+            if (!u.getProjects().contains(activeProject)) {
+                u.getProjects().add(activeProject);
+            }
+            
         }
-        System.out.println("Active Project: "+getActiveProject().getId());
-        
         
         
         CADFile f = new CADFile();
         f.setName(fileName);
         f.setProject(getActiveProject());
-        em.persist(f);
-        em.flush();
+        UUID fuuid = UUID.randomUUID();
+        f.setUuid(fuuid.toString());
+        f.setParts(new HashSet<Part>());
+        f.setInstances(new ArrayList<Instance>());
+        activeProject.getCadfiles().add(f);
+
         
 
-        String filedest = destination.concat(getActiveProject().getId()+"/"+f.getId()+"/");
+        String filedest = destination.concat(getActiveProject().getUuid()+"/"+f.getUuid()+"/");
         Path path = Paths.get(filedest);
         try {
             
@@ -410,10 +444,10 @@ public class ProjectController implements Serializable {
             try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
                 String line;
-                System.out.println("Process Output:");
+                //System.out.println("Process Output:");
                 while ((line = reader.readLine()) != null) {
                     
-                    System.out.println(line);
+                    //System.out.println(line);
                     if (line.startsWith("******") || line.contains("info")) {
                         importUpdate.fire(new ImportUpdate(line,wsid));
                     }
@@ -462,9 +496,9 @@ public class ProjectController implements Serializable {
             Process pr = rt.exec(command);
             BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
             String line;
-            System.out.println("Process Output:");
+            //System.out.println("Process Output:");
             while ((line = reader.readLine()) != null) {
-                System.out.println(line);
+                //System.out.println(line);
                 importUpdate.fire(new ImportUpdate(line,wsid));
             }
             pr.waitFor();
@@ -474,53 +508,15 @@ public class ProjectController implements Serializable {
             System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         }
         
-        /*
-        
-                    String step2glb = String.format("step2glb %s --outdir %s", (filedest + fileName), filedest);
-            pr = rt.exec(command);
-            importUpdate.fire(new ImportUpdate("Generating files...",wsid));
-            try {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
-                String line;
-                System.out.println("Process Output:");
-                while ((line = reader.readLine()) != null) {
-                    
-                    System.out.println(line);
-                    if (line.startsWith("******") || line.contains("info")) {
-                        importUpdate.fire(new ImportUpdate(line,wsid));
-                    }
-                }
-                pr.waitFor();
-            } catch (InterruptedException ex) {
-                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-            }
 
-            
-            
-            command = String.format("mogrify %s*.png -transparent white %s*.png",filedest, filedest);
-            System.out.println("Executing mogrify: "+command);
-            pr = rt.exec(command);
-            try {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
-                String line;
-                System.out.println("Process Output:");
-                while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
-                    importUpdate.fire(new ImportUpdate(line,wsid));
-                }
-                pr.waitFor();
-            } catch (InterruptedException ex) {
-                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-            }
-        */
         
         
         
         try (JsonReader jsonReader = Json.createReader(new StringReader(Files.readString(Paths.get(filedest+"out.json"))))) {
 
             JsonObject json = jsonReader.readObject();
-            System.out.println("JsonObject toString output:");
-            System.out.println(json.toString());
+            //System.out.println("JsonObject toString output:");
+            //System.out.println(json.toString());
 
             // The STEP file has an array of parts and each part has an array of bodies
 
@@ -536,6 +532,7 @@ public class ProjectController implements Serializable {
                 
                 for (JsonObject b : bodies.getValuesAs(JsonObject.class)) {
                     
+                    // If the part 
                     String id = p.getString("id");
                     System.out.println("Part XDEID: " + id+ " Type: "+b.getString("type"));                    
                     Part part = new Part();
@@ -584,6 +581,11 @@ public class ProjectController implements Serializable {
                                 + "where t.product=p and t.propertyType.key='THICKNESS' and shape.key='SHEET_METAL_FLAT' and p.categories=shape order by abs(t.value - :thickness)")
                                 .setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue()).setMaxResults(1).getSingleResult();
                         part.setMaterial(m);
+                        
+                        // save
+                        f.getParts().add(part);
+                        partmap.put(p.getString("id"), part);                     
+                        
 
                     } else if (type.equals("TUBE_RECTANGULAR")) {
                         part.setSectionWidth(b.getJsonNumber("sectionWidth").bigDecimalValue());
@@ -656,13 +658,25 @@ public class ProjectController implements Serializable {
                         System.out.println("Query: "+q.toString());
                         
                         Product m = (Product)q.setMaxResults(1).getSingleResult();
-                        part.setMaterial(m); 
+                        part.setMaterial(m);
+                        
+                        
+                        // save
+                        f.getParts().add(part);
+                        partmap.put(p.getString("id"), part);
+                        
                     }
-                    em.persist(part);
-                    partmap.put(p.getString("id"), part);                    
+                    /*
+                    if (bodies.size() == 1) {
+                                            // save
+                        f.getParts().add(part);
+                        partmap.put(p.getString("id"), part);    
+                    }
+                    */
+                                        
                 }
             }
-            em.flush();
+
             
             // Now obtain the instances, for each instance check the prototype
             
@@ -691,7 +705,7 @@ public class ProjectController implements Serializable {
                 JsonArray rotation = inst.getJsonArray("rotation");
                 JsonArray translation = inst.getJsonArray("translation");
                 
-                Instance instance = new Instance();
+                
                 JsonString persid = pps.get(inst.getJsonNumber("prototype"));
 
                 if (persid != null) {
@@ -702,14 +716,16 @@ public class ProjectController implements Serializable {
                     if (part != null) {
                         System.out.println("Found part "+part.getPersid());
                         System.out.println("The part found has id: "+part.getId());
+                        Instance instance = new Instance();
                         instance.setPart(part);
 
                         instance.setRotx(rotation.getJsonNumber(0).bigDecimalValue());
                         instance.setTransx(translation.getJsonNumber(0).bigDecimalValue());
                         instance.setCadfile(f);
-
-                        em.persist(instance);
-                        em.flush();
+                        f.getInstances().add(instance);
+                        System.out.println("* * * * * * * * * ADDING INSTANCE * * * * * * "+instance.getPart()+" rotx: "+instance.getRotx()+" now contains:"+f.getInstances().size());
+                        
+                        
                     }
                 }
             }
@@ -758,8 +774,28 @@ public class ProjectController implements Serializable {
         return (Material)em.createQuery("select m from Material m order by ABS(m.thickness - :thickness").setParameter("thickness", thickness).getSingleResult();
     }
     
-    public void deleteProject() {
+    public void deleteProject(Long pid) {
         
+        
+
+        try {
+            User u = em.find(User.class, userController.getUser().getId());
+            Project p = em.find(Project.class, pid);
+            if (activeProject != null) {
+                if (activeProject.getId() == p.getId()) {
+                    activeProject = null;
+                }
+            }
+            u.getProjects().remove(p);
+            em.remove(p);
+            
+        } catch (Exception e) {
+            System.out.println("Exception "+e.getMessage());
+            FacesMessage msg = new FacesMessage(FacesMessage.SEVERITY_INFO,"Error", "An error occured while attempting to delete project");
+            FacesContext.getCurrentInstance().addMessage(null, msg);             
+        }
+
+
     }
 
     /**

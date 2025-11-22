@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import java.io.Serializable;
 import java.util.Set;
+import java.util.List;
 
 /**
  *
@@ -27,12 +28,14 @@ public class CADFile implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
-    @ManyToOne
+    private String uuid;
+    
+    //@ManyToOne
     private Project project;
-    @OneToMany(mappedBy = "cadfile", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "cadfile", cascade = CascadeType.ALL)
     private Set<Part> parts;
-    @OneToMany(mappedBy = "cadfile", cascade = CascadeType.PERSIST)
-    private Set<Instance>instances;
+    @OneToMany(mappedBy = "cadfile", cascade = CascadeType.ALL)
+    private List<Instance>instances;
     
     
 
@@ -114,18 +117,34 @@ public class CADFile implements Serializable {
         this.parts = parts;
     }
 
+
+
+    /**
+     * @return the uuid
+     */
+    public String getUuid() {
+        return uuid;
+    }
+
+    /**
+     * @param uuid the uuid to set
+     */
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
     /**
      * @return the instances
      */
-    public Set<Instance> getInstances() {
+    public List<Instance> getInstances() {
         return instances;
     }
 
     /**
      * @param instances the instances to set
      */
-    public void setInstances(Set<Instance> instances) {
+    public void setInstances(List<Instance> instances) {
         this.instances = instances;
     }
-
+    
 }

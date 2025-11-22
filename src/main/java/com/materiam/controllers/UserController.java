@@ -4,6 +4,7 @@
  */
 package com.materiam.controllers;
 
+import com.materiam.entities.Project;
 import com.materiam.entities.User;
 import jakarta.enterprise.context.SessionScoped;
 import jakarta.faces.application.FacesMessage;
@@ -117,10 +118,11 @@ public class UserController implements Serializable {
                 if (projectController.getActiveProject() == null) {
                     System.out.println(" >>>>>>>>>>>>>>>>>>>>>>>>>> activeProject is null!!!!!!!");
                 } else {
-                    projectController.getActiveProject().setSaved(true);
-                    em.merge(projectController.getActiveProject());
-                    user.getProjects().add(projectController.getActiveProject());
-                    em.merge(user);
+                    Project p = em.find(Project.class, projectController.getActiveProject().getId());
+                    
+                    p.setSaved(true);
+                    User u = em.find(User.class, user.getId());
+                    u.getProjects().add(projectController.getActiveProject());
                 }
 
 

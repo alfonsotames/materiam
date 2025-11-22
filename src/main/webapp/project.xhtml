@@ -5,7 +5,8 @@
                 template="./fetemplate.xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:p="primefaces"
-                xmlns:f="jakarta.faces.core">
+                xmlns:f="jakarta.faces.core"
+                xmlns:c="jakarta.tags.core">
 
 
     <ui:define name="headscripts">
@@ -27,6 +28,13 @@
     <ui:define name="top">
         
     </ui:define>
+    
+    
+    
+    
+
+
+
 
     <ui:define name="content">
                     <div style="color: white; "><div id="viewport"  /></div>
@@ -36,18 +44,23 @@
                             padding: 0px; width: 380px; ">
                         <h:form id="form" onkeypress="if (event.keyCode == 13) { saver(); event.preventDefault();}" style="margin-bottom: 0px;">
                             <p:remoteCommand name="saver" actionListener="#{projectController.save()}" update="nombre"  />
-                            <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;">
-                                <span style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
-                                    <p:inplace id="nombre" editor="true">
-                                        <p:inputText  value="#{projectController.activeProject.name}" required="true" label="text"/>
+                            
+                            <div style="background-color: #dedede; padding-top: 9px; padding-bottom: 7px;  border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;">
 
-                                        <p:ajax event="save" listener="#{projectController.save}" update="nombre"/>
-                                    </p:inplace>
-                                </span>
+                                    <span style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
+                                        <p:inplace id="nombre" editor="true" rendered="#{projectController.activeProject != null}">
+                                            <p:inputText  value="#{projectController.activeProject.name}" required="true" label="text"/>
+
+                                            <p:ajax event="save" listener="#{projectController.saveName}" update="nombre"/>
+                                        </p:inplace>
+                                    </span>
+                                <c:if test="#{projectController.activeProject == null}">
+                                    <span style="margin-left: 7px; font-family: Materiam; font-size: 14px;">CREATE A NEW PROJECT BY DROPPING FILES</span>
+                                </c:if>
                             </div>
                         </h:form>
-                        <div ondragover="dragging()" ondragleave="dragout()" ondrop="drop()" style="background-color: white;  padding: 0px; ">
-                            <h:form id="submitwsid" style="margin-top: 0px; margin-bottom: 0px;">
+                        <div ondragover="dragging()" ondragleave="dragout()" ondrop="drop()" style="background-color: #f0f0f0;  padding: 0px; ">
+                            <h:form id="submitwsid" style="margin: 0px;">
 
                                 <h:inputHidden id="wsid" value="#{projectController.wsid}" />
                                 <h:commandButton id="hiddenButton" action="#{projectController.submitwsid}" style="display:none;">
@@ -93,79 +106,81 @@
                         </div>              
                         
                         
-                        <h:form id="formparts" style="margin-top:0px;">
+                        <h:form id="formparts" style="margin:0px;">
                      
-                            <div style="background-color: #5a5a5a; color: white; padding: 5px; font-size: 14px;">Manufacturing Order:</div>
-                            <div style="color: white; overflow-y: scroll;  max-height: 50vh;">
-                                
+                            <!--<div style="background-color: #5a5a5a; color: white; padding: 5px; font-size: 14px;">Manufacturing Order:</div>-->
+                            <div style="color: white; background-color: #e9e9e9; overflow-y: scroll;  max-height: 60vh;">
+
                                 
                                 
                                 
                                 <p:dataView id="cadfiles" var="cf" value="#{projectController.CADFiles}" paginator="false">
                                 
                                     <p:dataViewListItem>
-                                        <p:panel rendered="#{projectController.getParts(cf).size() gt 1}" style="margin: 0px; padding: 0px;">
-                                                    <script type="text/javascript">            
-                                                        window.onload = function() {
-                                                            loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{cf.id}&amp;persid=0-1-1-1');
-                                                        };
-                                                    </script>
+                                       
+                                        <h:panelGroup rendered="#{projectController.getInstances(cf.id).size() gt 1}">
                                             
-                                                        <div>
-                                                            <div style="margin: 4px; word-break: break-all;">
-                                                                <div style="font-size: 14px; "><B>Assembly: #{cf.name}</B></div>
-                                                            </div>                                                            
-                                                            <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 340px;">
-                                                                <img style="width:330px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
-                                                                     src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{cf.id}&amp;persid=0-1-1-1"
-                                                                     onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{cf.id}&amp;persid=0-1-1-1');"/>
-                                                            </div>                                                     
+                                            <script type="text/javascript">            
+                                                window.onload = function() {
+                                                    loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{cf.uuid}&amp;persid=0-1-1-1');
+                                                };
+                                            </script>
 
-                                                        </div>
-                                                </p:panel>
+                                                <div>
+                                                    <div style="margin: 0px; word-break: break-all;">
+                                                        <div style="margin:0px; padding: 9px; font-size: 14px; background-color: #666666; color: white; width:100%;"><B>ASSEMBLY: #{cf.name}</B></div>
+                                                    </div>                                                            
+                                                    
+                                                        <img style="width:330px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
+                                                             src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{cf.uuid}&amp;persid=0-1-1-1"
+                                                             onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{cf.uuid}&amp;persid=0-1-1-1');"/>
+                                                   
+
+                                                </div>
+                                        </h:panelGroup>
                                 
-                                                <p:dataView id="dataview" var="qp" value="#{projectController.getQuotedParts(cf)}" paginator="false"
-                                                            rowsPerPageTemplate="6,12,16"
-                                                            paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
-                                                            gridIcon="pi pi-th-large" listIcon="pi pi-bars">
-                                                    <p:dataViewListItem>
-                                                        <div style="
-                                                            display: grid;
-                                                            grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
-                                                            grid-template-rows: auto; /* Allows row height to adjust to content */
-                                                            justify-content: center; /* Centers the grid horizontally within its parent */
-                                                            align-items: start; /* Centers items vertically within their cells */">
-                                                            <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px;">
-                                                                <img style="width:110px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
-                                                                     src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}"
-                                                                     onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}');"/>
-                                                            </div>                                                     
-                                                            <div style="margin: 4px;  width:240px; word-break: break-all;">
-                                                                <div style="font-size: 14px; "><B>#{qp.part.name}</B></div>
-                                                                
-                                                                <div style="font-size: 12px;">Part thickness:
-                                                                    <h:outputText value="#{qp.part.thickness}">
-                                                                        <f:convertNumber maxFractionDigits="2" minFractionDigits="2" />
-                                                                    </h:outputText>
-                                                                      mm
-                                                                </div>
-                                                                
-                                                                <div style="font-size: 12px;">#{qp.part.material.name} (#{projectController.getPropertyByKey(qp.part.material.id,'THICKNESS').value}mm)</div>
+                                        <p:dataView id="dataview" var="qp" value="#{projectController.getQuotedParts(cf)}" paginator="false"
+                                                    rowsPerPageTemplate="6,12,16"
+                                                    paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                    gridIcon="pi pi-th-large" listIcon="pi pi-bars">
+                                            <p:dataViewListItem>
+                                                <div style="
+                                                    display: grid;
+                                                    grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
+                                                    grid-template-rows: auto; /* Allows row height to adjust to content */
+                                                    justify-content: center; /* Centers the grid horizontally within its parent */
+                                                    align-items: start; /* Centers items vertically within their cells */">
+                                                    <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px;">
+                                                        <img style="width:110px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
+                                                             src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{qp.part.cadfile.uuid}&amp;persid=#{qp.part.persid}"
+                                                             onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{qp.part.cadfile.uuid}&amp;persid=#{qp.part.persid}');"/>
+                                                    </div>                                                     
+                                                    <div style="margin: 4px;  width:240px; word-break: break-all;">
+                                                        <div style="font-size: 14px; "><B>#{qp.part.name}</B></div>
 
-
-                                                               
-                                                                <div>#{qp.part.comments}</div>
-
-                                                                 <div style="font-size: 14px;">Quantity: #{qp.part.timesRepeated}</div>
-                                                                <div style="margin-top:5px;">
-                                                                    <h:outputText style="font-weight: bold;" value="#{qp.price}" styleClass="product-price" rendered="#{qp.price ne 0}">
-                                                                        <f:convertNumber currencySymbol="USD$" type="currency"/>
-                                                                    </h:outputText>
-                                                                </div>                                                                 
-                                                            </div>
+                                                        <div style="font-size: 12px;">Part thickness:
+                                                            <h:outputText value="#{qp.part.thickness}">
+                                                                <f:convertNumber maxFractionDigits="2" minFractionDigits="2" />
+                                                            </h:outputText>
+                                                              mm
                                                         </div>
-                                                    </p:dataViewListItem>
-                                                </p:dataView>
+
+                                                        <div style="font-size: 12px;">#{qp.part.material.name} (#{projectController.getPropertyByKey(qp.part.material.id,'THICKNESS').value}mm)</div>
+
+
+
+                                                        <div>#{qp.part.comments}</div>
+
+                                                         <div style="font-size: 14px;">Quantity: #{qp.part.timesRepeated}</div>
+                                                        <div style="margin-top:5px;">
+                                                            <h:outputText style="font-weight: bold;" value="#{qp.price}" styleClass="product-price" rendered="#{qp.price ne 0}">
+                                                                <f:convertNumber currencySymbol="USD$" type="currency"/>
+                                                            </h:outputText>
+                                                        </div>                                                                 
+                                                    </div>
+                                                </div>
+                                            </p:dataViewListItem>
+                                        </p:dataView>
                                 
                                         
                                     </p:dataViewListItem>
@@ -191,7 +206,7 @@
                                         </h:outputText>                                           
                                     </div>
                                 </div>
-                                <p:commandLink action="#{projectController.save()}"><i class="pi pi-save" style="color:black;" /></p:commandLink>
+                                
                             </div>
                         </h:form>   
                     </div>

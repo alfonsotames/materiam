@@ -26,6 +26,20 @@ import java.util.Set;
 public class Project implements Serializable {
 
     /**
+     * @return the uuid
+     */
+    public String getUuid() {
+        return uuid;
+    }
+
+    /**
+     * @param uuid the uuid to set
+     */
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
+    /**
      * @return the name
      */
     public String getName() {
@@ -46,13 +60,14 @@ public class Project implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @OneToMany(mappedBy = "project", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL)
     private List<CADFile> cadfiles;
     
     @Temporal(TemporalType.TIMESTAMP)
     private Date postedDate;
     private String name;
     private boolean saved;
+    private String uuid;
     
     
     

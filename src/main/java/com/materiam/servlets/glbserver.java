@@ -75,11 +75,11 @@ public class glbserver extends HttpServlet {
         String persid = request.getParameter("persid").replaceAll(":", "-");;
 
         //String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/out_"+persid+"_1_colored.glb";
-        //String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/out_"+persid+"_1.glb";
+        String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/out_"+persid+"_1.glb";
 
         
         
-        String filename = "/Users/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/out_"+persid+"_1.glb";
+        //String filename = "/Users/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/out_"+persid+"_1.glb";
 
         /*    
         // Get the MIME type of the image

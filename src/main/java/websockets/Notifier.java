@@ -45,11 +45,11 @@ public class Notifier {
     }
     
     public void onCDIEvent(@Observes @EventQualifier ImportUpdate iu) {
-        System.out.println("The Notifier received a CDI Event!");
+        //System.out.println("The Notifier received a CDI Event!");
         
         Session s = userwebsockets.get(iu.getWsid());
         try {
-            System.out.println("Sending message to session "+s.getId());
+            //System.out.println("Sending message to session "+s.getId());
             s.getBasicRemote().sendText(iu.getMsg());
         } catch (java.lang.IllegalStateException | IOException e) {
             Logger.getLogger(Notifier.class.getName()).log(Level.SEVERE, "Carefully removing disconnected client {0}", s.getId());

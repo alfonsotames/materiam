@@ -13,29 +13,47 @@
 
     <ui:define name="content">
         
-        <h:form id="projectsform">
-            
-            <p:dataTable id="projects" var="pr" value="#{projectController.projects}" 
-                         widgetVar="cellProjects" stripedRows="true" editable="true">
-                
-                <p:column>
-                    <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.4); width: 120px; background-color: white;">
-                        <p:commandLink action="#{projectController.openProject(pr)}">
-                            <img style="width:110px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
-                             src="#{request.contextPath}/imageserver?projectid=#{pr.id}&amp;cadfile=#{projectController.getFirstCADFileForProject(pr).id}&amp;persid=0-1-1-1" />
-                        </p:commandLink>
-                    </div> 
-                </p:column>
-                
-                <p:column width="340px; ">
-                    <div style="color: white;">
-                        #{pr.name} Project id: #{pr.id} FirstCADFile: #{projectController.getFirstCADFileForProject(pr).id}
-                    </div>
-                </p:column>
-            
-            </p:dataTable>
 
-        </h:form>
+        
+
+        <h:form id="form">
+            <p:dataView var="pr" value="#{projectController.projects}" rows="12" paginator="true" layout="grid"
+                        rowsPerPageTemplate="6,12,16"
+                        paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}">
+
+                <p:dataViewGridItem>
+                    <div class="product-grid-item card border-1">
+                        <div class="product-grid-item-top">
+                                                    <div class="product-grid-item-content">
+                            #{pr.name}
+                        </div>
+
+    
+
+                        </div>
+                        <div class="product-grid-item-content">
+                            <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.4); width: 320px; background-color: white;">
+                                    <p:commandLink action="#{projectController.openProject(pr)}">
+                                        <img style="width:310px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
+                                         src="#{request.contextPath}/imageserver?projectid=#{pr.uuid}&amp;cadfile=#{projectController.getFirstCADFileForProject(pr).uuid}&amp;persid=0-1-1-1" />
+                                    </p:commandLink>
+                            </div>                             
+                        </div>
+                        <div class="product-grid-item-bottom">
+
+                            
+                        </div>
+                    </div>
+                </p:dataViewGridItem>
+
+                <p:dataViewListItem>
+                    <div class="product-list-item">
+                        qweqwe
+                    </div>
+                </p:dataViewListItem>
+            </p:dataView>
+        </h:form>            
+
         
     </ui:define>
 

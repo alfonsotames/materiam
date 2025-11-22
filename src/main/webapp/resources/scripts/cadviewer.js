@@ -27,7 +27,7 @@ class Coin3DControls {
 
         this.rotateSpeed = 2.5; 
         this.panSpeed = 1.0;
-        this.zoomSpeed = 1.01; 
+        this.zoomSpeed = 1.10; 
 
         this.state = -1; 
         this.isDragging = false;

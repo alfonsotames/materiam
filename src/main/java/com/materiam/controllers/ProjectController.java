@@ -13,6 +13,7 @@ import com.materiam.entities.Part;
 import com.materiam.entities.Product;
 import com.materiam.entities.Project;
 import com.materiam.entities.Property;
+import com.materiam.entities.User;
 import events.EventQualifier;
 import events.ImportUpdate;
 import jakarta.annotation.PostConstruct;
@@ -137,19 +138,23 @@ public class ProjectController implements Serializable {
     }
     
     public CADFile getFirstCADFileForProject(Project p) {
-        
-        return (CADFile)em.createQuery("select cf from CADFile cf where cf.project=:project order by cf.id")
+        CADFile cf = null;
+        try {
+            cf=  (CADFile)em.createQuery("select cf from CADFile cf where cf.project=:project order by cf.id")
                 .setParameter("project", p).setMaxResults(1).getSingleResult();
-        
+        } catch (Exception ex) {
+            System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
+        return cf;
     }
     
     
     public void save() {
         System.out.println("************* -------- Persistiendo el activeproject... ----------- ***************"+activeProject.getName());
-        
+        activeProject.setSaved(true);
         em.merge(activeProject);
-        
-        userController.getUser().getProjects().add(activeProject);
+        User u = em.find(User.class, userController.getUser().getId());
+        u.getProjects().add(activeProject);
     }
     
     public List<Part> getParts(CADFile cf) {
@@ -337,9 +342,14 @@ public class ProjectController implements Serializable {
             getActiveProject().setPostedDate(new Date());
             em.persist(getActiveProject());
             em.flush();
-        } 
+        }
+        if (userController.getUser() != null) {
+            User u = em.find(User.class, userController.getUser().getId());
+            u.getProjects().add(activeProject);
+        }
         System.out.println("Active Project: "+getActiveProject().getId());
-
+        
+        
         
         CADFile f = new CADFile();
         f.setName(fileName);

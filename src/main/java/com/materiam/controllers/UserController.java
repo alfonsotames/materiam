@@ -103,7 +103,7 @@ public class UserController implements Serializable {
                     withParams()
                             .credential(credential));
             Logger.getLogger(this.getClass().getName()).log(Level.INFO, "* - * - * - * - * - * - Authenticate invocado  * - * - * - * - * - * - ");
-            setUser((User) em.createQuery("select u from User u where u.email=:email").setParameter("email", loginEmail).getSingleResult());
+            this.user = (User) em.createQuery("select u from User u where u.email=:email").setParameter("email", loginEmail).getSingleResult();
             
             Logger.getLogger(this.getClass().getName()).log(Level.INFO, "status equals {0}", status);
             if (status.equals(SEND_CONTINUE)) {
@@ -118,8 +118,9 @@ public class UserController implements Serializable {
                     System.out.println(" >>>>>>>>>>>>>>>>>>>>>>>>>> activeProject is null!!!!!!!");
                 } else {
                     projectController.getActiveProject().setSaved(true);
+                    em.merge(projectController.getActiveProject());
                     user.getProjects().add(projectController.getActiveProject());
-                    
+                    em.merge(user);
                 }
 
 

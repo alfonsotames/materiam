@@ -4,37 +4,39 @@
                 xmlns:ui="jakarta.faces.facelets"
                 template="../fetemplate.xhtml"
                 xmlns:p="http://primefaces.org/ui"
-                xmlns:f="jakarta.faces.core">
+                xmlns:f="jakarta.faces.core"
+                xmlns:h="jakarta.faces.html">
 
     <ui:define name="top">
         
     </ui:define>
 
     <ui:define name="content">
-        <span style="color: white;">
-        Welcome to your account #{loginController.user.name} !!!<br/>
-        Project: #{projectcontroller.activeProject.name}
-        </span>
-        <div>
-            <p:card style="width: 240px">
-                <f:facet name="header">
-                    <img alt="user header" style="width: 240px; height: 100px; object-fit: cover" src="https://image.made-in-china.com/2f0j00RMtVrJLwAdfb/Customized-Parking-Lot-Standing-Pylon-Sign-Totem-for-Shopping-Mall-Wayfinding-Signage.webp"/>
-                </f:facet>
-                <f:facet name="title">
-                    Parking Lot Totem
-                </f:facet>
-                <f:facet name="subtitle">
-                    Card subtitle
-                </f:facet>
+        
+        <h:form id="projectsform">
+            
+            <p:dataTable id="projects" var="pr" value="#{projectController.projects}" 
+                         widgetVar="cellProjects" stripedRows="true" editable="true">
+                
+                <p:column>
+                    <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.4); width: 120px; background-color: white;">
+                        <p:commandLink action="#{projectController.openProject(pr)}">
+                            <img style="width:110px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
+                             src="#{request.contextPath}/imageserver?projectid=#{pr.id}&amp;cadfile=#{projectController.getFirstCADFileForProject(pr).id}&amp;persid=0-1-1-1" />
+                        </p:commandLink>
+                    </div> 
+                </p:column>
+                
+                <p:column width="140px; ">
+                    <div style="color: white;">
+                        #{pr.name} Project id: #{pr.id} #{projectController.getFirstCADFileForProject(pr).id}
+                    </div>
+                </p:column>
+            
+            </p:dataTable>
 
-                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
-
-                <f:facet name="footer">
-                    <p:commandButton icon="pi pi-check" value="Save"/>
-                    <p:commandButton icon="pi pi-times" value="Cancel" styleClass="ui-button-secondary" style="margin-left: .5em"/>
-                </f:facet>
-            </p:card>
-        </div>
+        </h:form>
+        
     </ui:define>
 
     <ui:define name="bottom">

@@ -33,7 +33,7 @@
                     <div id="info" style="position: absolute;   position: absolute;  z-index: 10;
                             top: 10px;
                             left: 10px;
-                            padding: 0px; width: 400px; ">
+                            padding: 0px; width: 420px; ">
                         <h:form id="form" onkeypress="if (event.keyCode == 13) { saver(); event.preventDefault();}" style="margin-bottom: 0px;">
                             <p:remoteCommand name="saver" actionListener="#{projectController.save()}" update="nombre"  />
                             <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;">
@@ -63,10 +63,10 @@
                                     
                                     <div class="grid_two" style="border:1px dashed grey; margin-bottom: 5px;">    
                                         <div id="statusimage"  style="background-image: url('images/sheetmetal.png'); 
-                                            width:60px; height:50px;
+                                            width:80px; height:70px;
 
                                             margin-left: 40px;
-                                            background-size:     60px 40px;                      
+                                            background-size:     80px 60px;                      
                                             background-repeat:   no-repeat;
                                             background-position: center center;  
                                                 ">
@@ -95,49 +95,80 @@
                         
                         <h:form id="formparts" style="margin-top:0px;">
                      
-                            <div style="background-color: #5a5a5a; color: white; padding: 5px; font-size: 14px;">Manufacturing Order contains #{projectController.quotedParts.size()} parts:</div>
+                            <div style="background-color: #5a5a5a; color: white; padding: 5px; font-size: 14px;">Manufacturing Order:</div>
                             <div style="color: white; overflow-y: scroll;  max-height: 50vh;">
+                                
+                                
+                                
+                                
+                                <p:dataView id="cadfiles" var="cf" value="#{projectController.CADFiles}" paginator="false">
+                                
+                                    <p:dataViewListItem>
+                                        <p:panel rendered="#{projectController.getParts(cf).size() gt 1}" style="margin: 0px; padding: 0px;">
+                                                        <div style="
+                                                            display: grid;
+                                                            grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
+                                                            grid-template-rows: auto; /* Allows row height to adjust to content */
+                                                            justify-content: center; /* Centers the grid horizontally within its parent */
+                                                            align-items: start; /* Centers items vertically within their cells */">
+                                                            <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px;">
+                                                                <img style="width:110px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
+                                                                     src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{cf.id}&amp;persid=0-1-1-1"
+                                                                     onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{cf.id}&amp;persid=0-1-1-1');"/>
+                                                            </div>                                                     
+                                                            <div style="margin: 4px;  width:290px; word-break: break-all;">
+                                                                <div style="font-size: 14px; "><B>#{projectController.activeProject.id} #{cf.name} #{projectController.getParts(cf).size()} #{cf.project.postedDate}</B></div>
+                                                            </div>
+                                                        </div>
+                                                </p:panel>
+                                
+                                                <p:dataView id="dataview" var="qp" value="#{projectController.getQuotedParts(cf)}" paginator="false"
+                                                            rowsPerPageTemplate="6,12,16"
+                                                            paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                                            gridIcon="pi pi-th-large" listIcon="pi pi-bars">
+                                                    <p:dataViewListItem>
+                                                        <div style="
+                                                            display: grid;
+                                                            grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
+                                                            grid-template-rows: auto; /* Allows row height to adjust to content */
+                                                            justify-content: center; /* Centers the grid horizontally within its parent */
+                                                            align-items: start; /* Centers items vertically within their cells */">
+                                                            <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px;">
+                                                                <img style="width:110px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
+                                                                     src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}"
+                                                                     onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}');"/>
+                                                            </div>                                                     
+                                                            <div style="margin: 4px;  width:290px; word-break: break-all;">
+                                                                <div style="font-size: 14px; ">#{projectController.activeProject.id} <B>#{qp.part.name}</B></div>
 
-                                <p:dataView id="dataview" var="qp" value="#{projectController.quotedParts}" paginator="false"
-                                                rowsPerPageTemplate="6,12,16"
-                                                paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
-                                                gridIcon="pi pi-th-large" listIcon="pi pi-bars">
+                                                                <div style="font-size: 14px;">#{qp.part.material.name}</div>
 
-                                        <p:dataViewListItem>
-
-                                            <div style="
-
-                                                display: grid;
-                                                grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
-                                                grid-template-rows: auto; /* Allows row height to adjust to content */
-                                                justify-content: center; /* Centers the grid horizontally within its parent */
-                                                align-items: start; /* Centers items vertically within their cells */">
-                                                <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 80px;">
-                                                    <img style="width:80px; cursor: pointer; background-color: #fafafa;"
-                                                         src="#{request.contextPath}/imageserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}"
-                                                         onclick="loadGLB('#{request.contextPath}/glbserver?cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}');"/>
-                                                </div>                                                     
-                                                <div style="margin: 4px;  width:290px; word-break: break-all;">
-                                                    <div style="font-size: 14px; "><B>#{qp.part.name}</B></div>
-
-                                                    <div style="font-size: 14px;">#{qp.part.material.name}</div>
-                                                   
-                                                    <div style="font-size: 14px;">Thickness:
-                                                        <h:outputText value="#{qp.part.thickness}">
-                                                            <f:convertNumber maxFractionDigits="2" minFractionDigits="2" />
-                                                        </h:outputText>
-                                                          mm</div>
-                                                    <div>#{qp.part.comments}</div>
-                                                    <div style="margin-top:5px;">
-                                                        <h:outputText style="font-weight: bold;" value="#{qp.price}" styleClass="product-price" rendered="#{qp.price ne 0}">
-                                                            <f:convertNumber currencySymbol="USD$" type="currency"/>
-                                                        </h:outputText>
-                                                    </div>
-                                                     <div style="font-size: 14px;">Quantity: #{qp.part.timesRepeated}</div>
-                                                </div>
-                                            </div>
-                                        </p:dataViewListItem>
-                                    </p:dataView>
+                                                                <div style="font-size: 14px;">Thickness:
+                                                                    <h:outputText value="#{qp.part.thickness}">
+                                                                        <f:convertNumber maxFractionDigits="2" minFractionDigits="2" />
+                                                                    </h:outputText>
+                                                                      mm</div>
+                                                                <div>#{qp.part.comments}</div>
+                                                                <div style="margin-top:5px;">
+                                                                    <h:outputText style="font-weight: bold;" value="#{qp.price}" styleClass="product-price" rendered="#{qp.price ne 0}">
+                                                                        <f:convertNumber currencySymbol="USD$" type="currency"/>
+                                                                    </h:outputText>
+                                                                </div>
+                                                                 <div style="font-size: 14px;">Quantity: #{qp.part.timesRepeated}</div>
+                                                            </div>
+                                                        </div>
+                                                    </p:dataViewListItem>
+                                                </p:dataView>
+                                
+                                        
+                                    </p:dataViewListItem>
+                                
+                                </p:dataView>
+                                
+                                
+                                
+                                
+                                
                             </div>
 
                             <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-bottom-right-radius: 8px; border-bottom-left-radius: 8px; color: black;">
@@ -153,6 +184,7 @@
                                         </h:outputText>                                           
                                     </div>
                                 </div>
+                                <p:commandLink action="#{projectController.save()}"><i class="pi pi-save" style="color:black;" /></p:commandLink>
                             </div>
                         </h:form>   
                     </div>

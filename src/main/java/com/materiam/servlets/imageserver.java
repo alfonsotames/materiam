@@ -67,7 +67,11 @@ public class imageserver extends HttpServlet {
     public void doGet(HttpServletRequest request, HttpServletResponse resp) throws IOException {
         // Get the absolute path of the image
         ServletContext sc = getServletContext();
-        String projectid = projectController.getActiveProject().getId().toString();
+        
+        //String projectid = projectController.getActiveProject().getId().toString();
+        
+        //TODO: Limit the files to user projects!
+        String projectid = request.getParameter("projectid");
         String cadfileid = request.getParameter("cadfile");
         String persid = request.getParameter("persid").replaceAll(":", "-");;
 

@@ -37,8 +37,8 @@ function init() {
         ( frustumSize * aspect) / 2,
         frustumSize / 2,
         -frustumSize / 2,
-        0.1,
-        1000
+        0.001,
+        50000
     );
 
     camera.position.set(1, 1, 1);
@@ -101,7 +101,7 @@ function init() {
     controls = new TrackballControls(camera, renderer.domElement);
     controls.rotateSpeed = 3.0;
     controls.zoomSpeed = 1.2;
-    controls.panSpeed = 0.8;
+    controls.panSpeed = 40;
     controls.noZoom = false;
     controls.noPan = false;
     controls.staticMoving = false;
@@ -109,18 +109,201 @@ function init() {
     controls.target.set(0, 0, 0);
     controls.handleResize();
 
-    // Gizmo
+
     gizmo = new ViewportGizmo(camera, renderer, {
-        type: "sphere",
-        size: 100,
-        placement: "top-right",
-        resolution: 64,
-        lineWidth: 6.336,
-        radius: 1,
-        smoothness: 18,
-        animated: true,
-        speed: 1,
-        background: { enabled: true, color: 16777215, opacity: 0 }
+        "type": "sphere",
+        "size": 100,
+        "placement": "top-right",
+        "resolution": 64,
+        "lineWidth": 6.336,
+        "radius": 1,
+        "smoothness": 18,
+        "animated": true,
+        "speed": 1,
+        "background": {
+        "enabled": true,
+        "color": 16777215,
+        "opacity": 0,
+        "hover": {
+        "color": 16777215,
+        "opacity": 0.2
+        }
+        },
+        "font": {
+        "family": "sans-serif",
+        "weight": 700
+        },
+        "offset": {
+        "top": 90,
+        "left": 90,
+        "bottom": 0,
+        "right": 0
+        },
+        "corners": {
+        "enabled": false,
+        "color": 15915362,
+        "opacity": 1,
+        "scale": 0.15,
+        "radius": 1,
+        "smoothness": 18,
+        "hover": {
+        "color": 16777215,
+        "opacity": 1,
+        "scale": 0.2
+        }
+        },
+        "edges": {
+        "enabled": false,
+        "color": 15915362,
+        "opacity": 1,
+        "radius": 1,
+        "smoothness": 18,
+        "scale": 0.15,
+        "hover": {
+        "color": 16777215,
+        "opacity": 1,
+        "scale": 0.2
+        }
+        },
+        "x": {
+        "enabled": true,
+        "color": 9100032,
+        "opacity": 1,
+        "scale": 0.5,
+        "labelColor": 2236962,
+        "line": true,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        },
+        "hover": {
+        "color": 16777215,
+        "labelColor": 2236962,
+        "opacity": 1,
+        "scale": 0.7,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        }
+        },
+        "label": "Y"
+        },
+        "y": {
+        "enabled": true,
+        "color": 2920447,
+        "opacity": 1,
+        "scale": 0.5,
+        "labelColor": 2236962,
+        "line": true,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        },
+        "hover": {
+        "color": 16777215,
+        "labelColor": 2236962,
+        "opacity": 1,
+        "scale": 0.7,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        }
+        },
+        "label": "Z"
+        },
+        "z": {
+        "enabled": true,
+        "color": 16725587,
+        "opacity": 1,
+        "scale": 0.5,
+        "labelColor": 2236962,
+        "line": true,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        },
+        "hover": {
+        "color": 16777215,
+        "labelColor": 2236962,
+        "opacity": 1,
+        "scale": 0.7,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        }
+        },
+        "label": "X"
+        },
+        "nx": {
+        "line": false,
+        "scale": 0.45,
+        "hover": {
+        "scale": 0.5,
+        "color": 16777215,
+        "labelColor": 2236962,
+        "opacity": 1,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        }
+        },
+        "label": "",
+        "enabled": true,
+        "color": 16725587,
+        "opacity": 1,
+        "labelColor": 2236962,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        }
+        },
+        "ny": {
+        "line": false,
+        "scale": 0.45,
+        "hover": {
+        "scale": 0.5,
+        "color": 16777215,
+        "labelColor": 2236962,
+        "opacity": 1,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        }
+        },
+        "label": "",
+        "enabled": true,
+        "color": 9100032,
+        "opacity": 1,
+        "labelColor": 2236962,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        }
+        },
+        "nz": {
+        "line": false,
+        "scale": 0.45,
+        "hover": {
+        "scale": 0.5,
+        "color": 16777215,
+        "labelColor": 2236962,
+        "opacity": 1,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        }
+        },
+        "label": "",
+        "enabled": true,
+        "color": 2920447,
+        "opacity": 1,
+        "labelColor": 2236962,
+        "border": {
+        "size": 0,
+        "color": 14540253
+        }
+        },
+        "isSphere": true
     });
 
     gizmo.attachControls(controls);

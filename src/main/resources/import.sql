@@ -110,6 +110,12 @@ insert into unit values (1,'Unit','');
 insert into unit values (2,'Milimeters','mm');
 insert into unit values (3,'Kilogram per cubic meter','kg/m³');
 insert into unit values (4,'Currency','USD');
+insert into unit values (5,'Cubic Meter','m³');
+insert into unit values (6,'Square Meter','m²');
+insert into unit values (7,'Cubic Milimeter','mm³');
+insert into unit values (8,'Square Milimeter','mm²');
+insert into unit values (9,'Meter','m');
+insert into unit values (10,'Gram','g');
 
 
 insert into propertytype values (1,'WIDTH','Width',2);
@@ -119,6 +125,23 @@ insert into propertytype values (4,'THICKNESS','Thickness',2);
 insert into propertytype values (5,'DENSITY','Density',3);
 insert into propertytype values (6,'PRICEPERKG','Price/kg',4);
 insert into propertytype values (7,'DIAMETER','Diameter',2);
+insert into propertytype values (7,'DIMX','X dimension of the axis-aligned bounding box for the entire assembly.',2);
+insert into propertytype values (8,'DIMY','Y dimension of the axis-aligned bounding box for the entire assembly.',2);
+insert into propertytype values (9,'DIMZ','Z dimension of the axis-aligned bounding box for the entire assembly.',2);
+insert into propertytype values (10,'FLATOBBLENGTH','The length of the optimized position of the flat pattern for a sheet metal body.',2);
+insert into propertytype values (11,'FLATOBBWIDTH','The width of the optimized position of the flat pattern for a sheet metal body.',2);
+insert into propertytype values (12,'FLATTOTALCONTOURLENGTH','The total cutting length computed as a sum of all segment lengths in the flat pattern (depends on K-factor), including inner holes and cutouts.',2);
+insert into propertytype values (13,'PARTLENGTH','The total length of a straight tube or a wire.',2);
+insert into propertytype values (14,'PERSID','A unique identifier of the part inside a CAD product. This ID is defined in the XDE/OCAF native format.',1);
+insert into propertytype values (15,'SECTIONHEIGHT','The profile’s height.',2);
+insert into propertytype values (16,'SECTIONWIDTH','The profile’s width.',2);
+insert into propertytype values (17,'INSTANCES','',1);
+insert into propertytype values (18,'TOTALAREA','The total area of all CAD faces in the solid body. Normally, this area equals sheetArea + thicknessArea.',8);
+insert into propertytype values (19,'VOLUME','The total volume of the solid body.',7);
+insert into propertytype values (20,'NUMCUTTINGCONTOURS','The number of cutting contours, i.e., how many contours a laser cutter should make along the part’s edges (including cutouts).',1);
+
+
+
 
 
 INSERT INTO public.product (id, name, sku, unit_id) VALUES (1, 'Sheet Metal Steel A36 Cold Rolled 28 Ga.', 'SM_STEEL_A36_CR_28GA', 1);

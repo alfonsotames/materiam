@@ -25,19 +25,6 @@ import java.util.Set;
 @Entity
 public class Category implements Serializable {
 
-    /**
-     * @return the products
-     */
-    public Set<Product> getProducts() {
-        return products;
-    }
-
-    /**
-     * @param products the products to set
-     */
-    public void setProducts(Set<Product> products) {
-        this.products = products;
-    }
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -61,6 +48,23 @@ public class Category implements Serializable {
         this.id = id;
     }
 
+    
+        /**
+     * @return the products
+     */
+    public Set<Product> getProducts() {
+        return products;
+    }
+
+    /**
+     * @param products the products to set
+     */
+    public void setProducts(Set<Product> products) {
+        this.products = products;
+    }
+
+    
+    
     @Override
     public int hashCode() {
         int hash = 0;

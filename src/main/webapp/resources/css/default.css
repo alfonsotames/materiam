@@ -135,8 +135,12 @@ input[type="text"]:focus, input[type="password"]:focus {
 	position: absolute;
 	left: -1px;
 	top: -1px;
-	background: linear-gradient(45deg, #fb0094, #0000ff, #00ff00,#ffff00, #ff0000, #fb0094, 
+	/*
+        background: linear-gradient(45deg, #fb0094, #0000ff, #00ff00,#ffff00, #ff0000, #fb0094, 
 		#0000ff, #00ff00,#ffff00, #ff0000);
+        */
+        background: linear-gradient(45deg, #fbfbfb, #eeeeee, #aaaaaa,#333333, #888888, #eeeeee, 
+		#ffffff, #999999,#bbbbbb, #cccccc);
 	background-size: 400%;
 	width: calc(100% + 2px);
 	height: calc(100% + 2px);

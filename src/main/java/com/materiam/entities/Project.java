@@ -4,6 +4,7 @@
  */
 package com.materiam.entities;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -45,8 +46,8 @@ public class Project implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @OneToMany(mappedBy = "project")
-    private Set<CADFile> cadfiles;
+    @OneToMany(mappedBy = "project", cascade = CascadeType.PERSIST)
+    private List<CADFile> cadfiles;
     
     @Temporal(TemporalType.TIMESTAMP)
     private Date postedDate;
@@ -122,14 +123,14 @@ public class Project implements Serializable {
     /**
      * @return the cadfiles
      */
-    public Set<CADFile> getCadfiles() {
+    public List<CADFile> getCadfiles() {
         return cadfiles;
     }
 
     /**
      * @param cadfiles the cadfiles to set
      */
-    public void setCadfiles(Set<CADFile> cadfiles) {
+    public void setCadfiles(List<CADFile> cadfiles) {
         this.cadfiles = cadfiles;
     }
     

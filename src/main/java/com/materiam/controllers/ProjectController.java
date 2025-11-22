@@ -15,6 +15,7 @@ import com.materiam.entities.Project;
 import com.materiam.entities.Property;
 import events.EventQualifier;
 import events.ImportUpdate;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.SessionScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.faces.application.FacesMessage;
@@ -81,6 +82,9 @@ import org.primefaces.model.file.UploadedFile;
 public class ProjectController implements Serializable {
     @Inject
     private HttpServletRequest request;
+    
+    @Inject
+    UserController userController;
         
     @PersistenceContext(unitName = "materiam")
     private EntityManager em;
@@ -109,27 +113,69 @@ public class ProjectController implements Serializable {
         System.out.println(">>>>>>>>>>>>>>>>>>> ✅  Submitwsid inkoked: "+wsid);
     }
     
+    @PostConstruct
+    public void init() {
+        //activeProject = new Project();
+    }
+    
+    public List<Project> getProjects() {
+        
+        return em.createQuery("select u.projects from User u where u=:user")
+                .setParameter("user", userController.getUser()).getResultList();
+    }
+    
+    public void openProject(Project pr) {
+        FacesContext facesContext = FacesContext.getCurrentInstance();
+        ExternalContext externalContext = facesContext.getExternalContext();
+        this.activeProject = pr;
+        String path = request.getContextPath() + "/project.xhtml";
+        try {
+            externalContext.redirect(path);
+        } catch (IOException ex) {
+            System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
+    }
+    
+    public CADFile getFirstCADFileForProject(Project p) {
+        
+        return (CADFile)em.createQuery("select cf from CADFile cf where cf.project=:project order by cf.id")
+                .setParameter("project", p).setMaxResults(1).getSingleResult();
+        
+    }
     
     
     public void save() {
         System.out.println("************* -------- Persistiendo el activeproject... ----------- ***************"+activeProject.getName());
+        
         em.merge(activeProject);
+        
+        userController.getUser().getProjects().add(activeProject);
     }
     
-    public List<Part> getParts() {
+    public List<Part> getParts(CADFile cf) {
         System.out.println("Retrieving parts...");
-        List<Part> parts = em.createQuery("SELECT p FROM Part p, CADFile cf, Project pr  where pr=:project and cf.project=pr and p.cadfile=cf")
-                                                .setParameter("project", activeProject).getResultList();
+        List<Part> parts = em.createQuery("SELECT p FROM Part p, CADFile cf, Project pr  where pr=:project and cf.project=pr and p.cadfile=cf and cf=:cadfile ")
+                                                .setParameter("project", activeProject)
+                                                .setParameter("cadfile", cf)
+                                                .getResultList();
         for (Part p : parts) {
             System.out.println("Part id: "+p.getId());
         }
         return parts;
     }
     
-    public List<QuotedPart> getQuotedParts() {
+    public List<CADFile> getCADFiles() {
+        List<CADFile> cfs = em.createQuery("select cf from CADFile cf where cf.project = :project")
+                .setParameter("project", activeProject).getResultList();
+        return cfs;
+    }
+    
+    public List<QuotedPart> getQuotedParts(CADFile cadfile) {
         List<QuotedPart> qps = new ArrayList<>();
-        List<Part> parts = em.createQuery("SELECT p FROM Part p, CADFile cf, Project pr  where pr=:project and cf.project=pr and p.cadfile=cf")
-                                                .setParameter("project", activeProject).getResultList();
+        List<Part> parts = em.createQuery("SELECT p FROM Part p, CADFile cf, Project pr  where pr=:project and cf.project=pr and p.cadfile=cf and cf=:cadfile")
+                                                .setParameter("project", activeProject)
+                                                .setParameter("cadfile", cadfile)
+                                                .getResultList();
         for (Part p : parts) {
             System.out.println("Part id: "+p.getId());
             QuotedPart qp = new QuotedPart();
@@ -230,12 +276,15 @@ public class ProjectController implements Serializable {
     
     public BigDecimal getTotal() {
         BigDecimal total = new BigDecimal(0);
-        List<QuotedPart> parts = getQuotedParts();
-        for (QuotedPart q : getQuotedParts()) {
+        for (CADFile cf : activeProject.getCadfiles()) {
 
-                total = total.add(q.getPrice());
+            for (QuotedPart q : getQuotedParts(cf)) {
 
+                    total = total.add(q.getPrice());
+
+            }
         }
+        
         return total;
     }
     
@@ -288,7 +337,7 @@ public class ProjectController implements Serializable {
             getActiveProject().setPostedDate(new Date());
             em.persist(getActiveProject());
             em.flush();
-        }
+        } 
         System.out.println("Active Project: "+getActiveProject().getId());
 
         
@@ -325,7 +374,8 @@ public class ProjectController implements Serializable {
             
             //String command = String.format("asiSheetMetalExe %s %s/out.json -image %s/image.png -asm -imagesForParts -gltf -flat -expandCompounds -onlyCuttingLines -gltfWithColors -step -profile -weldings", (filedest + fileName), filedest, filedest);
             String command = String.format("asiSheetMetalExe %s %s/out.json -image %s/image.png -asm -imagesForParts -gltf -flat -expandCompounds -step -profile ", (filedest + fileName), filedest, filedest);
-
+            //String command = String.format("asiSheetMetalExe %s %s/out.json  -asm  -flat -expandCompounds  -profile ", (filedest + fileName), filedest, filedest);
+            // asiSheetMetalExe parrilla.step out.json -image ./ -asm -imagesForParts -gltf -flat -expandCompounds -onlyCuttingLines -gltfWithColors -step -profile
             Process pr = rt.exec(command);
             importUpdate.fire(new ImportUpdate("Reading STEP file...",wsid));
             try {
@@ -745,5 +795,6 @@ public class ProjectController implements Serializable {
         }  
     }
     
+
 }
 

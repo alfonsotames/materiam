@@ -4,6 +4,7 @@
  */
 package com.materiam.entities;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,10 +29,11 @@ public class CADFile implements Serializable {
     private String name;
     @ManyToOne
     private Project project;
-    @OneToMany(mappedBy = "cadfile")
+    @OneToMany(mappedBy = "cadfile", cascade = CascadeType.PERSIST)
     private Set<Part> parts;
-    @OneToMany(mappedBy = "cadfile")
+    @OneToMany(mappedBy = "cadfile", cascade = CascadeType.PERSIST)
     private Set<Instance>instances;
+    
     
 
     
@@ -79,7 +81,7 @@ public class CADFile implements Serializable {
 
     @Override
     public String toString() {
-        return "com.materiam.entities.File[ id=" + id + " ]";
+        return "com.materiam.entities.CadFile[ id=" + id + " ]";
     }
     
 

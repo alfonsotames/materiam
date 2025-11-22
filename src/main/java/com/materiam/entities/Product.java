@@ -90,10 +90,10 @@ public class Product implements Serializable {
     private List<Property> properties = new ArrayList<>();
     
 
-    @ManyToMany(mappedBy = "products")
+    @ManyToMany(mappedBy = "products",cascade = CascadeType.PERSIST)
     private Set<Category> categories = new HashSet<>();
   
-    @OneToMany
+    @OneToMany(cascade = CascadeType.PERSIST)
     private List<Product> assembly;
     
 

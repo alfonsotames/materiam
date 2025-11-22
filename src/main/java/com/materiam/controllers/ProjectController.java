@@ -138,10 +138,12 @@ public class ProjectController implements Serializable {
     }
     
     public CADFile getFirstCADFileForProject(Project p) {
+        System.out.println("************* -------- getFirstCADFileForProject ----------- ***************"+p.getName());
+        
         CADFile cf = null;
         try {
-            cf=  (CADFile)em.createQuery("select cf from CADFile cf where cf.project=:project order by cf.id")
-                .setParameter("project", p).setMaxResults(1).getSingleResult();
+            cf=  (CADFile)em.createQuery("select cf from CADFile cf where cf.project.id=:projectid order by cf.id")
+                .setParameter("projectid", p.getId()).setMaxResults(1).getSingleResult();
         } catch (Exception ex) {
             System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         }

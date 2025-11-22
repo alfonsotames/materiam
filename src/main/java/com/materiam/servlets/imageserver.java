@@ -75,8 +75,8 @@ public class imageserver extends HttpServlet {
         String cadfileid = request.getParameter("cadfile");
         String persid = request.getParameter("persid").replaceAll(":", "-");;
 
-        String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/image_"+persid+"_1.png";
-        //String filename = "/Users/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/image_"+persid+"_1.png";
+        //String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/image_"+persid+"_1.png";
+        String filename = "/Users/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+cadfileid+"/image_"+persid+"_1.png";
 
         /*    
         // Get the MIME type of the image

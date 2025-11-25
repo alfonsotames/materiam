@@ -1,6 +1,5 @@
 // <![CDATA[
-// 1. IMPORTS: ALIGNED TO v0.180.0 TO FIX EXPORT ERRORS
-// If you use an HTML Import Map, you can change these URLs back to 'three', 'three/addons/...', etc.
+// 1. IMPORTS: Using Three.js v0.180.0
 import * as THREE from 'https://unpkg.com/three@0.180.0/build/three.module.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.180.0/examples/jsm/loaders/GLTFLoader.js';
 import { Line2 } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/Line2.js';
@@ -237,7 +236,6 @@ class Coin3DControls {
 let camera, scene, renderer, loader;
 let objectContainer;
 let controls; 
-let pivotHelper;
 
 // Default Orthographic Frustum Size
 const frustumSize = 20;
@@ -271,17 +269,13 @@ function init() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
-    
-    // V180 UPDATE: use outputColorSpace instead of sRGBEncoding
     renderer.outputColorSpace = THREE.SRGBColorSpace; 
-    
     container.appendChild(renderer.domElement);
 
     // 4. Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
     
-    // V180 UPDATE: Bump directional light intensity for physical lights
     const dirLight = new THREE.DirectionalLight(0xffffff, 3.0); 
     dirLight.position.set(5, 10, 7);
     scene.add(dirLight);
@@ -309,29 +303,21 @@ function init() {
     const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
     mesh.add(line);
 
-    // 7. Pivot Helper
-    const phGeo = new THREE.SphereGeometry(0.2);
-    const phMat = new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false });
-    pivotHelper = new THREE.Mesh(phGeo, phMat);
-    pivotHelper.renderOrder = 999;
-    scene.add(pivotHelper);
-
-    // 8. Grid
+    // 7. Grid (Red Sphere REMOVED)
     const gridHelper = new THREE.GridHelper(40, 40);
     scene.add(gridHelper);
 
-    // 9. Resize
+    // 8. Resize
     window.addEventListener('resize', onWindowResize);
 
-    // 10. Init Controls
+    // 9. Init Controls
     controls = new Coin3DControls(camera, renderer.domElement, new THREE.Vector3(0, 0, 0));
 
-    // 11. Create UI
+    // 10. Create UI
     createUI();
 }
 
 function createUI() {
-    // Container
     const ui = document.createElement('div');
     ui.style.position = 'absolute';
     ui.style.top = '10px';
@@ -341,7 +327,6 @@ function createUI() {
     ui.style.gap = '5px';
     document.body.appendChild(ui);
 
-    // --- PROJECTION TOGGLES ---
     const projDiv = document.createElement('div');
     projDiv.style.display = 'flex';
     projDiv.style.gap = '5px';
@@ -362,9 +347,7 @@ function createUI() {
     btnPersp.onclick = () => toggleProjection('persp');
     projDiv.appendChild(btnPersp);
 
-    // --- SNAP VIEW BUTTONS ---
     const views = ['Top', 'Bottom', 'Front', 'Back', 'Left', 'Right', 'Iso'];
-
     views.forEach(view => {
         const btn = document.createElement('button');
         btn.innerText = view;
@@ -385,14 +368,11 @@ function toggleProjection(mode) {
     let newCam;
 
     if (mode === 'persp') {
-        // --- Switch to Perspective ---
         newCam = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
         newCam.position.copy(camera.position);
         newCam.quaternion.copy(camera.quaternion);
         newCam.up.copy(camera.up);
 
-        // Calculate Matching Distance
         const orthoHeight = (camera.top - camera.bottom) / camera.zoom;
         const halfFovRad = (newCam.fov / 2) * (Math.PI / 180);
         const newDist = (orthoHeight / 2) / Math.tan(halfFovRad);
@@ -402,7 +382,6 @@ function toggleProjection(mode) {
         newCam.position.addVectors(controls.target, offset);
 
     } else {
-        // --- Switch to Orthographic ---
         const aspect = window.innerWidth / window.innerHeight;
         newCam = new THREE.OrthographicCamera( 
             frustumSize * aspect / -2, frustumSize * aspect / 2, 
@@ -414,11 +393,9 @@ function toggleProjection(mode) {
         newCam.quaternion.copy(camera.quaternion);
         newCam.up.copy(camera.up);
 
-        // Calculate Matching Zoom
         const dist = new THREE.Vector3().subVectors(camera.position, controls.target).length();
         const halfFovRad = (camera.fov / 2) * (Math.PI / 180);
         const perspHeight = 2 * dist * Math.tan(halfFovRad);
-        
         newCam.zoom = frustumSize / perspHeight;
     }
 
@@ -445,9 +422,6 @@ function onWindowResize() {
 
 function animate() {
     requestAnimationFrame(animate);
-    if (pivotHelper && controls) {
-        pivotHelper.position.copy(controls.target);
-    }
     renderer.render(scene, camera);
 }
 
@@ -461,7 +435,6 @@ function loadGLB(url) {
         (gltf) => {
             scene.add(gltf.scene);
 
-            // Center & scale model
             var box = new THREE.Box3().setFromObject(gltf.scene);
             var center = box.getCenter(new THREE.Vector3());
             var size = box.getSize(new THREE.Vector3());
@@ -471,10 +444,7 @@ function loadGLB(url) {
             gltf.scene.scale.set(scale, scale, scale);
             gltf.scene.position.sub(center.multiplyScalar(scale));
 
-            // Reset pivot to (0,0,0)
             controls.target.set(0, 0, 0);
-            
-            // Re-snap to default view
             controls.snap('iso');
         },
         (xhr) => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
@@ -486,9 +456,7 @@ function clearAllMeshes(scene) {
     const toRemove = [];
     scene.traverse((obj) => {
         if (obj.isCamera || obj.isLight) return;
-        
-        // Check if object is a Pivot or Helper (don't delete controls/helpers)
-        if (obj === pivotHelper || obj.type === 'GridHelper' || obj.type === 'AxesHelper') return;
+        if (obj.type === 'GridHelper' || obj.type === 'AxesHelper') return;
 
         const isRenderable =
             obj.isMesh ||
@@ -499,7 +467,6 @@ function clearAllMeshes(scene) {
 
         if (isRenderable) {
             if (obj.geometry) obj.geometry.dispose();
-
             if (obj.material) {
                 if (Array.isArray(obj.material)) {
                     obj.material.forEach((m) => m.dispose());

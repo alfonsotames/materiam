@@ -1,27 +1,30 @@
 // <![CDATA[
-import * as THREE from 'three';
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { Line2 } from 'three/addons/lines/Line2.js';
-import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
-import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+// 1. IMPORTS: ALIGNED TO v0.180.0 TO FIX EXPORT ERRORS
+// If you use an HTML Import Map, you can change these URLs back to 'three', 'three/addons/...', etc.
+import * as THREE from 'https://unpkg.com/three@0.180.0/build/three.module.js';
+import { GLTFLoader } from 'https://unpkg.com/three@0.180.0/examples/jsm/loaders/GLTFLoader.js';
+import { Line2 } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/Line2.js';
+import { LineGeometry } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/LineGeometry.js';
+import { LineMaterial } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/LineMaterial.js';
 
 // -------------------------------------------------------------
-// Coin3D Controls (Orthographic + Snap Views)
+// Coin3D Controls (Hybrid: Orthographic + Perspective)
 // -------------------------------------------------------------
 class Coin3DControls {
     constructor(camera, domElement, target) {
         this.camera = camera;
         this.domElement = domElement;
+        
+        // Pivot point locked at (0,0,0) (or model center)
         this.target = target || new THREE.Vector3(0, 0, 0);
 
         // Settings
         this.rotateSpeed = 2.5; 
         this.panSpeed = 1.0;
         this.zoomSpeed = 1.05;
-        this.enableDamping = false; 
 
         // Internal State
-        this.state = -1; 
+        this.state = -1; // -1: None, 0: Rotate, 1: Pan
         this.isDragging = false;
         this._lastMouse = new THREE.Vector2();
 
@@ -35,13 +38,14 @@ class Coin3DControls {
 
     // --- SNAP VIEW LOGIC ---
     snap(viewName) {
-        const dist = 50; // Distance to place camera (to avoid clipping)
+        // Perspective needs to be further back to see the same amount as Ortho 20
+        const dist = this.camera.isPerspectiveCamera ? 80 : 50; 
         const t = this.target;
 
-        // 1. Reset Camera Up vector (Standard Y-up)
+        // Reset Camera Up vector (Standard Y-up)
         this.camera.up.set(0, 1, 0);
 
-        // 2. Position Camera based on View
+        // Position Camera based on View
         switch(viewName) {
             case 'front': 
                 this.camera.position.set(t.x, t.y, t.z + dist); 
@@ -56,7 +60,7 @@ class Coin3DControls {
                 this.camera.position.set(t.x - dist, t.y, t.z);
                 break;
             case 'top':
-                // For Top view, looking down Y, the "Up" on screen is usually -Z
+                // For Top view, look down Y. Screen Up is -Z.
                 this.camera.position.set(t.x, t.y + dist, t.z);
                 this.camera.up.set(0, 0, -1); 
                 break;
@@ -69,7 +73,6 @@ class Coin3DControls {
                 break;
         }
 
-        // 3. Look at target and update
         this.camera.lookAt(t);
         this.camera.updateProjectionMatrix();
     }
@@ -106,8 +109,11 @@ class Coin3DControls {
             const angle = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
             if (angle > 0.0001) {
+                // Screen Space Axis Calculation
                 const axisScreen = new THREE.Vector3(-deltaY, deltaX, 0).normalize();
                 const axisWorld = axisScreen.applyQuaternion(this.camera.quaternion);
+                
+                // Rotate (-angle for natural feel)
                 this.rotateCamera(axisWorld, -angle * this.rotateSpeed);
             }
             this._lastMouse.copy(currMouse);
@@ -128,58 +134,99 @@ class Coin3DControls {
     onWheel(event) {
         event.preventDefault();
         if (event.deltaY > 0) {
-            this.zoomCamera(1 / this.zoomSpeed); 
+            this.zoomCamera(1 / this.zoomSpeed); // Zoom Out
         } else {
-            this.zoomCamera(this.zoomSpeed);
+            this.zoomCamera(this.zoomSpeed);     // Zoom In
         }
     }
 
     rotateCamera(axis, angle) {
         const q = new THREE.Quaternion();
         q.setFromAxisAngle(axis, angle);
+        
+        // Rotate the offset vector from Target
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.target);
         offset.applyQuaternion(q);
+        
+        // Rotate Camera orientation
         this.camera.quaternion.premultiply(q);
+        
+        // Re-position Camera
         this.camera.position.addVectors(this.target, offset);
     }
 
+    // --- HYBRID PAN LOGIC ---
     panCamera(deltaX, deltaY) {
-        const frustumHeight = (this.camera.top - this.camera.bottom) / this.camera.zoom;
-        const frustumWidth = (this.camera.right - this.camera.left) / this.camera.zoom;
-        const moveX = -deltaX * frustumWidth * 0.5;
-        const moveY = -deltaY * frustumHeight * 0.5;
+        let moveX, moveY;
+
+        if (this.camera.isPerspectiveCamera) {
+            // Perspective: Pan speed depends on distance to target
+            const offset = new THREE.Vector3().subVectors(this.camera.position, this.target);
+            const dist = offset.length();
+            const targetHeight = 2.0 * Math.tan((this.camera.fov * Math.PI) / 360) * dist;
+            
+            moveX = -deltaX * (targetHeight * this.camera.aspect) * 0.5;
+            moveY = -deltaY * targetHeight * 0.5;
+        } else {
+            // Orthographic: Pan speed depends on zoom/frustum
+            const frustumHeight = (this.camera.top - this.camera.bottom) / this.camera.zoom;
+            const frustumWidth = (this.camera.right - this.camera.left) / this.camera.zoom;
+            
+            moveX = -deltaX * frustumWidth * 0.5;
+            moveY = -deltaY * frustumHeight * 0.5;
+        }
+
         const vRight = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
         const vUp = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
+        
         const panVector = new THREE.Vector3();
         panVector.addScaledVector(vRight, moveX);
         panVector.addScaledVector(vUp, moveY);
+        
         this.camera.position.add(panVector);
     }
 
+    // --- HYBRID ZOOM LOGIC ---
     zoomCamera(scale) {
-        let newZoom = this.camera.zoom * scale;
-        if (newZoom < 0.1) newZoom = 0.1;
-        if (newZoom > 20) newZoom = 20;
+        if (this.camera.isPerspectiveCamera) {
+            // Perspective: Move physical camera closer (Dolly)
+            const offset = new THREE.Vector3().subVectors(this.camera.position, this.target);
+            const dist = offset.length();
+            let newDist = dist / scale;
+            
+            // Limits
+            if (newDist < 0.1) newDist = 0.1;
+            if (newDist > 1000) newDist = 1000;
+            
+            offset.setLength(newDist);
+            this.camera.position.addVectors(this.target, offset);
 
-        const effectiveScale = newZoom / this.camera.zoom;
-        if (Math.abs(effectiveScale - 1) < 0.0001) return; 
+        } else {
+            // Orthographic: Adjust Zoom property + Center Shift
+            let newZoom = this.camera.zoom * scale;
+            if (newZoom < 0.1) newZoom = 0.1;
+            if (newZoom > 20) newZoom = 20;
 
-        // Center-Pivot Zoom Logic
-        const P = this.camera.position.clone();
-        const T = this.target.clone();
-        const TC = new THREE.Vector3().subVectors(P, T); 
-        const dir = new THREE.Vector3();
-        this.camera.getWorldDirection(dir);
-        
-        const depthDist = TC.dot(dir);
-        const depthVec = dir.clone().multiplyScalar(depthDist);
-        const planeVec = TC.clone().sub(depthVec);
-        
-        planeVec.divideScalar(effectiveScale);
-        
-        this.camera.position.copy(T).add(depthVec).add(planeVec);
-        this.camera.zoom = newZoom;
-        this.camera.updateProjectionMatrix();
+            const effectiveScale = newZoom / this.camera.zoom;
+            if (Math.abs(effectiveScale - 1) < 0.0001) return; 
+
+            // Center-Pivot Logic: Pull camera laterally towards target
+            const P = this.camera.position.clone();
+            const T = this.target.clone();
+            const TC = new THREE.Vector3().subVectors(P, T); 
+            const dir = new THREE.Vector3();
+            this.camera.getWorldDirection(dir);
+            
+            const depthDist = TC.dot(dir);
+            const depthVec = dir.clone().multiplyScalar(depthDist);
+            const planeVec = TC.clone().sub(depthVec);
+            
+            planeVec.divideScalar(effectiveScale);
+            
+            this.camera.position.copy(T).add(depthVec).add(planeVec);
+            this.camera.zoom = newZoom;
+            this.camera.updateProjectionMatrix();
+        }
     }
 }
 
@@ -192,6 +239,7 @@ let objectContainer;
 let controls; 
 let pivotHelper;
 
+// Default Orthographic Frustum Size
 const frustumSize = 20;
 
 init();
@@ -205,7 +253,7 @@ function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x333333);
 
-    // 2. Orthographic Camera
+    // 2. Camera (Start with Orthographic)
     const aspect = window.innerWidth / window.innerHeight;
     camera = new THREE.OrthographicCamera( 
         frustumSize * aspect / -2, 
@@ -223,12 +271,18 @@ function init() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    
+    // V180 UPDATE: use outputColorSpace instead of sRGBEncoding
+    renderer.outputColorSpace = THREE.SRGBColorSpace; 
+    
     container.appendChild(renderer.domElement);
 
     // 4. Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    
+    // V180 UPDATE: Bump directional light intensity for physical lights
+    const dirLight = new THREE.DirectionalLight(0xffffff, 3.0); 
     dirLight.position.set(5, 10, 7);
     scene.add(dirLight);
 
@@ -246,10 +300,11 @@ function init() {
     const mesh = new THREE.Mesh(geometry, material);
     objectContainer.add(mesh);
     
-    // Add Axis helper to see orientation clearly
+    // Axis Helper
     const axesHelper = new THREE.AxesHelper( 5 );
     objectContainer.add( axesHelper );
 
+    // Edges
     const edges = new THREE.EdgesGeometry(geometry);
     const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
     mesh.add(line);
@@ -271,7 +326,7 @@ function init() {
     // 10. Init Controls
     controls = new Coin3DControls(camera, renderer.domElement, new THREE.Vector3(0, 0, 0));
 
-    // 11. Create Snap View Buttons UI
+    // 11. Create UI
     createUI();
 }
 
@@ -286,6 +341,28 @@ function createUI() {
     ui.style.gap = '5px';
     document.body.appendChild(ui);
 
+    // --- PROJECTION TOGGLES ---
+    const projDiv = document.createElement('div');
+    projDiv.style.display = 'flex';
+    projDiv.style.gap = '5px';
+    projDiv.style.marginBottom = '10px';
+    ui.appendChild(projDiv);
+
+    const btnOrtho = document.createElement('button');
+    btnOrtho.innerText = "Ortho";
+    btnOrtho.style.padding = '8px 12px';
+    btnOrtho.style.cursor = 'pointer';
+    btnOrtho.onclick = () => toggleProjection('ortho');
+    projDiv.appendChild(btnOrtho);
+
+    const btnPersp = document.createElement('button');
+    btnPersp.innerText = "Persp";
+    btnPersp.style.padding = '8px 12px';
+    btnPersp.style.cursor = 'pointer';
+    btnPersp.onclick = () => toggleProjection('persp');
+    projDiv.appendChild(btnPersp);
+
+    // --- SNAP VIEW BUTTONS ---
     const views = ['Top', 'Bottom', 'Front', 'Back', 'Left', 'Right', 'Iso'];
 
     views.forEach(view => {
@@ -299,12 +376,69 @@ function createUI() {
     });
 }
 
+function toggleProjection(mode) {
+    const isOrthoCurrently = camera.isOrthographicCamera;
+    
+    if (mode === 'ortho' && isOrthoCurrently) return;
+    if (mode === 'persp' && !isOrthoCurrently) return;
+
+    let newCam;
+
+    if (mode === 'persp') {
+        // --- Switch to Perspective ---
+        newCam = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        newCam.position.copy(camera.position);
+        newCam.quaternion.copy(camera.quaternion);
+        newCam.up.copy(camera.up);
+
+        // Calculate Matching Distance
+        const orthoHeight = (camera.top - camera.bottom) / camera.zoom;
+        const halfFovRad = (newCam.fov / 2) * (Math.PI / 180);
+        const newDist = (orthoHeight / 2) / Math.tan(halfFovRad);
+
+        const offset = new THREE.Vector3().subVectors(newCam.position, controls.target);
+        offset.setLength(newDist);
+        newCam.position.addVectors(controls.target, offset);
+
+    } else {
+        // --- Switch to Orthographic ---
+        const aspect = window.innerWidth / window.innerHeight;
+        newCam = new THREE.OrthographicCamera( 
+            frustumSize * aspect / -2, frustumSize * aspect / 2, 
+            frustumSize / 2, frustumSize / -2, 
+            0.1, 1000 
+        );
+
+        newCam.position.copy(camera.position);
+        newCam.quaternion.copy(camera.quaternion);
+        newCam.up.copy(camera.up);
+
+        // Calculate Matching Zoom
+        const dist = new THREE.Vector3().subVectors(camera.position, controls.target).length();
+        const halfFovRad = (camera.fov / 2) * (Math.PI / 180);
+        const perspHeight = 2 * dist * Math.tan(halfFovRad);
+        
+        newCam.zoom = frustumSize / perspHeight;
+    }
+
+    camera = newCam;
+    controls.camera = newCam;
+    camera.updateProjectionMatrix();
+}
+
 function onWindowResize() {
     const aspect = window.innerWidth / window.innerHeight;
-    camera.left = -frustumSize * aspect / 2;
-    camera.right = frustumSize * aspect / 2;
-    camera.top = frustumSize / 2;
-    camera.bottom = -frustumSize / 2;
+    
+    if (camera.isOrthographicCamera) {
+        camera.left = -frustumSize * aspect / 2;
+        camera.right = frustumSize * aspect / 2;
+        camera.top = frustumSize / 2;
+        camera.bottom = -frustumSize / 2;
+    } else {
+        camera.aspect = aspect;
+    }
+
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
@@ -317,7 +451,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-
+// --- UTILITIES ---
 
 function loadGLB(url) {
     clearAllMeshes(scene);
@@ -337,11 +471,11 @@ function loadGLB(url) {
             gltf.scene.scale.set(scale, scale, scale);
             gltf.scene.position.sub(center.multiplyScalar(scale));
 
-            // Initial pivot = model center
-            box.setFromObject(gltf.scene);
-            center = box.getCenter(new THREE.Vector3());
-            controls.target.copy(center);
-            controls.update();
+            // Reset pivot to (0,0,0)
+            controls.target.set(0, 0, 0);
+            
+            // Re-snap to default view
+            controls.snap('iso');
         },
         (xhr) => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
         (err) => console.error('Error loading GLB:', err)
@@ -352,6 +486,9 @@ function clearAllMeshes(scene) {
     const toRemove = [];
     scene.traverse((obj) => {
         if (obj.isCamera || obj.isLight) return;
+        
+        // Check if object is a Pivot or Helper (don't delete controls/helpers)
+        if (obj === pivotHelper || obj.type === 'GridHelper' || obj.type === 'AxesHelper') return;
 
         const isRenderable =
             obj.isMesh ||
@@ -361,26 +498,24 @@ function clearAllMeshes(scene) {
             (obj instanceof Line2);
 
         if (isRenderable) {
-            if (obj.geometry) obj.geometry.dispose?.();
+            if (obj.geometry) obj.geometry.dispose();
 
             if (obj.material) {
                 if (Array.isArray(obj.material)) {
-                    obj.material.forEach((m) => m.dispose?.());
+                    obj.material.forEach((m) => m.dispose());
                 } else {
-                    obj.material.dispose?.();
+                    obj.material.dispose();
                 }
             }
-
             toRemove.push(obj);
         }
     });
 
-    toRemove.forEach((obj) => obj.parent?.remove(obj));
+    toRemove.forEach((obj) => obj.parent.remove(obj));
 }
 
+// Expose utils to Window
 window.loadGLB = loadGLB;
 window.clearAllMeshes = clearAllMeshes;
-
-
 
 // ]]>

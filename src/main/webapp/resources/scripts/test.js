@@ -13,21 +13,19 @@ class Coin3DControls {
     constructor(camera, domElement, target) {
         this.camera = camera;
         this.domElement = domElement;
-        
-        // Pivot point locked at (0,0,0) (or model center)
         this.target = target || new THREE.Vector3(0, 0, 0);
 
         // Settings
         this.rotateSpeed = 2.5; 
         this.panSpeed = 1.0;
-        this.zoomSpeed = 1.05;
+        
+        // Zoom Speed (Kept at 1.01 as requested previously)
+        this.zoomSpeed = 1.01; 
 
-        // Internal State
-        this.state = -1; // -1: None, 0: Rotate, 1: Pan
+        this.state = -1; 
         this.isDragging = false;
         this._lastMouse = new THREE.Vector2();
 
-        // Bind Events
         this.domElement.addEventListener('mousedown', this.onMouseDown.bind(this));
         this.domElement.addEventListener('mousemove', this.onMouseMove.bind(this));
         this.domElement.addEventListener('mouseup', this.onMouseUp.bind(this));
@@ -35,40 +33,47 @@ class Coin3DControls {
         this.domElement.addEventListener('contextmenu', function(e) { e.preventDefault(); });
     }
 
-    // --- SNAP VIEW LOGIC ---
+    // --- SNAP VIEW LOGIC (FIXED) ---
     snap(viewName) {
-        // Perspective needs to be further back to see the same amount as Ortho 20
-        const dist = this.camera.isPerspectiveCamera ? 80 : 50; 
         const t = this.target;
+        
+        // FIXED: Calculate CURRENT distance to preserve Zoom level in Perspective mode
+        let dist;
+        if (this.camera.isPerspectiveCamera) {
+            dist = this.camera.position.distanceTo(t);
+        } else {
+            // In Ortho, distance is just for clipping, zoom is handled by camera.zoom
+            // We keep it at 50 to ensure it's outside the model
+            dist = 50; 
+        }
 
-        // Reset Camera Up vector (Standard Y-up)
         this.camera.up.set(0, 1, 0);
 
-        // Position Camera based on View
         switch(viewName) {
             case 'front': 
                 this.camera.position.set(t.x, t.y, t.z + dist); 
                 break;
-            case 'back':
-                this.camera.position.set(t.x, t.y, t.z - dist);
+            case 'back':  
+                this.camera.position.set(t.x, t.y, t.z - dist); 
                 break;
-            case 'right':
-                this.camera.position.set(t.x + dist, t.y, t.z);
+            case 'right': 
+                this.camera.position.set(t.x + dist, t.y, t.z); 
                 break;
-            case 'left':
-                this.camera.position.set(t.x - dist, t.y, t.z);
+            case 'left':  
+                this.camera.position.set(t.x - dist, t.y, t.z); 
                 break;
-            case 'top':
-                // For Top view, look down Y. Screen Up is -Z.
-                this.camera.position.set(t.x, t.y + dist, t.z);
+            case 'top':   
+                this.camera.position.set(t.x, t.y + dist, t.z); 
                 this.camera.up.set(0, 0, -1); 
                 break;
             case 'bottom':
-                this.camera.position.set(t.x, t.y - dist, t.z);
-                this.camera.up.set(0, 0, 1);
+                this.camera.position.set(t.x, t.y - dist, t.z); 
+                this.camera.up.set(0, 0, 1); 
                 break;
-            case 'iso':
-                this.camera.position.set(t.x + dist, t.y + dist, t.z + dist);
+            case 'iso':   
+                // Normalize the isometric vector to match the distance
+                const isoVec = new THREE.Vector3(1, 1, 1).normalize().multiplyScalar(dist);
+                this.camera.position.copy(t).add(isoVec);
                 break;
         }
 
@@ -88,36 +93,27 @@ class Coin3DControls {
         event.preventDefault();
         this.isDragging = true;
         this._lastMouse = this.getNormalizedMouse(event.clientX, event.clientY);
-
-        if (event.button === 0) {
-            this.state = 0; // ROTATE
-        } else if (event.button === 1 || event.button === 2) {
-            this.state = 1; // PAN
-        }
+        if (event.button === 0) this.state = 0; 
+        else if (event.button === 1 || event.button === 2) this.state = 1; 
     }
 
     onMouseMove(event) {
         if (!this.isDragging) return;
         event.preventDefault();
-
         const currMouse = this.getNormalizedMouse(event.clientX, event.clientY);
 
-        if (this.state === 0) { // ROTATE
+        if (this.state === 0) { 
             const deltaX = currMouse.x - this._lastMouse.x;
             const deltaY = currMouse.y - this._lastMouse.y;
             const angle = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
             if (angle > 0.0001) {
-                // Screen Space Axis Calculation
                 const axisScreen = new THREE.Vector3(-deltaY, deltaX, 0).normalize();
                 const axisWorld = axisScreen.applyQuaternion(this.camera.quaternion);
-                
-                // Rotate (-angle for natural feel)
                 this.rotateCamera(axisWorld, -angle * this.rotateSpeed);
             }
             this._lastMouse.copy(currMouse);
-
-        } else if (this.state === 1) { // PAN
+        } else if (this.state === 1) { 
             const deltaX = currMouse.x - this._lastMouse.x;
             const deltaY = currMouse.y - this._lastMouse.y;
             this.panCamera(deltaX, deltaY);
@@ -132,84 +128,57 @@ class Coin3DControls {
 
     onWheel(event) {
         event.preventDefault();
-        if (event.deltaY > 0) {
-            this.zoomCamera(1 / this.zoomSpeed); // Zoom Out
-        } else {
-            this.zoomCamera(this.zoomSpeed);     // Zoom In
-        }
+        if (event.deltaY > 0) this.zoomCamera(1 / this.zoomSpeed); 
+        else this.zoomCamera(this.zoomSpeed);
     }
 
     rotateCamera(axis, angle) {
         const q = new THREE.Quaternion();
         q.setFromAxisAngle(axis, angle);
-        
-        // Rotate the offset vector from Target
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.target);
         offset.applyQuaternion(q);
-        
-        // Rotate Camera orientation
         this.camera.quaternion.premultiply(q);
-        
-        // Re-position Camera
         this.camera.position.addVectors(this.target, offset);
     }
 
-    // --- HYBRID PAN LOGIC ---
     panCamera(deltaX, deltaY) {
         let moveX, moveY;
-
         if (this.camera.isPerspectiveCamera) {
-            // Perspective: Pan speed depends on distance to target
             const offset = new THREE.Vector3().subVectors(this.camera.position, this.target);
             const dist = offset.length();
             const targetHeight = 2.0 * Math.tan((this.camera.fov * Math.PI) / 360) * dist;
-            
             moveX = -deltaX * (targetHeight * this.camera.aspect) * 0.5;
             moveY = -deltaY * targetHeight * 0.5;
         } else {
-            // Orthographic: Pan speed depends on zoom/frustum
             const frustumHeight = (this.camera.top - this.camera.bottom) / this.camera.zoom;
             const frustumWidth = (this.camera.right - this.camera.left) / this.camera.zoom;
-            
             moveX = -deltaX * frustumWidth * 0.5;
             moveY = -deltaY * frustumHeight * 0.5;
         }
-
         const vRight = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
         const vUp = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
-        
         const panVector = new THREE.Vector3();
         panVector.addScaledVector(vRight, moveX);
         panVector.addScaledVector(vUp, moveY);
-        
         this.camera.position.add(panVector);
     }
 
-    // --- HYBRID ZOOM LOGIC ---
     zoomCamera(scale) {
         if (this.camera.isPerspectiveCamera) {
-            // Perspective: Move physical camera closer (Dolly)
             const offset = new THREE.Vector3().subVectors(this.camera.position, this.target);
             const dist = offset.length();
             let newDist = dist / scale;
-            
-            // Limits
             if (newDist < 0.1) newDist = 0.1;
             if (newDist > 1000) newDist = 1000;
-            
             offset.setLength(newDist);
             this.camera.position.addVectors(this.target, offset);
-
         } else {
-            // Orthographic: Adjust Zoom property + Center Shift
             let newZoom = this.camera.zoom * scale;
             if (newZoom < 0.1) newZoom = 0.1;
             if (newZoom > 20) newZoom = 20;
-
             const effectiveScale = newZoom / this.camera.zoom;
             if (Math.abs(effectiveScale - 1) < 0.0001) return; 
 
-            // Center-Pivot Logic: Pull camera laterally towards target
             const P = this.camera.position.clone();
             const T = this.target.clone();
             const TC = new THREE.Vector3().subVectors(P, T); 
@@ -221,7 +190,6 @@ class Coin3DControls {
             const planeVec = TC.clone().sub(depthVec);
             
             planeVec.divideScalar(effectiveScale);
-            
             this.camera.position.copy(T).add(depthVec).add(planeVec);
             this.camera.zoom = newZoom;
             this.camera.updateProjectionMatrix();
@@ -237,7 +205,6 @@ let camera, scene, renderer, loader;
 let objectContainer;
 let controls; 
 
-// Default Orthographic Frustum Size
 const frustumSize = 20;
 
 init();
@@ -247,11 +214,9 @@ function init() {
     
     loader = new GLTFLoader();
     
-    // 1. Scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x333333);
 
-    // 2. Camera (Start with Orthographic)
     const aspect = window.innerWidth / window.innerHeight;
     camera = new THREE.OrthographicCamera( 
         frustumSize * aspect / -2, 
@@ -264,7 +229,6 @@ function init() {
     camera.position.set(20, 20, 20);
     camera.lookAt(0, 0, 0);
 
-    // 3. Renderer
     const container = document.getElementById('viewport');
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -272,13 +236,22 @@ function init() {
     renderer.outputColorSpace = THREE.SRGBColorSpace; 
     container.appendChild(renderer.domElement);
 
-    // 4. Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
-    
-    const dirLight = new THREE.DirectionalLight(0xffffff, 3.0); 
-    dirLight.position.set(5, 10, 7);
+    // --- LIGHTING SETUP ---
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888888, 1.5);
+    hemiLight.position.set(0, 20, 0);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    dirLight.position.set(10, 10, 10); 
     scene.add(dirLight);
+
+    const backLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    backLight.position.set(-10, 5, -10);
+    scene.add(backLight);
+
+    const bottomLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    bottomLight.position.set(0, -10, 0);
+    scene.add(bottomLight);
 
     // 5. Object Container
     objectContainer = new THREE.Group();
@@ -303,7 +276,7 @@ function init() {
     const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
     mesh.add(line);
 
-    // 7. Grid (Red Sphere REMOVED)
+    // 7. Grid
     const gridHelper = new THREE.GridHelper(40, 40);
     scene.add(gridHelper);
 
@@ -361,7 +334,6 @@ function createUI() {
 
 function toggleProjection(mode) {
     const isOrthoCurrently = camera.isOrthographicCamera;
-    
     if (mode === 'ortho' && isOrthoCurrently) return;
     if (mode === 'persp' && !isOrthoCurrently) return;
 
@@ -406,7 +378,6 @@ function toggleProjection(mode) {
 
 function onWindowResize() {
     const aspect = window.innerWidth / window.innerHeight;
-    
     if (camera.isOrthographicCamera) {
         camera.left = -frustumSize * aspect / 2;
         camera.right = frustumSize * aspect / 2;
@@ -415,7 +386,6 @@ function onWindowResize() {
     } else {
         camera.aspect = aspect;
     }
-
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
@@ -481,7 +451,6 @@ function clearAllMeshes(scene) {
     toRemove.forEach((obj) => obj.parent.remove(obj));
 }
 
-// Expose utils to Window
 window.loadGLB = loadGLB;
 window.clearAllMeshes = clearAllMeshes;
 

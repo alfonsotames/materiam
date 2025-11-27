@@ -1,24 +1,48 @@
 // <![CDATA[
+// 1. IMPORTS
 import * as THREE from 'https://unpkg.com/three@0.180.0/build/three.module.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.180.0/examples/jsm/loaders/GLTFLoader.js';
 import { Line2 } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/LineMaterial.js';
 
+// IMPORT BVH (The performance fix for Raycasting)
+import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'https://unpkg.com/three-mesh-bvh@0.6.8/build/index.module.js';
+
+// 2. APPLY BVH PATCHES to Three.js
+// This supercharges the standard raycaster
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
 // -------------------------------------------------------------
-// Coin3D Controls
+// Coin3D Controls (Smart Pivot + BVH Optimization)
 // -------------------------------------------------------------
 class Coin3DControls {
-    constructor(camera, domElement, target) {
+    constructor(camera, domElement, objectGroup) {
         this.camera = camera;
         this.domElement = domElement;
-        this.target = target || new THREE.Vector3(0, 0, 0);
+        this.objectGroup = objectGroup;
+        this.target = new THREE.Vector3(0, 0, 0);
+
         this.rotateSpeed = 2.5; 
         this.panSpeed = 1.0;
-        this.zoomSpeed = 1.01; // Slow precise zoom
+        this.zoomSpeed = 1.01; 
+
         this.state = -1; 
         this.isDragging = false;
+        this.pivotingOnObject = false;
+
         this._lastMouse = new THREE.Vector2();
+        this._raycaster = new THREE.Raycaster();
+        
+        // BVH OPTIMIZATION: Stop looking after the first hit
+        // This makes raycasting on complex models instant.
+        this._raycaster.firstHitOnly = true; 
+
+        this._plane = new THREE.Plane();
+        this._planeNormal = new THREE.Vector3();
+        this._intersectPoint = new THREE.Vector3();
 
         this.domElement.addEventListener('mousedown', this.onMouseDown.bind(this));
         this.domElement.addEventListener('mousemove', this.onMouseMove.bind(this));
@@ -33,9 +57,8 @@ class Coin3DControls {
         if (this.camera.isPerspectiveCamera) {
             dist = this.camera.position.distanceTo(t);
         } else {
-            // Ensure we are far enough back to not clip
-            // We use the current far plane / 2 as a safe distance
             dist = (this.camera.far - this.camera.near) / 2;
+            if (dist < 10) dist = 50; 
         }
 
         this.camera.up.set(0, 1, 0);
@@ -52,10 +75,8 @@ class Coin3DControls {
                 this.camera.position.copy(t).add(isoVec);
                 break;
         }
-        
         this.camera.lookAt(t);
         this.camera.updateProjectionMatrix();
-        //this.panCamera(.2,0);
     }
 
     getNormalizedMouse(clientX, clientY) {
@@ -70,8 +91,30 @@ class Coin3DControls {
         event.preventDefault();
         this.isDragging = true;
         this._lastMouse = this.getNormalizedMouse(event.clientX, event.clientY);
-        if (event.button === 0) this.state = 0; 
-        else if (event.button === 1 || event.button === 2) this.state = 1; 
+
+        if (event.button === 0) { 
+            this.state = 0; // ROTATE
+            
+            // 1. Raycast (Instant thanks to BVH)
+            this._raycaster.setFromCamera(this._lastMouse, this.camera);
+            const intersects = this._raycaster.intersectObject(this.objectGroup, true);
+            
+            // We don't need to filter heavily because firstHitOnly=true handles efficiency
+            // Just check if we hit something visible
+            const hit = intersects.find(res => res.object.visible);
+
+            if (hit) {
+                this.target.copy(hit.point);
+                this.pivotingOnObject = true;
+            } else {
+                this.target.set(0, 0, 0);
+                this.pivotingOnObject = false;
+            }
+
+        } else if (event.button === 1 || event.button === 2) {
+            this.state = 1; // PAN
+            this.pivotingOnObject = false;
+        }
     }
 
     onMouseMove(event) {
@@ -83,6 +126,7 @@ class Coin3DControls {
             const deltaX = currMouse.x - this._lastMouse.x;
             const deltaY = currMouse.y - this._lastMouse.y;
             const angle = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
             if (angle > 0.0001) {
                 const axisScreen = new THREE.Vector3(-deltaY, deltaX, 0).normalize();
                 const axisWorld = axisScreen.applyQuaternion(this.camera.quaternion);
@@ -97,16 +141,21 @@ class Coin3DControls {
         }
     }
 
-    onMouseUp() { this.isDragging = false; this.state = -1; }
+    onMouseUp() { 
+        this.isDragging = false; 
+        this.state = -1; 
+        this.pivotingOnObject = false;
+    }
 
     onWheel(event) {
         event.preventDefault();
-        if (event.deltaY > 0) this.zoomCamera(1 / this.zoomSpeed); 
-        else this.zoomCamera(this.zoomSpeed);
+        const scale = event.deltaY > 0 ? (1 / this.zoomSpeed) : this.zoomSpeed;
+        this.zoomCamera(scale, event.clientX, event.clientY);
     }
 
     rotateCamera(axis, angle) {
-        const q = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+        const q = new THREE.Quaternion();
+        q.setFromAxisAngle(axis, angle);
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.target);
         offset.applyQuaternion(q);
         this.camera.quaternion.premultiply(q);
@@ -122,46 +171,58 @@ class Coin3DControls {
             moveX = -deltaX * (targetHeight * this.camera.aspect) * 0.5;
             moveY = -deltaY * targetHeight * 0.5;
         } else {
-            const h = (this.camera.top - this.camera.bottom) / this.camera.zoom;
-            const w = (this.camera.right - this.camera.left) / this.camera.zoom;
-            moveX = -deltaX * w * 0.5;
-            moveY = -deltaY * h * 0.5;
+            const frustumHeight = (this.camera.top - this.camera.bottom) / this.camera.zoom;
+            const frustumWidth = (this.camera.right - this.camera.left) / this.camera.zoom;
+            moveX = -deltaX * frustumWidth * 0.5;
+            moveY = -deltaY * frustumHeight * 0.5;
         }
+        
+        moveX *= this.panSpeed;
+        moveY *= this.panSpeed;
+
         const vRight = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
         const vUp = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
         const panVec = new THREE.Vector3().addScaledVector(vRight, moveX).addScaledVector(vUp, moveY);
+        
         this.camera.position.add(panVec);
+        this.target.add(panVec);
     }
 
-    zoomCamera(scale) {
+    zoomCamera(scale, clientX, clientY) {
+        const mouse = this.getNormalizedMouse(clientX, clientY);
+
+        this.camera.getWorldDirection(this._planeNormal);
+        this._plane.setFromNormalAndCoplanarPoint(this._planeNormal, this.target);
+
+        this._raycaster.setFromCamera(mouse, this.camera);
+        if (!this._raycaster.ray.intersectPlane(this._plane, this._intersectPoint)) return;
+        const startPoint = this._intersectPoint.clone();
+
         if (this.camera.isPerspectiveCamera) {
             const offset = new THREE.Vector3().subVectors(this.camera.position, this.target);
             const dist = offset.length();
             let newDist = dist / scale;
-            if (newDist < this.camera.near) newDist = this.camera.near; // Prevent clipping
-            if (newDist > this.camera.far) newDist = this.camera.far;
+            if (newDist < this.camera.near * 1.5) newDist = this.camera.near * 1.5;
+            if (newDist > this.camera.far * 0.9) newDist = this.camera.far * 0.9;
             offset.setLength(newDist);
             this.camera.position.addVectors(this.target, offset);
         } else {
             let newZoom = this.camera.zoom * scale;
-            // Clamp zoom relative to frustum size to prevent infinite zoom
-            if (newZoom < 0.001) newZoom = 0.001; 
-            if (newZoom > 10000) newZoom = 10000;
-            const effScale = newZoom / this.camera.zoom;
-            if (Math.abs(effScale - 1) < 0.00001) return;
-
-            const P = this.camera.position.clone();
-            const T = this.target.clone();
-            const TC = new THREE.Vector3().subVectors(P, T);
-            const dir = new THREE.Vector3();
-            this.camera.getWorldDirection(dir);
-            const depthDist = TC.dot(dir);
-            const depthVec = dir.clone().multiplyScalar(depthDist);
-            const planeVec = TC.clone().sub(depthVec).divideScalar(effScale);
-            this.camera.position.copy(T).add(depthVec).add(planeVec);
+            if (newZoom < 0.001) newZoom = 0.001;
+            if (newZoom > 100000) newZoom = 100000;
             this.camera.zoom = newZoom;
-            this.camera.updateProjectionMatrix();
         }
+        
+        this.camera.updateProjectionMatrix();
+        this.camera.updateMatrixWorld();
+
+        this._raycaster.setFromCamera(mouse, this.camera);
+        this._raycaster.ray.intersectPlane(this._plane, this._intersectPoint);
+        const endPoint = this._intersectPoint.clone();
+
+        const shift = new THREE.Vector3().subVectors(startPoint, endPoint);
+        this.camera.position.add(shift);
+        this.target.add(shift);
     }
 }
 
@@ -169,7 +230,7 @@ class Coin3DControls {
 // Main Application
 // -------------------------------------------------------------
 
-let camera, scene, renderer, loader, controls, objectContainer, gridHelper;
+let camera, scene, renderer, loader, controls, objectContainer, gridHelper, pivotSphere;
 const frustumSize = 20;
 
 init();
@@ -208,30 +269,46 @@ function init() {
     bottomLight.position.set(0, -10, 0);
     scene.add(bottomLight);
 
+    // Object Container
     objectContainer = new THREE.Group();
     scene.add(objectContainer);
 
-    // Initial Box
+    // Test Object
     const geometry = new THREE.BoxGeometry(4, 4, 4);
+    // Pre-compute bounds tree for the initial box
+    geometry.computeBoundsTree(); 
+    
     const material = new THREE.MeshStandardMaterial({ color: 0x00ff00, roughness: 0.5, metalness: 0.1 });
     const mesh = new THREE.Mesh(geometry, material);
     objectContainer.add(mesh);
     objectContainer.add(new THREE.AxesHelper(5));
     mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.LineBasicMaterial({ color: 0x000000 })));
 
-    // Initial Grid
+    // VISUALIZER: Pivot Sphere
+    const sphereGeo = new THREE.SphereGeometry(.2, 16, 16); 
+    const sphereMat = new THREE.MeshBasicMaterial({ 
+        color: 0xff0000, 
+        transparent: true, 
+        opacity: 0.6,
+        depthTest: false 
+    });
+    pivotSphere = new THREE.Mesh(sphereGeo, sphereMat);
+    pivotSphere.visible = false; 
+    pivotSphere.renderOrder = 999; 
+    scene.add(pivotSphere);
+
+    // Grid
     gridHelper = new THREE.GridHelper(40, 40);
     scene.add(gridHelper);
 
     window.addEventListener('resize', onWindowResize);
-    controls = new Coin3DControls(camera, renderer.domElement, new THREE.Vector3(0, 0, 0));
-    
+    controls = new Coin3DControls(camera, renderer.domElement, objectContainer);
     createUI();
 }
 
 function createUI() {
     const ui = document.createElement('div');
-    Object.assign(ui.style, { position: 'absolute', top: '70px', right: '10px', display: 'flex', flexDirection: 'column', gap: '5px' });
+    Object.assign(ui.style, { position: 'absolute', top: '10px', right: '10px', display: 'flex', flexDirection: 'column', gap: '5px' });
     document.body.appendChild(ui);
 
     const projDiv = document.createElement('div');
@@ -241,13 +318,13 @@ function createUI() {
     const addBtn = (txt, cb, parent) => {
         const b = document.createElement('button');
         b.innerText = txt;
-        Object.assign(b.style, { padding: '4px 6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '10px' });
+        Object.assign(b.style, { padding: '8px 12px', cursor: 'pointer', fontWeight: 'bold' });
         b.onclick = cb;
         parent.appendChild(b);
     };
 
-    addBtn('ORTHO', () => toggleProjection('ortho'), projDiv);
-    addBtn('PERSP', () => toggleProjection('persp'), projDiv);
+    addBtn('Ortho', () => toggleProjection('ortho'), projDiv);
+    addBtn('Persp', () => toggleProjection('persp'), projDiv);
 
     ['Top', 'Bottom', 'Front', 'Back', 'Left', 'Right', 'Iso'].forEach(v => 
         addBtn(v, () => controls.snap(v.toLowerCase()), ui)
@@ -259,17 +336,14 @@ function toggleProjection(mode) {
     if ((mode === 'ortho' && isOrtho) || (mode === 'persp' && !isOrtho)) return;
 
     let newCam;
-    // Get current camera distance to target to transfer it
     const dist = camera.position.distanceTo(controls.target);
 
     if (mode === 'persp') {
         newCam = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, camera.near, camera.far);
-        // Transfer position and rotation
         newCam.position.copy(camera.position);
         newCam.quaternion.copy(camera.quaternion);
         newCam.up.copy(camera.up);
         
-        // Calculate equivalent distance for visual size matching
         const orthoH = (camera.top - camera.bottom) / camera.zoom;
         const newDist = (orthoH / 2) / Math.tan(THREE.MathUtils.degToRad(newCam.fov / 2));
         const offset = new THREE.Vector3().subVectors(newCam.position, controls.target).setLength(newDist);
@@ -311,6 +385,23 @@ function onWindowResize() {
 
 function animate() {
     requestAnimationFrame(animate);
+    
+    if (pivotSphere && controls) {
+        pivotSphere.visible = controls.pivotingOnObject;
+        if (pivotSphere.visible) {
+            pivotSphere.position.copy(controls.target);
+            
+            let scaleFactor;
+            if (camera.isPerspectiveCamera) {
+                const dist = camera.position.distanceTo(pivotSphere.position);
+                scaleFactor = dist * 0.02; 
+            } else {
+                scaleFactor = 20 / camera.zoom * 0.02; 
+            }
+            pivotSphere.scale.setScalar(scaleFactor);
+        }
+    }
+    
     renderer.render(scene, camera);
 }
 
@@ -320,33 +411,34 @@ function loadGLB(url) {
     clearAllMeshes(scene);
 
     loader.load(url, (gltf) => {
-        scene.add(gltf.scene);
+        objectContainer.add(gltf.scene);
 
-        // 1. Calculate Bounds
+        // BVH: Compute bounds tree for all new meshes
+        // This pre-calculation makes raycasting instant later
+        gltf.scene.traverse((obj) => {
+            if (obj.isMesh && obj.geometry) {
+                obj.geometry.computeBoundsTree();
+            }
+        });
+
         const box = new THREE.Box3().setFromObject(gltf.scene);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
 
-        // 2. Center the object
         gltf.scene.position.sub(center);
         controls.target.set(0, 0, 0);
 
-        // 3. FIX: DYNAMIC CLIPPING PLANES
-        // Standard rule: near = maxDim / 1000, far = maxDim * 100
         const safeNear = maxDim / 1000;
         const safeFar = maxDim * 100;
         camera.near = safeNear;
         camera.far = safeFar;
         camera.updateProjectionMatrix();
 
-        // 4. FIX: DYNAMIC GRID SIZE
         if (gridHelper) scene.remove(gridHelper);
-        // Grid roughly 3x larger than object
         gridHelper = new THREE.GridHelper(maxDim * 3, 20);
         scene.add(gridHelper);
 
-        // 5. Fit Camera
         const padding = 1.5;
         if (camera.isPerspectiveCamera) {
             const fov = THREE.MathUtils.degToRad(camera.fov / 2);
@@ -358,16 +450,20 @@ function loadGLB(url) {
             camera.updateProjectionMatrix();
             camera.position.set(0, 0, maxDim * 2);
         }
-        
+
         controls.snap('iso');
     }, undefined, (err) => console.error(err));
 }
 
 function clearAllMeshes(scene) {
     const toRemove = [];
-    scene.traverse((obj) => {
+    objectContainer.traverse((obj) => {
         if (obj.isCamera || obj.isLight || obj.type.includes('Helper')) return;
         if (obj.isMesh || obj.isLine || obj.isPoints) {
+            // BVH: Cleanup memory
+            if (obj.geometry && obj.geometry.disposeBoundsTree) {
+                obj.geometry.disposeBoundsTree();
+            }
             obj.geometry?.dispose();
             if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
             else obj.material?.dispose();

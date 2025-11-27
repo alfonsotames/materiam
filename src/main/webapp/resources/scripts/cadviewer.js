@@ -2,21 +2,21 @@
 // 1. IMPORTS
 import * as THREE from 'https://unpkg.com/three@0.180.0/build/three.module.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.180.0/examples/jsm/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'https://unpkg.com/three@0.180.0/examples/jsm/environments/RoomEnvironment.js';
 import { Line2 } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'https://unpkg.com/three@0.180.0/examples/jsm/lines/LineMaterial.js';
 
-// IMPORT BVH (The performance fix for Raycasting)
+// IMPORT BVH
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'https://unpkg.com/three-mesh-bvh@0.6.8/build/index.module.js';
 
-// 2. APPLY BVH PATCHES to Three.js
-// This supercharges the standard raycaster
+// 2. APPLY BVH PATCHES
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 // -------------------------------------------------------------
-// Coin3D Controls (Smart Pivot + BVH Optimization)
+// Coin3D Controls (Direct Control - No Damping)
 // -------------------------------------------------------------
 class Coin3DControls {
     constructor(camera, domElement, objectGroup) {
@@ -35,9 +35,6 @@ class Coin3DControls {
 
         this._lastMouse = new THREE.Vector2();
         this._raycaster = new THREE.Raycaster();
-        
-        // BVH OPTIMIZATION: Stop looking after the first hit
-        // This makes raycasting on complex models instant.
         this._raycaster.firstHitOnly = true; 
 
         this._plane = new THREE.Plane();
@@ -94,14 +91,9 @@ class Coin3DControls {
 
         if (event.button === 0) { 
             this.state = 0; // ROTATE
-            
-            // 1. Raycast (Instant thanks to BVH)
             this._raycaster.setFromCamera(this._lastMouse, this.camera);
             const intersects = this._raycaster.intersectObject(this.objectGroup, true);
-            
-            // We don't need to filter heavily because firstHitOnly=true handles efficiency
-            // Just check if we hit something visible
-            const hit = intersects.find(res => res.object.visible);
+            const hit = intersects.find(res => res.object.isMesh && res.object.visible);
 
             if (hit) {
                 this.target.copy(hit.point);
@@ -110,7 +102,6 @@ class Coin3DControls {
                 this.target.set(0, 0, 0);
                 this.pivotingOnObject = false;
             }
-
         } else if (event.button === 1 || event.button === 2) {
             this.state = 1; // PAN
             this.pivotingOnObject = false;
@@ -227,10 +218,71 @@ class Coin3DControls {
 }
 
 // -------------------------------------------------------------
+// 3. CSS STYLES FOR UI
+// -------------------------------------------------------------
+const style = document.createElement('style');
+style.innerHTML = `
+    #ui-container {
+        position: absolute;
+        top: 60px; /* MOVED DOWN */
+        right: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 100;
+        font-family: sans-serif;
+    }
+
+    .ui-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 5px;
+        border-radius: 8px;
+        backdrop-filter: blur(2px);
+    }
+
+    .icon-btn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #bbbbbb;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .icon-btn:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+        transform: scale(1.05);
+    }
+
+    .icon-btn.active {
+        color: #3da3e0;
+        background-color: rgba(61, 163, 224, 0.1);
+    }
+
+    .icon-btn svg {
+        width: 24px;
+        height: 24px;
+        fill: currentColor;
+    }
+`;
+document.head.appendChild(style);
+
+// -------------------------------------------------------------
 // Main Application
 // -------------------------------------------------------------
 
-let camera, scene, renderer, loader, controls, objectContainer, gridHelper, pivotSphere;
+let camera, scene, renderer, loader, controls, objectContainer, pivotSphere, dirLight, shadowPlane;
+let loadingBarContainer, loadingBar;
+
 const frustumSize = 20;
 
 init();
@@ -238,8 +290,11 @@ animate();
 
 function init() {
     loader = new GLTFLoader();
+    createUI(); // New SVG UI
+    createLoadingUI();
+
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x333333);
+    scene.background = new THREE.Color(0x222222);
 
     const aspect = window.innerWidth / window.innerHeight;
     camera = new THREE.OrthographicCamera(
@@ -254,81 +309,164 @@ function init() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; 
+    renderer.toneMappingExposure = 0.5;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
     container.appendChild(renderer.domElement);
 
-    // Lighting
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 1.5));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
-    dirLight.position.set(10, 10, 10);
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
+    // --- LIGHTING (DARKER SHADOWS) ---
+    // Reduced ambient light to make shadows deeper
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888888, 0.05);
+    hemiLight.position.set(0, 20, 0);
+    scene.add(hemiLight);
+
+    dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(10, 20, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 4096; 
+    dirLight.shadow.mapSize.height = 4096;
+    dirLight.shadow.bias = -0.0001; 
+    dirLight.shadow.normalBias = 0.02; 
     scene.add(dirLight);
-    const backLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    scene.add(dirLight.target);
+
+    // Reduced backfill light
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.15);
     backLight.position.set(-10, 5, -10);
     scene.add(backLight);
-    const bottomLight = new THREE.DirectionalLight(0xffffff, 1.0);
+
+    const bottomLight = new THREE.DirectionalLight(0xffffff, 0.1);
     bottomLight.position.set(0, -10, 0);
     scene.add(bottomLight);
 
-    // Object Container
     objectContainer = new THREE.Group();
     scene.add(objectContainer);
 
-    // Test Object
+    const planeGeo = new THREE.PlaneGeometry(2000, 2000);
+    // Increased Opacity for darker floor shadow
+    const planeMat = new THREE.ShadowMaterial({ opacity: 0.75 });
+    shadowPlane = new THREE.Mesh(planeGeo, planeMat);
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = -2.01; 
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
     const geometry = new THREE.BoxGeometry(4, 4, 4);
-    // Pre-compute bounds tree for the initial box
-    geometry.computeBoundsTree(); 
-    
-    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00, roughness: 0.5, metalness: 0.1 });
+    geometry.computeBoundsTree();
+    const material = new THREE.MeshPhysicalMaterial({
+        color: 0x3da3e0, metalness: 0.7, roughness: 0.2, clearcoat: 1.0,
+    });
     const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     objectContainer.add(mesh);
     objectContainer.add(new THREE.AxesHelper(5));
-    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.LineBasicMaterial({ color: 0x000000 })));
+    const edges = new THREE.EdgesGeometry(geometry);
+    mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 })));
 
-    // VISUALIZER: Pivot Sphere
-    const sphereGeo = new THREE.SphereGeometry(.2, 16, 16); 
+    // Pivot Sphere
+    const sphereGeo = new THREE.SphereGeometry(.25, 16, 16);
     const sphereMat = new THREE.MeshBasicMaterial({ 
-        color: 0xff0000, 
-        transparent: true, 
-        opacity: 0.6,
-        depthTest: false 
+        color: 0xff0000, transparent: true, opacity: 0.3, depthTest: false 
     });
     pivotSphere = new THREE.Mesh(sphereGeo, sphereMat);
-    pivotSphere.visible = false; 
-    pivotSphere.renderOrder = 999; 
+    pivotSphere.visible = false;
+    pivotSphere.renderOrder = 999;
     scene.add(pivotSphere);
-
-    // Grid
-    gridHelper = new THREE.GridHelper(40, 40);
-    scene.add(gridHelper);
 
     window.addEventListener('resize', onWindowResize);
     controls = new Coin3DControls(camera, renderer.domElement, objectContainer);
-    createUI();
+}
+
+// --- SVG ICONS ---
+function getIconSvg(name) {
+    const paths = {
+        'ortho': '<path d="M2 2h20v20H2V2zm18 18V4H4v16h16zM6 12h4v4H6v-4zm6 0h4v4h-4v-4zm-6-6h4v4H6V6zm6 0h4v4h-4V6z"/>',
+        'persp': '<path d="M3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2zm2 0h14v14H5V5zm7 2h-2v2h2V7zm0 4h-2v2h2v-2zm0 4h-2v2h2v-2z"/>',
+        'top': '<path d="M4 15h16v2H4v-2zm8-11l8 8h-5v6h-6v-6H4l8-8z"/>', 
+        'bottom': '<path d="M20 9H4V7h16v2zM8 20l8-8h-5V6h-6v6H4l8 8z"/>', 
+        'front': '<path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>', 
+        'back': '<path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>', 
+        'left': '<path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>', 
+        'right': '<path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>', 
+        'iso': '<path d="M21 16.5l-9-5.19V5H9v6.31l-9 5.19V9h21v7.5zm-9-6.31L3.89 15 12 19.69 20.11 15 12 10.19zM12 3L2 9v12l10-6 10 6V9L12 3z"/>'
+    };
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${paths[name]}</svg>`;
 }
 
 function createUI() {
-    const ui = document.createElement('div');
-    Object.assign(ui.style, { position: 'absolute', top: '10px', right: '10px', display: 'flex', flexDirection: 'column', gap: '5px' });
-    document.body.appendChild(ui);
+    const uiContainer = document.createElement('div');
+    uiContainer.id = 'ui-container';
+    document.body.appendChild(uiContainer);
 
-    const projDiv = document.createElement('div');
-    projDiv.style.display = 'flex'; projDiv.style.gap = '5px'; projDiv.style.marginBottom = '10px';
-    ui.appendChild(projDiv);
-
-    const addBtn = (txt, cb, parent) => {
+    const addIconBtn = (iconName, tooltip, cb, parent) => {
         const b = document.createElement('button');
-        b.innerText = txt;
-        Object.assign(b.style, { padding: '8px 12px', cursor: 'pointer', fontWeight: 'bold' });
+        b.className = 'icon-btn';
+        b.innerHTML = getIconSvg(iconName);
+        b.title = tooltip;
         b.onclick = cb;
         parent.appendChild(b);
+        return b;
     };
 
-    addBtn('Ortho', () => toggleProjection('ortho'), projDiv);
-    addBtn('Persp', () => toggleProjection('persp'), projDiv);
+    const projGroup = document.createElement('div');
+    projGroup.className = 'ui-group';
+    projGroup.style.flexDirection = 'row';
+    uiContainer.appendChild(projGroup);
 
-    ['Top', 'Bottom', 'Front', 'Back', 'Left', 'Right', 'Iso'].forEach(v => 
-        addBtn(v, () => controls.snap(v.toLowerCase()), ui)
-    );
+    const btnOrtho = addIconBtn('ortho', 'Orthographic View', () => toggleProjection('ortho'), projGroup);
+    const btnPersp = addIconBtn('persp', 'Perspective View', () => toggleProjection('persp'), projGroup);
+
+    const viewGroup = document.createElement('div');
+    viewGroup.className = 'ui-group';
+    uiContainer.appendChild(viewGroup);
+
+    const views = [
+        { name: 'top', tip: 'Top View' },
+        { name: 'bottom', tip: 'Bottom View' },
+        { name: 'front', tip: 'Front View' },
+        { name: 'back', tip: 'Back View' },
+        { name: 'left', tip: 'Left View' },
+        { name: 'right', tip: 'Right View' },
+        { name: 'iso', tip: 'Isometric View' }
+    ];
+
+    views.forEach(v => {
+        addIconBtn(v.name, v.tip, () => controls.snap(v.name), viewGroup);
+    });
+
+    window.updateProjectionUI = (mode) => {
+        if (mode === 'ortho') {
+            btnOrtho.classList.add('active');
+            btnPersp.classList.remove('active');
+        } else {
+            btnOrtho.classList.remove('active');
+            btnPersp.classList.add('active');
+        }
+    };
+    updateProjectionUI('ortho');
+}
+
+function createLoadingUI() {
+    loadingBarContainer = document.createElement('div');
+    Object.assign(loadingBarContainer.style, {
+        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        width: '300px', height: '20px', backgroundColor: '#444', border: '2px solid white',
+        borderRadius: '10px', display: 'none', zIndex: '1000'
+    });
+    loadingBar = document.createElement('div');
+    Object.assign(loadingBar.style, {
+        width: '0%', height: '100%', backgroundColor: '#3da3e0', borderRadius: '8px', transition: 'width 0.1s'
+    });
+    loadingBarContainer.appendChild(loadingBar);
+    document.body.appendChild(loadingBarContainer);
 }
 
 function toggleProjection(mode) {
@@ -366,7 +504,8 @@ function toggleProjection(mode) {
     camera = newCam;
     controls.camera = newCam;
     camera.updateProjectionMatrix();
-    onWindowResize(); 
+    onWindowResize();
+    if (window.updateProjectionUI) window.updateProjectionUI(mode);
 }
 
 function onWindowResize() {
@@ -390,7 +529,6 @@ function animate() {
         pivotSphere.visible = controls.pivotingOnObject;
         if (pivotSphere.visible) {
             pivotSphere.position.copy(controls.target);
-            
             let scaleFactor;
             if (camera.isPerspectiveCamera) {
                 const dist = camera.position.distanceTo(pivotSphere.position);
@@ -409,50 +547,87 @@ function animate() {
 
 function loadGLB(url) {
     clearAllMeshes(scene);
+    loadingBarContainer.style.display = 'block';
+    loadingBar.style.width = '0%';
 
-    loader.load(url, (gltf) => {
-        objectContainer.add(gltf.scene);
+    loader.load(
+        url,
+        (gltf) => {
+            loadingBarContainer.style.display = 'none';
+            objectContainer.add(gltf.scene);
 
-        // BVH: Compute bounds tree for all new meshes
-        // This pre-calculation makes raycasting instant later
-        gltf.scene.traverse((obj) => {
-            if (obj.isMesh && obj.geometry) {
-                obj.geometry.computeBoundsTree();
-            }
-        });
+            gltf.scene.traverse(child => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.geometry) child.geometry.computeBoundsTree();
+                    
+                    if (child.material) {
+                        const color = child.material.color;
+                        child.material = new THREE.MeshPhysicalMaterial({
+                            color: color, 
+                            metalness: 0.1, 
+                            roughness: 0.7, 
+                            side: THREE.DoubleSide
+                        });
+                    }
+                }
+            });
 
-        const box = new THREE.Box3().setFromObject(gltf.scene);
-        const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
+            const box = new THREE.Box3().setFromObject(gltf.scene);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
 
-        gltf.scene.position.sub(center);
-        controls.target.set(0, 0, 0);
+            gltf.scene.position.sub(center);
+            controls.target.set(0, 0, 0);
 
-        const safeNear = maxDim / 1000;
-        const safeFar = maxDim * 100;
-        camera.near = safeNear;
-        camera.far = safeFar;
-        camera.updateProjectionMatrix();
+            dirLight.position.set(maxDim, maxDim * 2, maxDim);
+            dirLight.target.position.set(0, 0, 0);
+            dirLight.target.updateMatrixWorld();
 
-        if (gridHelper) scene.remove(gridHelper);
-        gridHelper = new THREE.GridHelper(maxDim * 3, 20);
-        scene.add(gridHelper);
+            const shadowCam = dirLight.shadow.camera;
+            const shadowPad = maxDim * 1.5; 
+            shadowCam.left = -shadowPad; shadowCam.right = shadowPad;
+            shadowCam.top = shadowPad; shadowCam.bottom = -shadowPad;
+            shadowCam.near = 0.1; shadowCam.far = maxDim * 10;
+            shadowCam.updateProjectionMatrix();
 
-        const padding = 1.5;
-        if (camera.isPerspectiveCamera) {
-            const fov = THREE.MathUtils.degToRad(camera.fov / 2);
-            let dist = (maxDim / 2) / Math.tan(fov);
-            dist *= padding;
-            camera.position.set(0, 0, dist);
-        } else {
-            camera.zoom = frustumSize / (maxDim * padding);
+            // Bias fixed to 0.02 (Stable)
+            dirLight.shadow.bias = -0.0005;
+            dirLight.shadow.normalBias = 0.02;
+
+            shadowPlane.position.y = -maxDim / 2 - (maxDim * 0.01); 
+            shadowPlane.scale.setScalar(maxDim * 100);
+
+            const safeNear = maxDim / 1000;
+            const safeFar = maxDim * 100;
+            camera.near = safeNear;
+            camera.far = safeFar;
             camera.updateProjectionMatrix();
-            camera.position.set(0, 0, maxDim * 2);
-        }
 
-        controls.snap('iso');
-    }, undefined, (err) => console.error(err));
+            const padding = 1.5;
+            if (camera.isPerspectiveCamera) {
+                const fov = THREE.MathUtils.degToRad(camera.fov / 2);
+                let dist = (maxDim / 2) / Math.tan(fov);
+                dist *= padding;
+                camera.position.set(0, 0, dist);
+            } else {
+                camera.zoom = frustumSize / (maxDim * padding);
+                camera.updateProjectionMatrix();
+                camera.position.set(0, 0, maxDim * 2);
+            }
+
+            controls.snap('iso');
+        },
+        (xhr) => {
+            if (xhr.lengthComputable) {
+                const percent = (xhr.loaded / xhr.total) * 100;
+                loadingBar.style.width = percent + '%';
+            }
+        },
+        (err) => { console.error(err); loadingBarContainer.style.display = 'none'; }
+    );
 }
 
 function clearAllMeshes(scene) {
@@ -460,7 +635,6 @@ function clearAllMeshes(scene) {
     objectContainer.traverse((obj) => {
         if (obj.isCamera || obj.isLight || obj.type.includes('Helper')) return;
         if (obj.isMesh || obj.isLine || obj.isPoints) {
-            // BVH: Cleanup memory
             if (obj.geometry && obj.geometry.disposeBoundsTree) {
                 obj.geometry.disposeBoundsTree();
             }

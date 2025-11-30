@@ -33,7 +33,7 @@
                     <div id="info" style="position: absolute;   position: absolute;  z-index: 10;
                             top: 10px;
                             left: 10px;
-                            padding: 0px; width: 360px; ">
+                            padding: 0px; width: 380px; ">
                         <h:form id="form" onkeypress="if (event.keyCode == 13) { saver(); event.preventDefault();}" style="margin-bottom: 0px;">
                             <p:remoteCommand name="saver" actionListener="#{projectController.save()}" update="nombre"  />
                             <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;">
@@ -105,20 +105,22 @@
                                 
                                     <p:dataViewListItem>
                                         <p:panel rendered="#{projectController.getParts(cf).size() gt 1}" style="margin: 0px; padding: 0px;">
-                                                        <div style="
-                                                            display: grid;
-                                                            grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
-                                                            grid-template-rows: auto; /* Allows row height to adjust to content */
-                                                            justify-content: center; /* Centers the grid horizontally within its parent */
-                                                            align-items: start; /* Centers items vertically within their cells */">
-                                                            <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px;">
-                                                                <img style="width:110px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
+                                                    <script type="text/javascript">            
+                                                        window.onload = function() {
+                                                            loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{cf.id}&amp;persid=0-1-1-1');
+                                                        };
+                                                    </script>
+                                            
+                                                        <div>
+                                                            <div style="margin: 4px; word-break: break-all;">
+                                                                <div style="font-size: 14px; "><B>Assembly: #{cf.name}</B></div>
+                                                            </div>                                                            
+                                                            <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 340px;">
+                                                                <img style="width:330px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
                                                                      src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{cf.id}&amp;persid=0-1-1-1"
                                                                      onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{cf.id}&amp;persid=0-1-1-1');"/>
                                                             </div>                                                     
-                                                            <div style="margin: 4px;  width:220px; word-break: break-all;">
-                                                                <div style="font-size: 14px; "><B>#{cf.name}</B></div>
-                                                            </div>
+
                                                         </div>
                                                 </p:panel>
                                 
@@ -138,23 +140,28 @@
                                                                      src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}"
                                                                      onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.id}&amp;cadfile=#{qp.part.cadfile.id}&amp;persid=#{qp.part.persid}');"/>
                                                             </div>                                                     
-                                                            <div style="margin: 4px;  width:220px; word-break: break-all;">
-                                                                <div style="font-size: 14px; ">#{projectController.activeProject.id} <B>#{qp.part.name}</B></div>
-
-                                                                <div style="font-size: 14px;">#{qp.part.material.name}</div>
-
-                                                                <div style="font-size: 14px;">Thickness:
+                                                            <div style="margin: 4px;  width:240px; word-break: break-all;">
+                                                                <div style="font-size: 14px; "><B>#{qp.part.name}</B></div>
+                                                                
+                                                                <div style="font-size: 12px;">Part thickness:
                                                                     <h:outputText value="#{qp.part.thickness}">
                                                                         <f:convertNumber maxFractionDigits="2" minFractionDigits="2" />
                                                                     </h:outputText>
-                                                                      mm</div>
+                                                                      mm
+                                                                </div>
+                                                                
+                                                                <div style="font-size: 12px;">#{qp.part.material.name} (#{projectController.getPropertyByKey(qp.part.material.id,'THICKNESS').value}mm)</div>
+
+
+                                                               
                                                                 <div>#{qp.part.comments}</div>
+
+                                                                 <div style="font-size: 14px;">Quantity: #{qp.part.timesRepeated}</div>
                                                                 <div style="margin-top:5px;">
                                                                     <h:outputText style="font-weight: bold;" value="#{qp.price}" styleClass="product-price" rendered="#{qp.price ne 0}">
                                                                         <f:convertNumber currencySymbol="USD$" type="currency"/>
                                                                     </h:outputText>
-                                                                </div>
-                                                                 <div style="font-size: 14px;">Quantity: #{qp.part.timesRepeated}</div>
+                                                                </div>                                                                 
                                                             </div>
                                                         </div>
                                                     </p:dataViewListItem>
@@ -192,6 +199,8 @@
         
 
         <script type="text/javascript">
+            
+            
             var wsUri = "ws://" + document.location.host + document.location.pathname.replace(/\/[^\/]+?\.[^\/]+?$/, '/') + "notifier";
             var websocket = new WebSocket(wsUri);
             
@@ -238,6 +247,13 @@
               const div = document.getElementById("statusimage");
               div.style.backgroundImage = "url('images/spinner.svg')";
             }            
+            
+            
+            
+            
+            
+
+            
         </script>
 
     </ui:define>

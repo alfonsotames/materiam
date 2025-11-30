@@ -119,6 +119,23 @@ public class ProjectController implements Serializable {
         //activeProject = new Project();
     }
     
+    public Property getPropertyByKey(Long productid, String key) {
+        Property prop = null;
+        
+        try {
+            prop = (Property)em.createQuery("select prop from Property prop, Product p, PropertyType pt "
+                    + "where pt.key=:key and prop.propertyType=pt and prop.product.id=:productid")
+                    .setParameter("key", key)
+                    .setParameter("productid", productid)
+                    .setMaxResults(1)
+                    .getSingleResult();
+        } catch (Exception e ) {
+            
+        }
+        return prop;
+        
+    }    
+    
     public List<Project> getProjects() {
         
         return em.createQuery("select u.projects from User u where u=:user")

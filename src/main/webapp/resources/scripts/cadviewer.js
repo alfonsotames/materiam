@@ -224,7 +224,7 @@ const style = document.createElement('style');
 style.innerHTML = `
     #ui-container {
         position: absolute;
-        top: 60px; /* MOVED DOWN */
+        top: 60px;
         right: 10px;
         display: flex;
         flex-direction: column;
@@ -280,7 +280,7 @@ document.head.appendChild(style);
 // Main Application
 // -------------------------------------------------------------
 
-let camera, scene, renderer, loader, controls, objectContainer, pivotSphere, dirLight, shadowPlane;
+let camera, scene, renderer, loader, controls, objectContainer, pivotSphere, dirLight;
 let loadingBarContainer, loadingBar;
 
 const frustumSize = 20;
@@ -349,14 +349,7 @@ function init() {
     objectContainer = new THREE.Group();
     scene.add(objectContainer);
 
-    const planeGeo = new THREE.PlaneGeometry(2000, 2000);
-    // Increased Opacity for darker floor shadow
-    const planeMat = new THREE.ShadowMaterial({ opacity: 0.75 });
-    shadowPlane = new THREE.Mesh(planeGeo, planeMat);
-    shadowPlane.rotation.x = -Math.PI / 2;
-    shadowPlane.position.y = -2.01; 
-    shadowPlane.receiveShadow = true;
-    scene.add(shadowPlane);
+    // --- FLOOR SHADOW PLANE REMOVED ---
 
     const geometry = new THREE.BoxGeometry(4, 4, 4);
     geometry.computeBoundsTree();
@@ -372,9 +365,9 @@ function init() {
     mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 })));
 
     // Pivot Sphere
-    const sphereGeo = new THREE.SphereGeometry(.25, 16, 16);
+    const sphereGeo = new THREE.SphereGeometry(.2, 16, 16);
     const sphereMat = new THREE.MeshBasicMaterial({ 
-        color: 0xff0000, transparent: true, opacity: 0.3, depthTest: false 
+        color: 0xff5555, transparent: true, opacity: 0.6, depthTest: false 
     });
     pivotSphere = new THREE.Mesh(sphereGeo, sphereMat);
     pivotSphere.visible = false;
@@ -597,8 +590,7 @@ function loadGLB(url) {
             dirLight.shadow.bias = -0.0005;
             dirLight.shadow.normalBias = 0.02;
 
-            shadowPlane.position.y = -maxDim / 2 - (maxDim * 0.01); 
-            shadowPlane.scale.setScalar(maxDim * 100);
+            // --- FLOOR SHADOW UPDATE REMOVED ---
 
             const safeNear = maxDim / 1000;
             const safeFar = maxDim * 100;

@@ -126,14 +126,14 @@
                                                 };
                                             </script>
 
-                                                <div>
+                                            <div>
                                                     <div style="margin: 0px; word-break: break-all;">
-                                                        <div style="margin:0px; padding: 9px; font-size: 14px; background-color: #666666; color: white; width:100%;"><B>ASSEMBLY: #{cf.name}</B></div>
+                                                        <div style="margin:0px; padding: 9px; font-size: 16px; background-color: #dddddd; color: black; width:100%;">CAD file: #{cf.name}</div>
                                                     </div>                                                            
                                                     
-                                                        <img style="width:330px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
+                                                    <center><img style="margin: 20px; width:280px; margin-left:5px; cursor: pointer; background-color: #f8f8f8; "
                                                              src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{cf.uuid}&amp;persid=0-1-1-1"
-                                                             onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{cf.uuid}&amp;persid=0-1-1-1');"/>
+                                                             onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{cf.uuid}&amp;persid=0-1-1-1');"/></center>
                                                    
 
                                                 </div>
@@ -150,7 +150,7 @@
                                                     grid-template-rows: auto; /* Allows row height to adjust to content */
                                                     justify-content: center; /* Centers the grid horizontally within its parent */
                                                     align-items: start; /* Centers items vertically within their cells */">
-                                                    <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px;">
+                                                    <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px; background-color: white;">
                                                         <img style="width:110px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
                                                              src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{qp.part.cadfile.uuid}&amp;persid=#{qp.part.persid}"
                                                              onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{qp.part.cadfile.uuid}&amp;persid=#{qp.part.persid}');"/>

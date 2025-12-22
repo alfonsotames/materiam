@@ -444,10 +444,10 @@ public class ProjectController implements Serializable {
             try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
                 String line;
-                //System.out.println("Process Output:");
+                System.out.println("Process Output:");
                 while ((line = reader.readLine()) != null) {
                     
-                    //System.out.println(line);
+                    System.out.println(line);
                     if (line.startsWith("******") || line.contains("info")) {
                         importUpdate.fire(new ImportUpdate(line,wsid));
                     }
@@ -463,9 +463,9 @@ public class ProjectController implements Serializable {
         
         try {
             Runtime rt = Runtime.getRuntime();
-            String command = String.format("step2glb %s --outdir %s", (filedest + fileName), filedest);
-            System.out.println("* = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = Executing step2glb * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = ");
-            System.out.println("Executing step2glb: "+command);
+            String command = String.format("stepguru %s --outdir %s", (filedest + fileName), filedest);
+            System.out.println("* = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = Executing stepguru * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = ");
+            System.out.println("Executing stepguru: "+command);
             Process pr = rt.exec(command);
             importUpdate.fire(new ImportUpdate("Generating files...",wsid));
 

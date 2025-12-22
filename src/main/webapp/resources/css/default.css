@@ -196,3 +196,23 @@ input[type="text"]:focus, input[type="password"]:focus {
       color: white;
   }
   
+  
+.myDataViewBackground {
+    background-color: #333333;
+}
+
+.ui-dataview.ui-widget-content {
+    background-color: #606060 !important; /* Use !important if necessary to override the theme */
+}
+
+/* Target individual data item containers within the DataView */
+.ui-dataview-content .ui-dataview-row {
+     background-color: #f8f8f8; /* Example for item rows */
+     
+}
+
+/* Target individual data item containers within the DataView */
+.ui-dataview-content .ui-dataview-row-parts {
+     background-color: white; /* Example for item rows */
+     
+}

@@ -17,7 +17,7 @@
         
 
         <h:form id="form">
-            <p:dataView var="pr" value="#{projectController.projects}" rows="12" paginator="true" layout="grid"
+            <p:dataView styleClass="myDataViewBackground" style="background-color: black;" var="pr" value="#{projectController.projects}" rows="12" paginator="true" layout="grid"
                         rowsPerPageTemplate="6,12,16"
                         paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}">
 
@@ -32,9 +32,9 @@
 
                         </div>
                         <div class="product-grid-item-content">
-                            <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.4); width: 320px; background-color: white;">
+                            <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.4); width: 270px; background-color: white;">
                                     <p:commandLink action="#{projectController.openProject(pr)}">
-                                        <img style="width:310px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
+                                        <img style="width:260px; margin-left:5px; cursor: pointer; background-color: white;"
                                          src="#{request.contextPath}/imageserver?projectid=#{pr.uuid}&amp;cadfile=#{projectController.getFirstCADFileForProject(pr).uuid}&amp;persid=0-1-1-1" />
                                     </p:commandLink>
                             </div>                             

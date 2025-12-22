@@ -282,6 +282,8 @@ document.head.appendChild(style);
 
 let camera, scene, renderer, loader, controls, objectContainer, pivotSphere, dirLight;
 let loadingBarContainer, loadingBar;
+// --- ANIMATION UPDATE: Globals ---
+let mixer, clock;
 
 const frustumSize = 20;
 
@@ -290,6 +292,9 @@ animate();
 
 function init() {
     loader = new GLTFLoader();
+    // --- ANIMATION UPDATE: Init Clock ---
+    clock = new THREE.Clock();
+    
     createUI(); // New SVG UI
     createLoadingUI();
 
@@ -517,6 +522,12 @@ function onWindowResize() {
 
 function animate() {
     requestAnimationFrame(animate);
+
+    // --- ANIMATION UPDATE: Update Mixer ---
+    if (clock) {
+        const delta = clock.getDelta();
+        if (mixer) mixer.update(delta);
+    }
     
     if (pivotSphere && controls) {
         pivotSphere.visible = controls.pivotingOnObject;
@@ -543,11 +554,25 @@ function loadGLB(url) {
     loadingBarContainer.style.display = 'block';
     loadingBar.style.width = '0%';
 
+    // --- ANIMATION UPDATE: Clean up old mixer ---
+    if (mixer) {
+        mixer.stopAllAction();
+        mixer = null;
+    }
+
     loader.load(
         url,
         (gltf) => {
             loadingBarContainer.style.display = 'none';
             objectContainer.add(gltf.scene);
+
+            // --- ANIMATION UPDATE: Setup Mixer & Play ---
+            if (gltf.animations && gltf.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(gltf.scene);
+                gltf.animations.forEach((clip) => {
+                    mixer.clipAction(clip).play();
+                });
+            }
 
             gltf.scene.traverse(child => {
                 if (child.isMesh) {

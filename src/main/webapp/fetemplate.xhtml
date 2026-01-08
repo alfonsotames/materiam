@@ -21,9 +21,12 @@
                         <div onclick="location.href='#{request.contextPath}/'" style="cursor: pointer; font-family: Materiam; 
                                                             font-size: 38px; color: white; margin-left: 10px; width: 220px; 
                                                             ">MATERIAM</div>
-                        <div><!-- Sessionid: #{request.session.id} --><ui:insert name="top"></ui:insert></div>
+                        <div>
+                            <div id="updates" style="align-content: center; width:100%">Updates</div>
+                            #{request.session.id}<ui:insert name="top"></ui:insert></div>
                         <div class="grid_four">
                             <div style="width:160px; ">
+                                
                                 <div><h:outputText id="username"  value="Welcome #{userController.user.name}" rendered="#{userController.user != null}" /></div>
                                 <div>
                                     <h:outputLink id="admin"  value="#{request.contextPath}/admin" rendered="#{request.isUserInRole('ADMIN')}" style="color: white;">ADMIN</h:outputLink>

@@ -17,6 +17,7 @@ import com.materiam.entities.User;
 import events.EventQualifier;
 import events.ImportUpdate;
 import jakarta.annotation.PostConstruct;
+import jakarta.ejb.Asynchronous;
 import jakarta.enterprise.context.SessionScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.faces.application.FacesMessage;
@@ -332,11 +333,36 @@ public class ProjectController implements Serializable {
         return total;
     }
     
+    @Asynchronous
+    public void testUpload(FileUploadEvent event) {
+        
+        System.out.println("Test upload for ..."+request.getSession().getId());
+        //importUpdate.fire(new ImportUpdate("Importing file...",wsid));
+       
+        try {
+            Runtime rt = Runtime.getRuntime();
+            String command = String.format("/usr/local/bin/timer");
+            System.out.println("* = - = * = - = Executing Timer * = - = * = - = *");
+            Process pr = rt.exec(command);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(request.getSession().getId()+ " : " +line);
+                if (line.startsWith("******") || line.contains("info")) {
+                    //importUpdate.fire(new ImportUpdate(line,wsid));
+                }
+            }
+            pr.waitFor();
+        } catch (InterruptedException ex) {
+                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        } catch (IOException ex) {
+            System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }        
+    }
 
     // TODO: Make this method Asynchronous
     // Inform the user when the upload is complete so he can close the window
-    // keep sending status messages
-    
+    // keep sending status messages   
     public void upload(FileUploadEvent event) {
         System.out.println("* - * - * * - * - * * - * - *  FileUpload Invoked with wsid: "+wsid+" * - * - *  * - * - * * - * - * ");
         FacesMessage msg = new FacesMessage("Success! ", event.getFile().getFileName() + " is uploaded.");
@@ -479,10 +505,10 @@ public class ProjectController implements Serializable {
                     importUpdate.fire(new ImportUpdate(line,wsid));
                 }
             }
-                pr.waitFor();
-            } catch (InterruptedException ex) {
+            pr.waitFor();
+        } catch (InterruptedException ex) {
                 System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-            } catch (IOException ex) {
+        } catch (IOException ex) {
             System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         }
 

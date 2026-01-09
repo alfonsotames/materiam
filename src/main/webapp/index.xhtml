@@ -46,14 +46,9 @@
                     </div>
                     <div class="item1" ondragover="dragging()" ondragleave="dragout()" ondrop="drop()">
                         
-                        <h:form id="submitwsid">
-                            <h:inputHidden id="wsid" value="#{projectController.wsid}" />
-                            <h:commandButton id="hiddenButton" action="#{projectController.submitwsid}" style="display:none;">
-                                <f:ajax execute="@form" render="submitwsid" />
-                            </h:commandButton>                            
-                        </h:form>
+
                         <h:form id="dropzone"  enctype="multipart/form-data">
-                            <h:inputHidden id="wsid" value="#{projectController.wsid}" />
+                            <h:inputHidden id="wsid" value="#{userController.wsid}" />
                             <div class="block" style="color: white; padding: 20px;">
                                 <center><span style="font-size: 20px;">Drag &amp; drop your files here!</span></center>
                                 <center><span style="font-size: 14px;"><br/>Multiple .step files accepted<br/>Assemblies supported!</span></center>
@@ -140,39 +135,7 @@
             background-position: center center;">
             
         </div>
-        <script type="text/javascript">
-            var wsUri = "ws://" + document.location.host + document.location.pathname.replace(/\/[^\/]+?\.[^\/]+?$/, '/') + "notifier";
-            var websocket = new WebSocket(wsUri);
-            
-            websocket.onerror = function (evt) {
-                console.log(evt.data);
-            };
-            websocket.onopen = function (evt) {
-                console.log("Connected to "+wsUri);
-                
-                //console.log(evt.data);
-             
-            };
-            
-            websocket.onmessage = function (evt) {
-                //console.log("Message received "+evt.data);
-                if (evt.data.startsWith("SESSIONID:")) {
-                    
-                    var wsSessionId = event.data.substring(10);
 
-                    // put it into the hidden input
-                    document.getElementById("dropzone:wsid").value = wsSessionId;
-                    document.getElementById("submitwsid:wsid").value = wsSessionId;
-
-                    console.log("Stored WebSocket id:", wsSessionId);
-                    document.getElementById('submitwsid:hiddenButton').click();
-                } else {                 
-                    document.getElementById("updates").innerText = event.data;
-                    //console.log("Finalmente el wsid tiene: "+document.getElementById("dropzone:wsid").value);
-                }
-            };
-            
-        </script>
     </ui:define>
 
     <ui:define name="bottom">

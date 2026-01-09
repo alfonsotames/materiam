@@ -2,7 +2,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:ui="jakarta.faces.facelets" 
-      xmlns:h="jakarta.faces.html">
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core">
 
     <h:head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -67,7 +68,46 @@
 
                 
             </div>
-        
+        <h:form id="submitwsid"  enctype="multipart/form-data">
+            
+            <h:inputHidden id="wsid" value="#{userController.wsid}" />
+            <h:commandButton id="hiddenButton" action="#{userController.registerWsid}" style="display:none;">
+                <f:ajax execute="@form" render="submitwsid" />
+            </h:commandButton>                            
+        </h:form>        
+        <script type="text/javascript">
+            var wsUri = "ws://" + document.location.host + document.location.pathname.replace(/\/[^\/]+?\.[^\/]+?$/, '/') + "notifier";
+            var websocket = new WebSocket(wsUri);
+            
+            websocket.onerror = function (evt) {
+                console.log(evt.data);
+            };
+            websocket.onopen = function (evt) {
+                console.log("Connected to "+wsUri);
+                
+                //console.log(evt.data);
+             
+            };
+            
+            websocket.onmessage = function (evt) {
+                console.log("Message received "+evt.data);
+                if (evt.data.startsWith("SESSIONID:")) {
+                    
+                    var wsSessionId = event.data.substring(10);
+
+                    // put it into the hidden input
+                    //document.getElementById("dropzone:wsid").value = wsSessionId;
+                    document.getElementById("submitwsid:wsid").value = wsSessionId;
+
+                    console.log("Stored WebSocket id:", wsSessionId);
+                    document.getElementById('submitwsid:hiddenButton').click();
+                } else {                 
+                    document.getElementById("updates").innerText = event.data;
+                    //console.log("Finalmente el wsid tiene: "+document.getElementById("dropzone:wsid").value);
+                }
+            };
+            
+        </script>        
     </h:body>
 
 </html>

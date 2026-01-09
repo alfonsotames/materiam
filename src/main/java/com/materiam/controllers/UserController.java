@@ -6,7 +6,10 @@ package com.materiam.controllers;
 
 import com.materiam.entities.Project;
 import com.materiam.entities.User;
+import events.EventQualifier;
+import events.ImportUpdate;
 import jakarta.enterprise.context.SessionScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.inject.Inject;
@@ -28,6 +31,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -71,9 +77,15 @@ public class UserController implements Serializable {
     @Inject
     private ProjectController projectController;
   
+    @Inject
+    @EventQualifier
+    Event<ImportUpdate> importUpdate;
+    
     private String loginEmail;
     private String loginPassw;
     private User user = null;
+    
+    private Set<String> wsids = Collections.synchronizedSet(new HashSet<>());
 
     public String logout() {
         try {
@@ -92,6 +104,8 @@ public class UserController implements Serializable {
 
     public String login() {
         try {
+            String currentWsid = this.wsid;
+            Set<String> currentWsids = new HashSet<>(this.wsids);
             
             Logger.getLogger(this.getClass().getName()).log(Level.INFO, "Trying login in for : {0}", loginEmail);
 
@@ -109,6 +123,13 @@ public class UserController implements Serializable {
             Logger.getLogger(this.getClass().getName()).log(Level.INFO, "status equals {0}", status);
             if (status.equals(SEND_CONTINUE)) {
                 Logger.getLogger(this.getClass().getName()).log(Level.INFO,"* * * SEND_CONTINUE * * * *");
+                if (this.wsid == null && currentWsid != null) {
+                    this.wsid = currentWsid;
+                }
+                if (this.wsids.isEmpty() && !currentWsids.isEmpty()) {
+                    this.wsids.addAll(currentWsids);
+                }
+                
                 context.responseComplete();
                 
                 
@@ -116,6 +137,13 @@ public class UserController implements Serializable {
             } else if (status.equals(SUCCESS)) {
                 
                 if (projectController.getActiveProject() == null) {
+                    if (this.wsid == null && currentWsid != null) {
+                        this.wsid = currentWsid;
+                    }
+                    if (this.wsids.isEmpty() && !currentWsids.isEmpty()) {
+                        this.wsids.addAll(currentWsids);
+                    }
+                    
                     System.out.println(" >>>>>>>>>>>>>>>>>>>>>>>>>> activeProject is null!!!!!!!");
                 } else {
                     Project p = em.find(Project.class, projectController.getActiveProject().getId());
@@ -123,6 +151,12 @@ public class UserController implements Serializable {
                     p.setSaved(true);
                     User u = em.find(User.class, user.getId());
                     u.getProjects().add(projectController.getActiveProject());
+                    if (this.wsid == null && currentWsid != null) {
+                        this.wsid = currentWsid;
+                    }
+                    if (this.wsids.isEmpty() && !currentWsids.isEmpty()) {
+                        this.wsids.addAll(currentWsids);
+                    }
                 }
 
 
@@ -194,6 +228,37 @@ public class UserController implements Serializable {
      */
     public void setUser(User user) {
         this.user = user;
+    }
+
+    private String wsid;
+
+    /**
+     * @return the wsid
+     */
+    public String getWsid() {
+        return wsid;
+    }
+
+    /**
+     * @param wsid the wsid to set
+     */
+    public void setWsid(String wsid) {
+        this.wsid = wsid;
+    }
+    
+    public void registerWsid() {
+        if (wsid != null && !wsid.isEmpty()) {
+            wsids.add(wsid);
+            System.out.println(">>>>>>>>>>>>>>>>>>>  ✅  Wsid registered in UserController: " + wsid);
+        }
+    }
+    
+    public void sendUpdate(String msg) {
+        synchronized (wsids) {
+            for (String id : wsids) {
+                importUpdate.fire(new ImportUpdate(msg, id));
+            }
+        }
     }
 
 

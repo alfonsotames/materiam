@@ -14,12 +14,9 @@ import com.materiam.entities.Product;
 import com.materiam.entities.Project;
 import com.materiam.entities.Property;
 import com.materiam.entities.User;
-import events.EventQualifier;
-import events.ImportUpdate;
 import jakarta.annotation.PostConstruct;
 import jakarta.ejb.Asynchronous;
 import jakarta.enterprise.context.SessionScoped;
-import jakarta.enterprise.event.Event;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.ExternalContext;
 import jakarta.faces.context.FacesContext;
@@ -101,22 +98,6 @@ public class ProjectController implements Serializable {
     private String destination = "/home/mufufu/Downloads/materiam/data/projects/";
     //private String destination = "/Users/mufufu/Downloads/materiam/data/projects/";
         
-        
-    @Inject
-    @EventQualifier
-    Event<ImportUpdate> importUpdate;    
-    
-    /**
-     * wsid is the websocket id, it changes every time a user loads or refreshes a page
-     */    
-    private String wsid;
-
-    /**
-     * The wsid is already assigned by the form submission
-     */       
-    public void submitwsid() {
-        System.out.println(">>>>>>>>>>>>>>>>>>> ✅  Submitwsid inkoked: "+wsid);
-    }
     
     @PostConstruct
     public void init() {
@@ -337,7 +318,7 @@ public class ProjectController implements Serializable {
     public void testUpload(FileUploadEvent event) {
         
         System.out.println("Test upload for ..."+request.getSession().getId());
-        //importUpdate.fire(new ImportUpdate("Importing file...",wsid));
+        //userController.sendUpdate("Importing file...");
        
         try {
             Runtime rt = Runtime.getRuntime();
@@ -349,7 +330,7 @@ public class ProjectController implements Serializable {
             while ((line = reader.readLine()) != null) {
                 System.out.println(request.getSession().getId()+ " : " +line);
                 if (line.startsWith("******") || line.contains("info")) {
-                    //importUpdate.fire(new ImportUpdate(line,wsid));
+                    userController.sendUpdate(line);
                 }
             }
             pr.waitFor();
@@ -364,13 +345,13 @@ public class ProjectController implements Serializable {
     // Inform the user when the upload is complete so he can close the window
     // keep sending status messages   
     public void upload(FileUploadEvent event) {
-        System.out.println("* - * - * * - * - * * - * - *  FileUpload Invoked with wsid: "+wsid+" * - * - *  * - * - * * - * - * ");
+        System.out.println("* - * - * * - * - * * - * - *  FileUpload Invoked * - * - *  * - * - * * - * - * ");
         FacesMessage msg = new FacesMessage("Success! ", event.getFile().getFileName() + " is uploaded.");
         FacesContext.getCurrentInstance().addMessage(null, msg);
         
         UploadedFile file = event.getFile();
         // Do what you want with the file
-        importUpdate.fire(new ImportUpdate("Importing file...",wsid));
+        userController.sendUpdate("Importing file...");
         
         try {
             copyFile(event.getFile().getFileName(), file.getInputStream());
@@ -466,7 +447,7 @@ public class ProjectController implements Serializable {
             //String command = String.format("asiSheetMetalExe %s %s/out.json  -asm  -flat -expandCompounds  -profile ", (filedest + fileName), filedest, filedest);
             // asiSheetMetalExe parrilla.step out.json -image ./ -asm -imagesForParts -gltf -flat -expandCompounds -onlyCuttingLines -gltfWithColors -step -profile
             Process pr = rt.exec(command);
-            importUpdate.fire(new ImportUpdate("Reading STEP file...",wsid));
+            userController.sendUpdate("Reading STEP file...");
             try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
                 String line;
@@ -475,7 +456,7 @@ public class ProjectController implements Serializable {
                     
                     System.out.println(line);
                     if (line.startsWith("******") || line.contains("info")) {
-                        importUpdate.fire(new ImportUpdate(line,wsid));
+                        userController.sendUpdate(line);
                     }
                 }
                 pr.waitFor();
@@ -493,7 +474,7 @@ public class ProjectController implements Serializable {
             System.out.println("* = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = Executing stepguru * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = ");
             System.out.println("Executing stepguru: "+command);
             Process pr = rt.exec(command);
-            importUpdate.fire(new ImportUpdate("Generating files...",wsid));
+            userController.sendUpdate("Generating files...");
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
             String line;
@@ -502,7 +483,7 @@ public class ProjectController implements Serializable {
 
                 System.out.println(line);
                 if (line.startsWith("******") || line.contains("info")) {
-                    importUpdate.fire(new ImportUpdate(line,wsid));
+                    userController.sendUpdate(line);
                 }
             }
             pr.waitFor();
@@ -525,7 +506,7 @@ public class ProjectController implements Serializable {
             //System.out.println("Process Output:");
             while ((line = reader.readLine()) != null) {
                 //System.out.println(line);
-                importUpdate.fire(new ImportUpdate(line,wsid));
+                userController.sendUpdate(line);
             }
             pr.waitFor();
             } catch (InterruptedException ex) {
@@ -838,21 +819,6 @@ public class ProjectController implements Serializable {
         this.activeProject = activeProject;
     }
 
-    /**
-     * @return the wsid
-     */
-    public String getWsid() {
-        return wsid;
-    }
-
-    /**
-     * @param wsid the wsid to set
-     */
-    public void setWsid(String wsid) {
-        this.wsid = wsid;
-    }
-    
-    
     
     public class QuotedPart {
         private Part part;
@@ -888,4 +854,3 @@ public class ProjectController implements Serializable {
     
 
 }
-

@@ -76,7 +76,7 @@
             </h:commandButton>                            
         </h:form>        
         <script type="text/javascript">
-            var wsUri = "ws://" + document.location.host + document.location.pathname.replace(/\/[^\/]+?\.[^\/]+?$/, '/') + "notifier";
+            var wsUri = "ws://" + document.location.host + "#{request.contextPath}/notifier";
             var websocket = new WebSocket(wsUri);
             
             websocket.onerror = function (evt) {

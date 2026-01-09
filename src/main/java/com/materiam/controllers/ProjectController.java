@@ -316,8 +316,36 @@ public class ProjectController implements Serializable {
     
     @Asynchronous
     public void testUpload(FileUploadEvent event) {
+        userController.sendUpdate("Uploading file...");
+        System.out.println("* - * - * * - * - * * - * - *  Uploading File * - * - *  * - * - * * - * - * ");
+        FacesMessage msg = new FacesMessage("Success! ", event.getFile().getFileName() + " is uploaded.");
+        FacesContext.getCurrentInstance().addMessage(null, msg);
         
-        System.out.println("Test upload for ..."+request.getSession().getId());
+        UploadedFile file = event.getFile();
+        // Do what you want with the file
+        userController.sendUpdate("Importing file...");
+        
+        try {
+            copyFile(event.getFile().getFileName(), file.getInputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        FacesContext facesContext = FacesContext.getCurrentInstance();
+        ExternalContext externalContext = facesContext.getExternalContext();
+
+        // TODO: Do not redirect if it is the same page!!!
+        try {
+            externalContext.redirect("project.xhtml"); 
+        } catch (IOException e) {
+            // Handle the IOException
+            e.printStackTrace();
+        }        
+    }
+
+    
+    
+    public void processFile() {
+        System.out.println("Processing file..."+request.getSession().getId());
         //userController.sendUpdate("Importing file...");
        
         try {
@@ -338,9 +366,13 @@ public class ProjectController implements Serializable {
                 System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         } catch (IOException ex) {
             System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-        }        
+        }           
     }
-
+    
+    
+    
+    
+    
     // TODO: Make this method Asynchronous
     // Inform the user when the upload is complete so he can close the window
     // keep sending status messages   

@@ -112,26 +112,7 @@
                                 
                                     <p:dataViewListItem>
                                        
-                                        <h:panelGroup rendered="#{projectController.getInstances(cf.id).size() gt 1}">
-                                            
-                                            <script type="text/javascript">            
-                                                window.onload = function() {
-                                                    loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{cf.uuid}&amp;persid=0-1-1-1');
-                                                };
-                                            </script>
 
-                                            <div>
-                                                    <div style="margin: 0px; word-break: break-all;">
-                                                        <div style="margin:0px; padding: 9px; font-size: 16px; background-color: #dddddd; color: black; width:100%;">CAD file: #{cf.name}</div>
-                                                    </div>                                                            
-                                                    
-                                                    <center><img style="margin: 20px; width:280px; margin-left:5px; cursor: pointer; background-color: #f8f8f8; "
-                                                             src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{cf.uuid}&amp;persid=0-1-1-1"
-                                                             onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{cf.uuid}&amp;persid=0-1-1-1');"/></center>
-                                                   
-
-                                                </div>
-                                        </h:panelGroup>
                                 
                                         <p:dataView id="dataview" var="qp" value="#{projectController.getQuotedParts(cf)}" paginator="false"
                                                     rowsPerPageTemplate="6,12,16"

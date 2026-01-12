@@ -4,6 +4,7 @@
  */
 package com.materiam.controllers;
 
+import com.materiam.entities.Assembly;
 import com.materiam.entities.CADFile;
 import com.materiam.entities.Category;
 import com.materiam.entities.FabProcess;
@@ -93,6 +94,8 @@ public class ProjectController implements Serializable {
     
     private Project activeProject;
     
+    private Map<String, Object> definitionsEntityMap;
+
     
     
     private String destination = "/home/mufufu/Downloads/materiam/data/projects/";
@@ -183,10 +186,12 @@ public class ProjectController implements Serializable {
         return cf.getParts();
     }
     
+    /*
     public List<Instance> getInstances(Long cfid) {
         CADFile cf = em.find(CADFile.class, cfid);
         return cf.getInstances();
     }
+    */
     
     public List<CADFile> getCADFiles() {
         List<CADFile> cfs = em.createQuery("select cf from CADFile cf where cf.project = :project")
@@ -206,7 +211,7 @@ public class ProjectController implements Serializable {
             qp.setPart(p);
             if (p.getShape().getKey().equals("SHEET_METAL_FLAT") || p.getShape().getKey().equals("SHEET_METAL_FOLDED")) {
                 BigDecimal price = new BigDecimal(0.00);
-
+                try {
                 BigDecimal volumen;
                 volumen = p.getFlatObbLength().divide(BigDecimal.valueOf(1000)).multiply(p.getFlatObbWidth().divide(BigDecimal.valueOf(1000)));
                 volumen = volumen.multiply(p.getThickness().divide(BigDecimal.valueOf(1000)));
@@ -267,6 +272,11 @@ public class ProjectController implements Serializable {
                     price = price.add(ppb.multiply(new BigDecimal(qp.getPart().getBends())));
                 }
                 
+                
+                } catch (java.lang.NullPointerException ex) {
+                    System.out.println("Error while calculating price!!!!");
+                    price = BigDecimal.ZERO;
+                }
                 qp.setPrice(price);
 
                 } else if (p.getShape().getKey().equals("TUBE_RECTANGULAR") ) {
@@ -314,105 +324,41 @@ public class ProjectController implements Serializable {
         return total;
     }
     
+    /*
+    
+    
+    We will to the following in this and auxiliary functions:
+    
+    
+    1. Generate a new Project where the uploaded CAD file will be stored
+    2. Generate the folders <project/cadfile> and store the cadfile there
+    3. Run stepguru on the CAD file to generate PNG, GLB and the assembly.json file
+    4. 
+    5. Run amatix on the folded sheet metal parts.
+    
+    */
+    
+    
     @Asynchronous
-    public void testUpload(FileUploadEvent event) {
-        userController.sendUpdate("Uploading file...");
+    public void uploadCadFile(FileUploadEvent event) {
+        FacesContext facesContext = FacesContext.getCurrentInstance();
+        ExternalContext externalContext = facesContext.getExternalContext();
+        
+        userController.sendUpdate("Uploading CAD file...");
         System.out.println("* - * - * * - * - * * - * - *  Uploading File * - * - *  * - * - * * - * - * ");
         FacesMessage msg = new FacesMessage("Success! ", event.getFile().getFileName() + " is uploaded.");
         FacesContext.getCurrentInstance().addMessage(null, msg);
         
         UploadedFile file = event.getFile();
+        
         // Do what you want with the file
         userController.sendUpdate("Importing file...");
+        String fileName = sanitizeFilename(event.getFile().getFileName());
         
-        try {
-            copyFile(event.getFile().getFileName(), file.getInputStream());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        FacesContext facesContext = FacesContext.getCurrentInstance();
-        ExternalContext externalContext = facesContext.getExternalContext();
-
-        // TODO: Do not redirect if it is the same page!!!
-        try {
-            externalContext.redirect("project.xhtml"); 
-        } catch (IOException e) {
-            // Handle the IOException
-            e.printStackTrace();
-        }        
-    }
-
-    
-    
-    public void processFile() {
-        System.out.println("Processing file..."+request.getSession().getId());
-        //userController.sendUpdate("Importing file...");
-       
-        try {
-            Runtime rt = Runtime.getRuntime();
-            String command = String.format("/usr/local/bin/timer");
-            System.out.println("* = - = * = - = Executing Timer * = - = * = - = *");
-            Process pr = rt.exec(command);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(request.getSession().getId()+ " : " +line);
-                if (line.startsWith("******") || line.contains("info")) {
-                    userController.sendUpdate(line);
-                }
-            }
-            pr.waitFor();
-        } catch (InterruptedException ex) {
-                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-        } catch (IOException ex) {
-            System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-        }           
-    }
-    
-    
-    
-    
-    
-    // TODO: Make this method Asynchronous
-    // Inform the user when the upload is complete so he can close the window
-    // keep sending status messages   
-    public void upload(FileUploadEvent event) {
-        System.out.println("* - * - * * - * - * * - * - *  FileUpload Invoked * - * - *  * - * - * * - * - * ");
-        FacesMessage msg = new FacesMessage("Success! ", event.getFile().getFileName() + " is uploaded.");
-        FacesContext.getCurrentInstance().addMessage(null, msg);
-        
-        UploadedFile file = event.getFile();
-        // Do what you want with the file
-        userController.sendUpdate("Importing file...");
-        
-        try {
-            copyFile(event.getFile().getFileName(), file.getInputStream());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        FacesContext facesContext = FacesContext.getCurrentInstance();
-        ExternalContext externalContext = facesContext.getExternalContext();
-
-        // TODO: Do not redirect if it is the same page!!!
-        try {
-            externalContext.redirect("project.xhtml"); 
-        } catch (IOException e) {
-            // Handle the IOException
-            e.printStackTrace();
-        }
-            
-            
-    }
-    
-    
-
-
-    
-    public void copyFile(String fileName, InputStream in) {
-        
-        fileName = sanitizeFilename(fileName);
         HttpSession session = request.getSession();
-        
+
+        fileName = sanitizeFilename(fileName);
+
 
         if (activeProject == null) {
             System.out.println("⚠️ ⚠️ ⚠️ ActiveProject is null when copying file... ⚠️ ⚠️ ⚠️");
@@ -445,14 +391,13 @@ public class ProjectController implements Serializable {
         UUID fuuid = UUID.randomUUID();
         f.setUuid(fuuid.toString());
         f.setParts(new HashSet<Part>());
-        f.setInstances(new ArrayList<Instance>());
+        //f.setInstances(new ArrayList<Instance>());
         activeProject.getCadfiles().add(f);
-
-        
 
         String filedest = destination.concat(getActiveProject().getUuid()+"/"+f.getUuid()+"/");
         Path path = Paths.get(filedest);
         try {
+            InputStream in = file.getInputStream();
             
             Files.createDirectories(path);
             System.out.println("Directory created successfully at: " + path.toAbsolutePath());
@@ -470,51 +415,22 @@ public class ProjectController implements Serializable {
             out.close();
             System.out.println("New file uploaded: " + (filedest + fileName));
             
-            
-
-            Runtime rt = Runtime.getRuntime();
-            
-            //String command = String.format("asiSheetMetalExe %s %s/out.json -image %s/image.png -asm -imagesForParts -gltf -flat -expandCompounds -onlyCuttingLines -gltfWithColors -step -profile -weldings", (filedest + fileName), filedest, filedest);
-            String command = String.format("asiSheetMetalExe %s %s/out.json -image %s/image.png -asm -imagesForParts -gltf -flat -expandCompounds -step -profile ", (filedest + fileName), filedest, filedest);
-            //String command = String.format("asiSheetMetalExe %s %s/out.json  -asm  -flat -expandCompounds  -profile ", (filedest + fileName), filedest, filedest);
-            // asiSheetMetalExe parrilla.step out.json -image ./ -asm -imagesForParts -gltf -flat -expandCompounds -onlyCuttingLines -gltfWithColors -step -profile
-            Process pr = rt.exec(command);
-            userController.sendUpdate("Reading STEP file...");
-            try {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
-                String line;
-                System.out.println("Process Output:");
-                while ((line = reader.readLine()) != null) {
-                    
-                    System.out.println(line);
-                    if (line.startsWith("******") || line.contains("info")) {
-                        userController.sendUpdate(line);
-                    }
-                }
-                pr.waitFor();
-            } catch (InterruptedException ex) {
-                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-            }
 
         } catch (IOException e) {
             System.out.println(e.getMessage());
-        }
+        }        
         
+        String command; // for holding command line instructions
         try {
             Runtime rt = Runtime.getRuntime();
-            String command = String.format("stepguru %s --outdir %s", (filedest + fileName), filedest);
-            System.out.println("* = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = Executing stepguru * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = ");
-            System.out.println("Executing stepguru: "+command);
+            command = String.format("/usr/local/bin/stepguru %s --out %s -i",(filedest + fileName), filedest);
+            System.out.println("* = - = * = - = Executing STEPGuru * = - = * = - = *");
             Process pr = rt.exec(command);
-            userController.sendUpdate("Generating files...");
-
             BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
             String line;
-            System.out.println("Process Output:");
             while ((line = reader.readLine()) != null) {
-
-                System.out.println(line);
-                if (line.startsWith("******") || line.contains("info")) {
+                System.out.println(request.getSession().getId()+ " : " +line);
+                if (line.startsWith("******") || line.contains("info:")) {
                     userController.sendUpdate(line);
                 }
             }
@@ -523,259 +439,192 @@ public class ProjectController implements Serializable {
                 System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         } catch (IOException ex) {
             System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-        }
+        } 
 
-            
-            
-        try {
-            Runtime rt = Runtime.getRuntime();
-            String command = String.format("mogrify %s*.png -transparent white %s*.png",filedest, filedest);
-            System.out.println("* = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = Executing mogrify * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = * = - = ");
-            System.out.println("Executing mogrify: "+command);
-            Process pr = rt.exec(command);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
-            String line;
-            //System.out.println("Process Output:");
-            while ((line = reader.readLine()) != null) {
-                //System.out.println(line);
-                userController.sendUpdate(line);
+        
+        // Parse assembly.json
+        try (JsonReader jsonReader = Json.createReader(new StringReader(Files.readString(Paths.get(filedest+"assembly.json"))))) {
+
+            JsonObject json = jsonReader.readObject();
+            JsonArray definitions = json.getJsonArray("definitions");
+
+            // Initialize the definitions map (in-memory only)
+            Map<String, Object> definitionsEntityMap = new HashMap<>();
+
+            System.out.println("=== Parsing Definitions (in memory) ===");
+
+            // STEP 1: Create entities in memory - NO PERSIST YET
+            for (JsonObject d : definitions.getValuesAs(JsonObject.class)) {
+                String persid    = d.getString("id");
+                String name      = d.getString("name");
+                String shapeType = d.getString("shapeType");
+
+                if (shapeType.equals("COMPOUND")) {
+                    System.out.println("Creating assembly in memory: " + name);
+                    Assembly assembly = new Assembly();
+                    assembly.setPersid(persid);
+                    assembly.setName(name);
+                    assembly.setAssemblies(new ArrayList<>());
+                    assembly.setParts(new ArrayList<>());
+                    definitionsEntityMap.put(persid, assembly);
+                }
+
+                if (shapeType.equals("SOLID")) {
+                    System.out.println("Creating part in memory: " + name);
+                    Part p = new Part();
+                    p.setPersid(persid);
+                    p.setName(name);
+                    p.setCadfile(f);
+                    
+                    String partType = d.getString("partType");
+                    System.out.println("Found partType: "+partType);
+                    if (partType.equals("TUBE_RECTANGULAR_BENT")) {
+                        p.setShape(em.find(Category.class, 6L));
+                        p.setSectionWidth(d.getJsonNumber("width").bigDecimalValue());
+                        p.setSectionHeight(d.getJsonNumber("height").bigDecimalValue());
+                        p.setPartLength(d.getJsonNumber("length").bigDecimalValue());
+                        p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
+                        p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
+                        p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
+                    }
+                    if (partType.equals("TUBE_RECTANGULAR")) {
+                        p.setShape(em.find(Category.class, 4L));
+                        p.setSectionWidth(d.getJsonNumber("width").bigDecimalValue());
+                        p.setSectionHeight(d.getJsonNumber("height").bigDecimalValue());
+                        p.setPartLength(d.getJsonNumber("length").bigDecimalValue());
+                        p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
+                        p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
+                        p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
+                    }
+                    if (partType.equals("TUBE_ROUND_BENT")) {
+                        p.setShape(em.find(Category.class, 7L));
+                        p.setDiameter(d.getJsonNumber("diameter").bigDecimalValue());
+                        p.setPartLength(d.getJsonNumber("length").bigDecimalValue());
+                        p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
+                        p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
+                        p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
+                    }                   
+                    if (partType.equals("TUBE_ROUND")) {
+                        p.setShape(em.find(Category.class, 5L));
+                        p.setDiameter(d.getJsonNumber("diameter").bigDecimalValue());
+                        p.setPartLength(d.getJsonNumber("length").bigDecimalValue());
+                        p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
+                        p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
+                        p.setVolume(d.getJsonNumber("volume").bigDecimalValue());                        
+                    }
+                    if (partType.equals("SHEET_METAL_FLAT")) {
+                        p.setShape(em.find(Category.class, 2L));
+                        p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
+                        p.setFlatTotalContourLength(d.getJsonNumber("cutLength").bigDecimalValue());
+                        p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
+                        p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
+                        p.setFlatObbWidth(d.getJsonNumber("flatPatternWidth").bigDecimalValue());
+                        p.setFlatObbLength(d.getJsonNumber("flatPatternLength").bigDecimalValue());
+                    }
+                    if (partType.equals("SHEET_METAL_FOLDED")) {
+                        p.setShape(em.find(Category.class, 3L));
+                        p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
+                        p.setFlatTotalContourLength(d.getJsonNumber("cutLength").bigDecimalValue());
+                        p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
+                        p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
+                        p.setBends(d.getJsonNumber("numBends").longValue());
+                        p.setFlatObbWidth(d.getJsonNumber("flatPatternWidth").bigDecimalValue());
+                        p.setFlatObbLength(d.getJsonNumber("flatPatternLength").bigDecimalValue());                        
+                    }
+                    if (partType.equals("UNKNOWN")) {
+                        p.setShape(em.find(Category.class, 1L));
+                    }                    
+                    // check 
+                    definitionsEntityMap.put(persid, p);
+                }
             }
-            pr.waitFor();
-            } catch (InterruptedException ex) {
-                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-            } catch (IOException ex) {
+
+            // STEP 2: Traverse and build relationships
+            System.out.println("\n=== Building Assembly Hierarchy ===");
+            JsonObject root = json.getJsonObject("root");
+            Assembly rootAssembly = traverseInstance(root, definitionsEntityMap, f);
+
+            // STEP 3: Persist everything via cascade
+            System.out.println("\n=== Persisting to Database ===");
+            f.setRoot(rootAssembly);
+            em.persist(f);  // Cascades to parts via CADFile
+            em.persist(rootAssembly);  // Cascades to child assemblies and their parts
+
+            System.out.println("Successfully persisted CADFile and assembly tree");
+
+        } catch (IOException ex) {         
             System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         }
         
 
-        
-        
-        
-        try (JsonReader jsonReader = Json.createReader(new StringReader(Files.readString(Paths.get(filedest+"out.json"))))) {
 
-            JsonObject json = jsonReader.readObject();
-            //System.out.println("JsonObject toString output:");
-            //System.out.println(json.toString());
 
-            // The STEP file has an array of parts and each part has an array of bodies
-
-            // Get the "parts" array
-            JsonArray parts = json.getJsonArray("parts");
-
-            // Iterate through each part object
-            Map<String, Part> partmap = new HashMap<String, Part>();
-            
-            for (JsonObject p : parts.getValuesAs(JsonObject.class)) {
-                
-                JsonArray bodies = p.getJsonArray("bodies");
-                
-                for (JsonObject b : bodies.getValuesAs(JsonObject.class)) {
-                    
-                    // If the part 
-                    String id = p.getString("id");
-                    System.out.println("Part XDEID: " + id+ " Type: "+b.getString("type"));                    
-                    Part part = new Part();
-                    part.setCadfile(f);
-                    part.setPersid(p.getString("id"));
-                    part.setTimesRepeated(p.getJsonNumber("numOccurrences").longValue());
-                    part.setName(p.getString("name"));
-                    String type = b.getString("type");
-                    part.setDimX(b.getJsonNumber("bboxDx").bigDecimalValue());
-                    part.setDimY(b.getJsonNumber("bboxDy").bigDecimalValue());
-                    part.setDimZ(b.getJsonNumber("bboxDz").bigDecimalValue());
-                    
-                    
-                    //MaterialFormat pt = (MaterialFormat)em.createQuery("select mf from MaterialFormat mf where mf.type=:type").setParameter("type", type).getSingleResult();
-                    
-                    Category shape = (Category)em.createQuery("select cat from Category cat where cat.key=:type").setParameter("type",type).getSingleResult();
-                    part.setShape(shape);
-                    // TODO: Define routing and BOM data structures
-                    /*
-                    If it indeed is a Sheet Metal part, then we can define the manufacturing process.
-                    This will help in our manufacturing application. We need to define basic routing
-                    (1. laser cut, 2. bending) then the client defines material (BOM) and finishes
-                    (additional routing stops).
-                    */
-                    
-                    
-                  
-                    
-                    
-                    if (type.equals("SHEET_METAL_FOLDED") || type.equals("SHEET_METAL_FLAT")) {
-                        if (type.equals("SHEET_METAL_FOLDED")) {
-                            JsonArray bends = b.getJsonArray("bends");
-                            part.setBends((long)bends.size());
-                        }
-                        part.setFlatObbWidth(b.getJsonNumber("flatAabbWidth").bigDecimalValue());
-                        part.setFlatObbLength(b.getJsonNumber("flatAabbLength").bigDecimalValue());
-                        part.setThickness(b.getJsonNumber("thickness").bigDecimalValue());
-                        part.setFlatTotalContourLength(b.getJsonNumber("flatTotalContourLength").bigDecimalValue());
-                        part.setVolume(b.getJsonNumber("volume").bigDecimalValue());
-                        part.setTotalArea(b.getJsonNumber("totalArea").bigDecimalValue());
-                        
-                        //Material m = (Material)em.createQuery("select m from Material m order by abs(m.thickness - :thickness)").setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue()).setMaxResults(1).getSingleResult();
-                        //part.setMaterial(m);
-                        
-                        Product m = (Product)em.createQuery("select p from Product p, Property t, Category shape "
-                                + "where t.product=p and t.propertyType.key='THICKNESS' and shape.key='SHEET_METAL_FLAT' and p.categories=shape order by abs(t.value - :thickness)")
-                                .setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue()).setMaxResults(1).getSingleResult();
-                        part.setMaterial(m);
-                        
-                        // save
-                        f.getParts().add(part);
-                        partmap.put(p.getString("id"), part);                     
-                        
-
-                    } else if (type.equals("TUBE_RECTANGULAR")) {
-                        part.setSectionWidth(b.getJsonNumber("sectionWidth").bigDecimalValue());
-                        part.setSectionHeight(b.getJsonNumber("sectionHeight").bigDecimalValue());
-                        part.setPartLength(b.getJsonNumber("partLength").bigDecimalValue());
-                        part.setThickness(b.getJsonNumber("thickness").bigDecimalValue());
-                        part.setVolume(b.getJsonNumber("volume").bigDecimalValue());
-                        part.setTotalArea(b.getJsonNumber("totalArea").bigDecimalValue());
-                        /*
-                        Query q = em.createQuery("select m from Material m where m.width=:width and m.height=:height and m.thickness=:thickness")
-                                                            .setParameter("width", b.getJsonNumber("sectionWidth").bigDecimalValue())
-                                                            .setParameter("height", b.getJsonNumber("sectionHeight").bigDecimalValue())
-                                                            .setParameter("thickness", b.getJsonNumber("partLength").bigDecimalValue());
-                        */
-                        System.out.println("Section Width: "+b.getJsonNumber("sectionWidth").bigDecimalValue().setScale(2, RoundingMode.HALF_UP));
-                        
-                        System.out.println(" ******************************************************************************************************************** ");
-                        System.out.println(" ************************ LOOKING FOR THE BEST FIT OF TUBE RECTANGUAR *********************************************** ");
-                        System.out.println("Tube Size (w,h): "+b.getJsonNumber("sectionWidth").bigDecimalValue()+","+b.getJsonNumber("sectionHeight").bigDecimalValue());
-                        System.out.println("Tube Length: "+b.getJsonNumber("partLength").bigDecimalValue());
-                        System.out.println("Tube Thickness: "+b.getJsonNumber("thickness").bigDecimalValue());
-                        
-                        BigDecimal x = b.getJsonNumber("sectionWidth").bigDecimalValue();
-                        BigDecimal y = b.getJsonNumber("sectionHeight").bigDecimalValue();
-                        
-                        BigDecimal width;
-                        BigDecimal height;
-                        
-                        if (x.compareTo(y) > 0) {
-                            width=x;
-                            height=y;
-                        } else {
-                            width=y;
-                            height=x;
-                        }
-                        
-                        /*        -------------------- TEST ---------------------    */
-                        List<Product> testp = em.createQuery("select p from Product p, Category shape, Property w, Property h, Property t "
-                                + "where shape.key='TUBE_RECTANGULAR' and shape.products=p and "
-                                + "w.propertyType.key='WIDTH'     and w.product=p and "
-                                + "h.propertyType.key='HEIGHT'    and h.product=p and "
-                                + "t.propertyType.key='THICKNESS' and t.product=p order by "
-                                + "abs(w.value - :width), "
-                                + "abs(h.value - :height), "
-                                + "abs(t.value - :thickness)")
-                                .setParameter("width", width.setScale(2, RoundingMode.HALF_UP))
-                                .setParameter("height", height.setScale(2, RoundingMode.HALF_UP))
-                                .setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue().setScale(2, RoundingMode.HALF_UP))
-                                .getResultList();
-                        for (Product tp : testp) {
-                            System.out.println("Product: "+tp.getName());
-                        }
-                        System.out.println(" ******************************************************************************************************************** ");
-                        
-                        /* --------------------------------------------------------- */
-                        
-                        Query q = em.createQuery("select p from Product p, Category shape, Property w, Property h, Property t "
-                                + "where shape.key='TUBE_RECTANGULAR' and shape.products=p and "
-                                + "w.propertyType.key='WIDTH'     and w.product=p and "
-                                + "h.propertyType.key='HEIGHT'    and h.product=p and "
-                                + "t.propertyType.key='THICKNESS' and t.product=p order by "
-                                + "abs(w.value - :width), "
-                                + "abs(h.value - :height), "
-                                + "abs(t.value - :thickness)")
-                                .setParameter("width", width.setScale(2, RoundingMode.HALF_UP))
-                                .setParameter("height", height.setScale(2, RoundingMode.HALF_UP))
-                                .setParameter("thickness", b.getJsonNumber("thickness").bigDecimalValue().setScale(2, RoundingMode.HALF_UP));
-                        
-                        
-                        System.out.println("Query: "+q.toString());
-                        
-                        Product m = (Product)q.setMaxResults(1).getSingleResult();
-                        part.setMaterial(m);
-                        
-                        
-                        // save
-                        f.getParts().add(part);
-                        partmap.put(p.getString("id"), part);
-                        
-                    }
-                    /*
-                    if (bodies.size() == 1) {
-                                            // save
-                        f.getParts().add(part);
-                        partmap.put(p.getString("id"), part);    
-                    }
-                    */
-                                        
-                }
-            }
-
-            
-            // Now obtain the instances, for each instance check the prototype
-            
-            JsonObject sceneTree = json.getJsonObject("sceneTree");
-            JsonArray instances = sceneTree.getJsonArray("instances");
-            JsonObject prototypes = sceneTree.getJsonObject("prototypes");
-            JsonArray protoParts = prototypes.getJsonArray("parts");
-            Map<JsonNumber,JsonString> pps = new HashMap<JsonNumber,JsonString>();
-            for (JsonObject p : protoParts.getValuesAs(JsonObject.class)) {
-                pps.put(p.getJsonNumber("id"), p.getJsonString("persistentId"));
-            }
-            
-            System.out.println("pps contains:");
-            for (Map.Entry<JsonNumber, JsonString> entry : pps.entrySet()) {
-                System.out.println("Protopart: "+entry.getKey()+" : "+entry.getValue());
-            }
-            
-
-            System.out.println("The Part Map has: ");
-            for (Map.Entry<String,Part> entry : partmap.entrySet()) {
-                System.out.println("Part:"+entry.getValue().getPersid()+" Part ID: "+entry.getValue().getId());
-            }
-                    
-            for (JsonObject inst : instances.getValuesAs(JsonObject.class)) {
-                System.out.println("Instance Prototype: "+inst.getJsonNumber("prototype"));
-                JsonArray rotation = inst.getJsonArray("rotation");
-                JsonArray translation = inst.getJsonArray("translation");
-                
-                
-                JsonString persid = pps.get(inst.getJsonNumber("prototype"));
-
-                if (persid != null) {
-                    System.out.println("Finding persid: "+persid+" inside the part map");
-
-                    
-                    Part part = partmap.get(persid.getString());
-                    if (part != null) {
-                        System.out.println("Found part "+part.getPersid());
-                        System.out.println("The part found has id: "+part.getId());
-                        Instance instance = new Instance();
-                        instance.setPart(part);
-
-                        instance.setRotx(rotation.getJsonNumber(0).bigDecimalValue());
-                        instance.setTransx(translation.getJsonNumber(0).bigDecimalValue());
-                        instance.setCadfile(f);
-                        f.getInstances().add(instance);
-                        System.out.println("* * * * * * * * * ADDING INSTANCE * * * * * * "+instance.getPart()+" rotx: "+instance.getRotx()+" now contains:"+f.getInstances().size());
-                        
-                        
-                    }
-                }
-            }
-            
-            
-            
-        }   catch (IOException ex) {
-                System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-            }
-        
+        // TODO: Do not redirect if it is the same page!!!
+        try {
+            externalContext.redirect("project.xhtml"); 
+        } catch (IOException e) {
+            // Handle the IOException
+            e.printStackTrace();
+        }        
     }
+
+
+    
+    
+    private Assembly traverseInstance(JsonObject instance, 
+                                       Map<String, Object> definitionsEntityMap,
+                                       CADFile cadFile) {
+        if (instance == null) {
+            return null;
+        }
+
+        String instanceId = instance.getString("id");
+        String definitionId = instance.getString("definitionId");
+        Object entity = definitionsEntityMap.get(definitionId);
+
+        if (entity == null) {
+            System.out.println("Warning: No entity found for definitionId: " + definitionId);
+            return null;
+        }
+
+        JsonArray children = instance.getJsonArray("children");
+        boolean hasChildren = (children != null && !children.isEmpty());
+
+        if (entity instanceof Assembly) {
+            Assembly assembly = (Assembly) entity;
+
+            if (hasChildren) {
+                for (int i = 0; i < children.size(); i++) {
+                    JsonObject childInstance = children.getJsonObject(i);
+                    String childDefId = childInstance.getString("definitionId");
+                    Object childEntity = definitionsEntityMap.get(childDefId);
+
+                    if (childEntity instanceof Assembly) {
+                        Assembly childAssembly = traverseInstance(childInstance, definitionsEntityMap, cadFile);
+                        if (childAssembly != null) {
+                            childAssembly.setParent(assembly);  // Set parent reference
+                            assembly.getAssemblies().add(childAssembly);
+                        }
+                    } else if (childEntity instanceof Part) {
+                        Part childPart = (Part) childEntity;
+                        assembly.getParts().add(childPart);
+                        cadFile.getParts().add(childPart);  // Also add to CADFile's flat list
+                    }
+                }
+            }
+
+            System.out.println("Built assembly: " + assembly.getName() + 
+                              " [" + assembly.getAssemblies().size() + " sub-assemblies, " + 
+                              assembly.getParts().size() + " parts]");
+
+            return assembly;
+        }
+
+        return null;
+    }    
+
+    
+
     
     
     private static final Pattern INVALID_FILENAME_CHARS = 

@@ -22,6 +22,20 @@ import java.util.List;
 @Entity
 public class CADFile implements Serializable {
 
+    /**
+     * @return the root
+     */
+    public Assembly getRoot() {
+        return root;
+    }
+
+    /**
+     * @param root the root to set
+     */
+    public void setRoot(Assembly root) {
+        this.root = root;
+    }
+
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -34,8 +48,8 @@ public class CADFile implements Serializable {
     private Project project;
     @OneToMany(mappedBy = "cadfile", cascade = CascadeType.ALL)
     private Set<Part> parts;
-    @OneToMany(mappedBy = "cadfile", cascade = CascadeType.ALL)
-    private List<Instance>instances;
+    private Assembly root;
+    
     
     
 
@@ -133,18 +147,6 @@ public class CADFile implements Serializable {
         this.uuid = uuid;
     }
 
-    /**
-     * @return the instances
-     */
-    public List<Instance> getInstances() {
-        return instances;
-    }
 
-    /**
-     * @param instances the instances to set
-     */
-    public void setInstances(List<Instance> instances) {
-        this.instances = instances;
-    }
     
 }

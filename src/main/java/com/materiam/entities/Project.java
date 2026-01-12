@@ -25,33 +25,7 @@ import java.util.Set;
 @Entity
 public class Project implements Serializable {
 
-    /**
-     * @return the uuid
-     */
-    public String getUuid() {
-        return uuid;
-    }
 
-    /**
-     * @param uuid the uuid to set
-     */
-    public void setUuid(String uuid) {
-        this.uuid = uuid;
-    }
-
-    /**
-     * @return the name
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * @param name the name to set
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
 
 
 
@@ -148,5 +122,33 @@ public class Project implements Serializable {
     public void setCadfiles(List<CADFile> cadfiles) {
         this.cadfiles = cadfiles;
     }
+    /**
+     * @return the uuid
+     */
+    public String getUuid() {
+        return uuid;
+    }
+
+    /**
+     * @param uuid the uuid to set
+     */
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
+    /**
+     * @return the name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @param name the name to set
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
+
     
 }

@@ -19,6 +19,20 @@ import java.math.BigDecimal;
 @Entity
 public class Instance implements Serializable {
 
+    /**
+     * @return the assembly
+     */
+    public Assembly getAssembly() {
+        return assembly;
+    }
+
+    /**
+     * @param assembly the assembly to set
+     */
+    public void setAssembly(Assembly assembly) {
+        this.assembly = assembly;
+    }
+
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,7 +43,7 @@ public class Instance implements Serializable {
     private Part part;
     private BigDecimal rotx;
     private BigDecimal transx;
-    
+    private Assembly assembly;
 
     public Long getId() {
         return id;

@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StepGuru Assembly Export",
+  "description": "Schema for the JSON export of STEP assembly structure and part classification.",
+  "type": "object",
+  "required": [
+    "definitions",
+    "root",
+    "objectCounts"
+  ],
+  "properties": {
+    "definitions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/PartDefinition"
+      }
+    },
+    "root": {
+      "$ref": "#/definitions/Instance"
+    },
+    "objectCounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "count"],
+        "properties": {
+          "id": { "type": "string" },
+          "count": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "PartDefinition": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "shapeType",
+        "classification",
+        "partType",
+        "color"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "shapeType": { "type": "string" },
+        "classification": { "type": "string" },
+        "partType": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "SHEET_METAL_FLAT",
+            "SHEET_METAL_FOLDED",
+            "TUBE_RECTANGULAR",
+            "TUBE_RECTANGULAR_BENT",
+            "TUBE_ROUND"
+          ]
+        },
+        "color": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "thickness": { "type": "number" },
+        "cutLength": { "type": "number" },
+        "surfaceArea": { "type": "number" },
+        "volume": { "type": "number" },
+        "numBends": { "type": "integer" },
+        "width": { "type": "number" },
+        "height": { "type": "number" },
+        "length": { "type": "number" },
+        "diameter": { "type": "number" },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Warnings about measurement reliability or classification confidence"
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "partType": { "const": "SHEET_METAL_FLAT" } } }, "then": { "required": ["thickness", "cutLength", "surfaceArea", "volume"] } },
+        { "if": { "properties": { "partType": { "const": "SHEET_METAL_FOLDED" } } }, "then": { "required": ["thickness", "cutLength", "surfaceArea", "volume", "numBends"] } },
+        { "if": { "properties": { "partType": { "const": "TUBE_RECTANGULAR" } } }, "then": { "required": ["width", "height", "length", "thickness", "surfaceArea", "volume"] } },
+        { "if": { "properties": { "partType": { "const": "TUBE_RECTANGULAR_BENT" } } }, "then": { "required": ["width", "height", "length", "thickness", "surfaceArea", "volume"] } },
+        { "if": { "properties": { "partType": { "const": "TUBE_ROUND" } } }, "then": { "required": ["diameter", "thickness", "length", "surfaceArea", "volume"] } }
+      ]
+    },
+    "Instance": {
+      "type": "object",
+      "required": ["id", "definitionId", "isInstance", "children"],
+      "properties": {
+        "id": { "type": "string" },
+        "definitionId": { "type": "string" },
+        "isInstance": { "type": "boolean" },
+        "transform": {
+          "type": "array",
+          "description": "4x4 transformation matrix in row-major order. Layout: [R00,R01,R02,Tx, R10,R11,R12,Ty, R20,R21,R22,Tz, 0,0,0,1]. Tx/Ty/Tz are translation, Rxx is rotation/scale. Only present if not identity.",
+          "items": { "type": "number" },
+          "minItems": 16,
+          "maxItems": 16
+        },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Instance" }
+        }
+      }
+    }
+  }
+}

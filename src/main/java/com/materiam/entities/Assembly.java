@@ -4,11 +4,16 @@
  */
 package com.materiam.entities;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -18,15 +23,61 @@ import java.util.List;
 @Entity
 public class Assembly implements Serializable {
 
+    /**
+     * @return the parent
+     */
+    public Assembly getParent() {
+        return parent;
+    }
+
+    /**
+     * @param parent the parent to set
+     */
+    public void setParent(Assembly parent) {
+        this.parent = parent;
+    }
+
+    /**
+     * @return the instances
+     */
+    public List<Instance> getInstances() {
+        return instances;
+    }
+
+    /**
+     * @param instances the instances to set
+     */
+    public void setInstances(List<Instance> instances) {
+        this.instances = instances;
+    }
+
+
+
     private static final long serialVersionUID = 1L;
+
+    
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    private List<Assembly> assemblies;
-    private List<Part> parts;
-    
+    private String persid;
+    private String name;
 
+    @ManyToOne
+    private Assembly parent;  // Add parent reference for bidirectional relationship
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Assembly> assemblies = new ArrayList<>();
+    
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name = "assembly_id")  // Unidirectional, or add @ManyToOne in Part
+    private List<Part> parts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "assembly", cascade = CascadeType.ALL)
+    private List<Instance> instances;
+    
+    
+    
     
     
     public Long getId() {
@@ -88,6 +139,33 @@ public class Assembly implements Serializable {
      */
     public void setParts(List<Part> parts) {
         this.parts = parts;
+    }
+    /**
+     * @return the persid
+     */
+    public String getPersid() {
+        return persid;
+    }
+
+    /**
+     * @param persid the persid to set
+     */
+    public void setPersid(String persid) {
+        this.persid = persid;
+    }
+
+    /**
+     * @return the name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @param name the name to set
+     */
+    public void setName(String name) {
+        this.name = name;
     }
     
 }

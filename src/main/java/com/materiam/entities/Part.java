@@ -22,19 +22,7 @@ import java.math.BigDecimal;
 @Entity
 public class Part implements Serializable {
 
-    /**
-     * @return the bends
-     */
-    public Long getBends() {
-        return bends;
-    }
 
-    /**
-     * @param bends the bends to set
-     */
-    public void setBends(Long bends) {
-        this.bends = bends;
-    }
 
 
     private static final long serialVersionUID = 1L;
@@ -67,17 +55,34 @@ public class Part implements Serializable {
     private BigDecimal sectionHeight;
     @Column(precision = 9, scale = 3) //999,999.999 mm
     private BigDecimal partLength;
-
+    @Column(precision = 9, scale = 3) //999,999.999 mm
+    private BigDecimal diameter;
     @Column(precision = 9, scale = 3) //999,999.999 mm
     private BigDecimal dimX;
     @Column(precision = 9, scale = 3) //999,999.999 mm
     private BigDecimal dimY;
     @Column(precision = 9, scale = 3) //999,999.999 mm
     private BigDecimal dimZ;
+    
+    /*
+    The total cutting length computed as a sum of all segment lengths
+    in the flat pattern (depends on K-factor), including inner holes
+    and cutouts.
+    */
     @Column(precision = 9, scale = 3) //999,999.999 mm
     private BigDecimal flatTotalContourLength;
+    
+    /*
+    The length of the optimized position of the flat pattern for a
+    sheet metal body.
+    */
     @Column(precision = 9, scale = 3) //999,999.999 mm
     private BigDecimal flatObbLength;
+    
+    /*
+    The width of the optimized position of the flat pattern for a
+    sheet metal body.
+    */    
     @Column(precision = 9, scale = 3) //999,999.999 mm
     private BigDecimal flatObbWidth;
     private Long bends;
@@ -95,7 +100,19 @@ public class Part implements Serializable {
     public void setId(Long id) {
         this.id = id;
     }
+    /**
+     * @return the bends
+     */
+    public Long getBends() {
+        return bends;
+    }
 
+    /**
+     * @param bends the bends to set
+     */
+    public void setBends(Long bends) {
+        this.bends = bends;
+    }
     /**
      * @return the name
      */
@@ -409,6 +426,20 @@ public class Part implements Serializable {
      */
     public void setMaterial(Product material) {
         this.material = material;
+    }
+
+    /**
+     * @return the diameter
+     */
+    public BigDecimal getDiameter() {
+        return diameter;
+    }
+
+    /**
+     * @param diameter the diameter to set
+     */
+    public void setDiameter(BigDecimal diameter) {
+        this.diameter = diameter;
     }
 
 

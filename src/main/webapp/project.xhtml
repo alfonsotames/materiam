@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8' ?>
-<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 <ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:ui="jakarta.faces.facelets"
                 template="./fetemplate.xhtml"
@@ -10,20 +10,137 @@
 
 
     <ui:define name="headscripts">
-        
+
         <script crossorigin="anonymous" type="importmap">
              {
                  "imports": {
-                     "three": "https://unpkg.com/three@0.180.0/build/three.module.js",
-                     "three/addons/": "https://unpkg.com/three@0.180.0/examples/jsm/",
-                     "three-viewport-gizmo": "https://unpkg.com/three-viewport-gizmo@2.2.0/dist/three-viewport-gizmo.js",
-                     "three.meshline": "https://unpkg.com/threejs-meshline@2.0.12/src/index.js"
+                     "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                     "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
                      }
              }
-        </script>        
-        <script type="module" src="#{resource['scripts/cadviewer.js']}" />
-        
-        
+        </script>
+
+        <script type="module">
+            import { SheetMetalViewer } from '#{request.contextPath}/scripts/cad/sheet-metal/index.js';
+            import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+            import * as THREE from 'three';
+
+            let viewer = null;
+            let gltfLoader = null;
+            let currentModel = null;
+
+            // Initialize the viewer when DOM is ready
+            document.addEventListener('DOMContentLoaded', function() {
+                viewer = new SheetMetalViewer({
+                    containerId: 'viewport',
+                    backgroundColor: 0x3a3a42,
+                    enableCAM: true,
+                    autoLoad: false
+                });
+
+                gltfLoader = new GLTFLoader();
+                window.cadViewer = viewer;
+
+                // Load GLB file into the viewer
+                window.loadGLB = function(url) {
+                    if (!viewer) return;
+
+                    // Clear previous model
+                    if (currentModel) {
+                        viewer.getScene().remove(currentModel);
+                        currentModel = null;
+                    }
+
+                    // Clear any sheet metal part
+                    if (viewer.clearPart) {
+                        viewer.clearPart();
+                    }
+
+                    gltfLoader.load(
+                        url,
+                        (gltf) => {
+                            currentModel = gltf.scene;
+
+                            gltf.scene.traverse(child => {
+                                if (child.isMesh) {
+                                    child.castShadow = true;
+                                    child.receiveShadow = true;
+                                    if (child.material) {
+                                        const color = child.material.color ? child.material.color.clone() : new THREE.Color(0x888888);
+                                        child.material = new THREE.MeshPhysicalMaterial({
+                                            color: color,
+                                            metalness: 0.1,
+                                            roughness: 0.7,
+                                            side: THREE.DoubleSide
+                                        });
+                                    }
+                                }
+                            });
+
+                            viewer.getScene().add(gltf.scene);
+                            viewer.fitToScene(gltf.scene);
+                        },
+                        (xhr) => {
+                            if (xhr.lengthComputable) {
+                                const percent = (xhr.loaded / xhr.total) * 100;
+                                console.log('Loading: ' + percent.toFixed(1) + '%');
+                            }
+                        },
+                        (err) => {
+                            console.error('Error loading GLB:', err);
+                        }
+                    );
+                };
+
+                // Load simulation for sheet metal parts
+                window.loadSimulation = function(basePath) {
+                    if (!viewer) return;
+
+                    // Clear previous GLB model
+                    if (currentModel) {
+                        viewer.getScene().remove(currentModel);
+                        currentModel = null;
+                    }
+
+                    // Set the asset path to the simulation directory and load
+                    // basePath is like /materiam/simserver/proj-uuid/cad-uuid/persid-cam_simulation/
+                    viewer.assetPath = basePath;
+                    viewer.loadPart('blueprint.json');
+                };
+            });
+        </script>
+
+        <c:choose>
+            <c:when test="#{projectController.activeProject != null and not empty projectController.activeProject.cadfiles and projectController.activeProject.cadfiles[0].root != null}">
+                <script type="text/javascript">
+                    document.addEventListener('DOMContentLoaded', function() {
+                        function tryLoadGLB() {
+                            if (typeof window.loadGLB === 'function') {
+                                window.loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{projectController.activeProject.cadfiles[0].uuid}&amp;persid=#{projectController.activeProject.cadfiles[0].root.persid}');
+                            } else {
+                                setTimeout(tryLoadGLB, 100);
+                            }
+                        }
+                        setTimeout(tryLoadGLB, 100);
+                    });
+                </script>
+            </c:when>
+            <c:when test="#{projectController.firstPart != null}">
+                <script type="text/javascript">
+                    document.addEventListener('DOMContentLoaded', function() {
+                        function tryLoadGLB() {
+                            if (typeof window.loadGLB === 'function') {
+                                window.loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{projectController.firstCadFile.uuid}&amp;persid=#{projectController.firstPart.persid}');
+                            } else {
+                                setTimeout(tryLoadGLB, 100);
+                            }
+                        }
+                        setTimeout(tryLoadGLB, 100);
+                    });
+                </script>
+            </c:when>
+        </c:choose>
+
     </ui:define>
     <ui:define name="top">
         
@@ -108,59 +225,47 @@
                                 
                                 
                                 
-                                <p:dataView id="cadfiles" var="cf" value="#{projectController.CADFiles}" paginator="false">
-                                
-                                    <p:dataViewListItem>
-                                       
-
-                                
-                                        <p:dataView id="dataview" var="qp" value="#{projectController.getQuotedParts(cf)}" paginator="false"
-                                                    rowsPerPageTemplate="6,12,16"
-                                                    paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
-                                                    gridIcon="pi pi-th-large" listIcon="pi pi-bars">
-                                            <p:dataViewListItem>
-                                                <div style="
-                                                    display: grid;
-                                                    grid-template-columns: repeat(2, 1fr); /* Creates 2 columns of equal width */
-                                                    grid-template-rows: auto; /* Allows row height to adjust to content */
-                                                    justify-content: center; /* Centers the grid horizontally within its parent */
-                                                    align-items: start; /* Centers items vertically within their cells */">
-                                                    <div style="margin: 5px; box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 120px; background-color: white;">
-                                                        <img style="width:110px; margin-left:5px; cursor: pointer; background-color: #ffffff;"
-                                                             src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{qp.part.cadfile.uuid}&amp;persid=#{qp.part.persid}"
-                                                             onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{qp.part.cadfile.uuid}&amp;persid=#{qp.part.persid}');"/>
-                                                    </div>                                                     
-                                                    <div style="margin: 4px;  width:240px; word-break: break-all;">
-                                                        <div style="font-size: 14px; "><B>#{qp.part.name}</B></div>
-
-                                                        <div style="font-size: 12px;">Part thickness:
-                                                            <h:outputText value="#{qp.part.thickness}">
-                                                                <f:convertNumber maxFractionDigits="2" minFractionDigits="2" />
-                                                            </h:outputText>
-                                                              mm
-                                                        </div>
-
-                                                        <div style="font-size: 12px;">#{qp.part.material.name} (#{projectController.getPropertyByKey(qp.part.material.id,'THICKNESS').value}mm)</div>
-
-
-
-                                                        <div>#{qp.part.comments}</div>
-
-                                                         <div style="font-size: 14px;">Quantity: #{qp.part.timesRepeated}</div>
-                                                        <div style="margin-top:5px;">
-                                                            <h:outputText style="font-weight: bold;" value="#{qp.price}" styleClass="product-price" rendered="#{qp.price ne 0}">
-                                                                <f:convertNumber currencySymbol="USD$" type="currency"/>
-                                                            </h:outputText>
-                                                        </div>                                                                 
-                                                    </div>
-                                                </div>
-                                            </p:dataViewListItem>
-                                        </p:dataView>
-                                
-                                        
-                                    </p:dataViewListItem>
-                                
-                                </p:dataView>
+                                <p:tree id="assemblyTree" value="#{projectController.assemblyTree}" var="node"
+                                       style="width:100%; border:none;">
+                                    <p:treeNode type="assembly">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 135px; background-color: white;">
+                                                <img style="width:130px; margin:2px; cursor: pointer; background-color: #ffffff;"
+                                                     src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}"
+                                                     onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}');"/>
+                                            </div>
+                                            <div style="flex: 1;">
+                                                <div style="font-size: 13px; font-weight: bold; color: #333;">#{node.name}</div>
+                                                <div style="font-size: 11px; color: #888;">Qty: #{node.quantity}</div>
+                                            </div>
+                                        </div>
+                                    </p:treeNode>
+                                    <p:treeNode type="part">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 135px; background-color: white;">
+                                                <img style="width:130px; margin:2px; cursor: pointer; background-color: #ffffff;"
+                                                     src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}"
+                                                     onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}');"/>
+                                            </div>
+                                            <div style="flex: 1;">
+                                                <div style="font-size: 13px; font-weight: bold; color: #333;">#{node.name}</div>
+                                                <div style="font-size: 11px; color: #666;">Qty: #{node.quantity} | $0.00</div>
+                                                <h:panelGroup rendered="#{node.foldedSheetMetal and node.hasSimulation}">
+                                                    <button type="button"
+                                                            onclick="loadSimulation('#{request.contextPath}/simserver/#{node.simulationPath}');"
+                                                            style="margin-top: 5px; padding: 4px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                                        &#9658; Play Bend Simulation
+                                                    </button>
+                                                </h:panelGroup>
+                                                <h:panelGroup rendered="#{node.foldedSheetMetal and not node.hasSimulation}">
+                                                    <span style="margin-top: 5px; padding: 4px 10px; background-color: #888; color: white; border: none; border-radius: 4px; font-size: 11px; display: inline-block;">
+                                                        Bend Simulation Unavailable
+                                                    </span>
+                                                </h:panelGroup>
+                                            </div>
+                                        </div>
+                                    </p:treeNode>
+                                </p:tree>
                                 
                                 
                                 

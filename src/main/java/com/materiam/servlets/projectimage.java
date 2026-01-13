@@ -29,8 +29,10 @@ public class projectimage extends HttpServlet {
         ServletContext sc = getServletContext();
         String projectid = ((Project)request.getSession().getAttribute("activeProject")).getId().toString();
 
-        String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+"image.png";
-
+        //String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+"image.png";
+        String filename = "/Users/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+"image.png";
+        
+                
         /*    
         // Get the MIME type of the image
         String mimeType = sc.getMimeType(filename);

@@ -31,8 +31,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -86,6 +89,9 @@ public class UserController implements Serializable {
     private User user = null;
     
     private Set<String> wsids = Collections.synchronizedSet(new HashSet<>());
+
+    private static final int MAX_CONSOLE_MESSAGES = 100;
+    private LinkedList<String> consoleMessages = new LinkedList<>();
 
     public String logout() {
         try {
@@ -254,10 +260,28 @@ public class UserController implements Serializable {
     }
     
     public void sendUpdate(String msg) {
+        synchronized (consoleMessages) {
+            consoleMessages.addLast(msg);
+            if (consoleMessages.size() > MAX_CONSOLE_MESSAGES) {
+                consoleMessages.removeFirst();
+            }
+        }
         synchronized (wsids) {
             for (String id : wsids) {
                 importUpdate.fire(new ImportUpdate(msg, id));
             }
+        }
+    }
+
+    public List<String> getConsoleMessages() {
+        synchronized (consoleMessages) {
+            return new ArrayList<>(consoleMessages);
+        }
+    }
+
+    public String getConsoleMessagesFormatted() {
+        synchronized (consoleMessages) {
+            return String.join("\n", consoleMessages);
         }
     }
 

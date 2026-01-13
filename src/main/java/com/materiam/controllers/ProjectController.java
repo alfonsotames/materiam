@@ -60,6 +60,8 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.file.UploadedFile;
+import org.primefaces.model.DefaultTreeNode;
+import org.primefaces.model.TreeNode;
 
 /**
  *
@@ -98,8 +100,8 @@ public class ProjectController implements Serializable {
 
     
     
-    private String destination = "/home/mufufu/Downloads/materiam/data/projects/";
-    //private String destination = "/Users/mufufu/Downloads/materiam/data/projects/";
+    //private String destination = "/home/mufufu/Downloads/materiam/data/projects/";
+    private String destination = "/Users/mufufu/Downloads/materiam/data/projects/";
         
     
     @PostConstruct
@@ -209,96 +211,88 @@ public class ProjectController implements Serializable {
             System.out.println("Part id: "+p.getId());
             QuotedPart qp = new QuotedPart();
             qp.setPart(p);
+            if (p.getShape() == null) {
+                qp.setPrice(BigDecimal.ZERO);
+                qps.add(qp);
+                continue;
+            }
             if (p.getShape().getKey().equals("SHEET_METAL_FLAT") || p.getShape().getKey().equals("SHEET_METAL_FOLDED")) {
-                BigDecimal price = new BigDecimal(0.00);
+                BigDecimal price = BigDecimal.ZERO;
                 try {
-                BigDecimal volumen;
-                volumen = p.getFlatObbLength().divide(BigDecimal.valueOf(1000)).multiply(p.getFlatObbWidth().divide(BigDecimal.valueOf(1000)));
-                volumen = volumen.multiply(p.getThickness().divide(BigDecimal.valueOf(1000)));
-                System.out.println("VOLUMEN: "+volumen);
-                
-                price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
-                System.out.println("Price 1: "+price);
-                
-                // get material from new product relationship
-                
-                Property density = (Property)em.createQuery("select den from Property den where den.product=:product and den.propertyType.key='DENSITY'")
-                        .setParameter("product", p.getMaterial()).getSingleResult();
-                
-                price = price.multiply(density.getValue());
-                System.out.println("Price 2: "+price);
-                
-                Property ppk = (Property)em.createQuery("select ppk from Property ppk where ppk.product=:product and ppk.propertyType.key='PRICEPERKG'")
-                        .setParameter("product", p.getMaterial()).getSingleResult();
-                
-                price = price.multiply(ppk.getValue());
+                    if (p.getMaterial() == null) {
+                        System.out.println("Part has no material assigned, skipping price calculation");
+                    } else {
+                        BigDecimal volumen;
+                        volumen = p.getFlatObbLength().divide(BigDecimal.valueOf(1000)).multiply(p.getFlatObbWidth().divide(BigDecimal.valueOf(1000)));
+                        volumen = volumen.multiply(p.getThickness().divide(BigDecimal.valueOf(1000)));
+                        System.out.println("VOLUMEN: "+volumen);
 
+                        price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
+                        System.out.println("Price 1: "+price);
 
+                        // get material from new product relationship
+                        Property density = (Property)em.createQuery("select den from Property den where den.product=:product and den.propertyType.key='DENSITY'")
+                                .setParameter("product", p.getMaterial()).getSingleResult();
 
-                /* TODO: Determine the cutting process by thickness and max min for each material / process.
-                         Right now it is hard set at Laser cutting.
-                */
-                FabProcess fp = (FabProcess)em.find(FabProcess.class, 1L);
+                        price = price.multiply(density.getValue());
+                        System.out.println("Price 2: "+price);
 
-                // get process time
-                System.out.println("p.getFlatTotalContourLength()"+p.getFlatTotalContourLength());
-                
-                // get cutting speed
-                // TODO: integrate cutting speed
-                /*
-                CuttingSpeed cs = (CuttingSpeed)em.createQuery(
-                        "select cs from CuttingSpeed cs where cs.material=:material and cs.fabProcess=:fabProcess")
-                        .setParameter("material", p.getMaterial())
-                        .setParameter("fabProcess", fp)
-                        .getSingleResult();
-                */
-                BigDecimal cs = new BigDecimal(28.5);
-                //System.out.println("Cutting speed: "+cs);
-                BigDecimal pPrice =  p.getFlatTotalContourLength().divide(cs, 2, RoundingMode.HALF_UP);
-                //System.out.println("Process Time in Seconds: "+pPrice);
-                pPrice = pPrice.multiply((fp.getPriceph().divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)));
+                        Property ppk = (Property)em.createQuery("select ppk from Property ppk where ppk.product=:product and ppk.propertyType.key='PRICEPERKG'")
+                                .setParameter("product", p.getMaterial()).getSingleResult();
 
-                //System.out.println("Process price: "+pPrice);
-                price = price.add(pPrice);
-                
-                // Press break down curtain -> 10 segs
-                FabProcess fppb = (FabProcess)em.find(FabProcess.class, 3L);
-                BigDecimal ppb = (fppb.getPriceph()).divide(new BigDecimal(60),2, RoundingMode.HALF_UP);
-                //System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Price per minute of press breake: $ "+ppb);
-                ppb = ppb.divide(new BigDecimal(6), 2, RoundingMode.HALF_UP);
-                //System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Price per bend: $ "+ppb);
-                
-                if (p.getShape().getKey().equals("SHEET_METAL_FOLDED")) {
-                    price = price.add(ppb.multiply(new BigDecimal(qp.getPart().getBends())));
-                }
-                
-                
-                } catch (java.lang.NullPointerException ex) {
-                    System.out.println("Error while calculating price!!!!");
+                        price = price.multiply(ppk.getValue());
+
+                        /* TODO: Determine the cutting process by thickness and max min for each material / process.
+                                 Right now it is hard set at Laser cutting.
+                        */
+                        FabProcess fp = (FabProcess)em.find(FabProcess.class, 1L);
+
+                        // get process time
+                        System.out.println("p.getFlatTotalContourLength()"+p.getFlatTotalContourLength());
+
+                        // get cutting speed
+                        // TODO: integrate cutting speed
+                        BigDecimal cs = new BigDecimal(28.5);
+                        BigDecimal pPrice = p.getFlatTotalContourLength().divide(cs, 2, RoundingMode.HALF_UP);
+                        pPrice = pPrice.multiply((fp.getPriceph().divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)));
+
+                        price = price.add(pPrice);
+
+                        // Press break down curtain -> 10 segs
+                        FabProcess fppb = (FabProcess)em.find(FabProcess.class, 3L);
+                        BigDecimal ppb = (fppb.getPriceph()).divide(new BigDecimal(60),2, RoundingMode.HALF_UP);
+                        ppb = ppb.divide(new BigDecimal(6), 2, RoundingMode.HALF_UP);
+
+                        if (p.getShape().getKey().equals("SHEET_METAL_FOLDED")) {
+                            price = price.add(ppb.multiply(new BigDecimal(qp.getPart().getBends())));
+                        }
+                    }
+                } catch (Exception ex) {
+                    System.out.println("Error while calculating price: " + ex.getMessage());
                     price = BigDecimal.ZERO;
                 }
                 qp.setPrice(price);
 
                 } else if (p.getShape().getKey().equals("TUBE_RECTANGULAR") ) {
-                    
-                    
-                    
-                Property density = (Property)em.createQuery("select den from Property den where "
-                        + "den.product=:product and den.propertyType.key='DENSITY'")
-                        .setParameter("product", p.getMaterial()).getSingleResult();
-                
-                Property ppk = (Property)em.createQuery("select ppk from Property ppk where "
-                        + "ppk.product=:product and ppk.propertyType.key='PRICEPERKG'")
-                        .setParameter("product", p.getMaterial()).getSingleResult();                    
-                    
+                    BigDecimal price = BigDecimal.ZERO;
+                    try {
+                        if (p.getMaterial() != null) {
+                            Property density = (Property)em.createQuery("select den from Property den where "
+                                    + "den.product=:product and den.propertyType.key='DENSITY'")
+                                    .setParameter("product", p.getMaterial()).getSingleResult();
 
-                    BigDecimal price = new BigDecimal(0.00);
-                    //System.out.println("Volume in mm3 of the tube: "+p.getVolume());
-                    price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
-                    //System.out.println("Volume in m3: "+price);
-                    price = price.multiply(density.getValue());
-                    //System.out.println("Weight in Kg: "+price);
-                    price = price.multiply(ppk.getValue());
+                            Property ppk = (Property)em.createQuery("select ppk from Property ppk where "
+                                    + "ppk.product=:product and ppk.propertyType.key='PRICEPERKG'")
+                                    .setParameter("product", p.getMaterial()).getSingleResult();
+
+                            price = p.getVolume().divide(BigDecimal.valueOf(1000000000));
+                            price = price.multiply(density.getValue());
+                            price = price.multiply(ppk.getValue());
+                        }
+                    } catch (Exception ex) {
+                        System.out.println("Error calculating price for TUBE_RECTANGULAR: " + ex.getMessage());
+                        price = BigDecimal.ZERO;
+                    }
                     qp.setPrice(price);
                 } else {
                     qp.setPrice(new BigDecimal(0));
@@ -373,7 +367,12 @@ public class ProjectController implements Serializable {
 
         } else {
             System.out.println("⚠️ ⚠️ ⚠️ ActiveProject is NOT null when copying file... ⚠️ ⚠️ ⚠");
-            activeProject = em.find(Project.class, getActiveProject().getId());
+            if (getActiveProject().getId() != null) {
+                activeProject = em.find(Project.class, getActiveProject().getId());
+            } else {
+                // Project exists in memory but not persisted yet
+                em.persist(getActiveProject());
+            }
         }
 
         if (userController.getUser() != null) {
@@ -425,12 +424,17 @@ public class ProjectController implements Serializable {
             Runtime rt = Runtime.getRuntime();
             command = String.format("/usr/local/bin/stepguru %s --out %s -i",(filedest + fileName), filedest);
             System.out.println("* = - = * = - = Executing STEPGuru * = - = * = - = *");
-            Process pr = rt.exec(command);
+            Process pr = null;
+            try{ 
+                pr = rt.exec(command);
+            } catch (Exception e) {
+                System.out.println("Error while trying to execute stepguru: "+e.getMessage());
+            }
             BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
                 System.out.println(request.getSession().getId()+ " : " +line);
-                if (line.startsWith("******") || line.contains("info:")) {
+                if (line.startsWith("******") || line.contains("info")) {
                     userController.sendUpdate(line);
                 }
             }
@@ -479,7 +483,7 @@ public class ProjectController implements Serializable {
                     String partType = d.getString("partType");
                     System.out.println("Found partType: "+partType);
                     if (partType.equals("TUBE_RECTANGULAR_BENT")) {
-                        p.setShape(em.find(Category.class, 6L));
+                        p.setShape(em.find(Category.class, 9L));  // BENT_TUBE_RECTANGULAR
                         p.setSectionWidth(d.getJsonNumber("width").bigDecimalValue());
                         p.setSectionHeight(d.getJsonNumber("height").bigDecimalValue());
                         p.setPartLength(d.getJsonNumber("length").bigDecimalValue());
@@ -488,7 +492,7 @@ public class ProjectController implements Serializable {
                         p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
                     }
                     if (partType.equals("TUBE_RECTANGULAR")) {
-                        p.setShape(em.find(Category.class, 4L));
+                        p.setShape(em.find(Category.class, 7L));  // TUBE_RECTANGULAR
                         p.setSectionWidth(d.getJsonNumber("width").bigDecimalValue());
                         p.setSectionHeight(d.getJsonNumber("height").bigDecimalValue());
                         p.setPartLength(d.getJsonNumber("length").bigDecimalValue());
@@ -497,23 +501,23 @@ public class ProjectController implements Serializable {
                         p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
                     }
                     if (partType.equals("TUBE_ROUND_BENT")) {
-                        p.setShape(em.find(Category.class, 7L));
+                        p.setShape(em.find(Category.class, 10L));  // BENT_TUBE_ROUND
                         p.setDiameter(d.getJsonNumber("diameter").bigDecimalValue());
                         p.setPartLength(d.getJsonNumber("length").bigDecimalValue());
                         p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
                         p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
                         p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
-                    }                   
+                    }
                     if (partType.equals("TUBE_ROUND")) {
-                        p.setShape(em.find(Category.class, 5L));
+                        p.setShape(em.find(Category.class, 8L));  // TUBE_ROUND
                         p.setDiameter(d.getJsonNumber("diameter").bigDecimalValue());
                         p.setPartLength(d.getJsonNumber("length").bigDecimalValue());
                         p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
                         p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
-                        p.setVolume(d.getJsonNumber("volume").bigDecimalValue());                        
+                        p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
                     }
                     if (partType.equals("SHEET_METAL_FLAT")) {
-                        p.setShape(em.find(Category.class, 2L));
+                        p.setShape(em.find(Category.class, 5L));  // SHEET_METAL_FLAT
                         p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
                         p.setFlatTotalContourLength(d.getJsonNumber("cutLength").bigDecimalValue());
                         p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
@@ -522,17 +526,17 @@ public class ProjectController implements Serializable {
                         p.setFlatObbLength(d.getJsonNumber("flatPatternLength").bigDecimalValue());
                     }
                     if (partType.equals("SHEET_METAL_FOLDED")) {
-                        p.setShape(em.find(Category.class, 3L));
+                        p.setShape(em.find(Category.class, 6L));  // SHEET_METAL_FOLDED
                         p.setThickness(d.getJsonNumber("thickness").bigDecimalValue());
                         p.setFlatTotalContourLength(d.getJsonNumber("cutLength").bigDecimalValue());
                         p.setTotalArea(d.getJsonNumber("surfaceArea").bigDecimalValue());
                         p.setVolume(d.getJsonNumber("volume").bigDecimalValue());
                         p.setBends(d.getJsonNumber("numBends").longValue());
                         p.setFlatObbWidth(d.getJsonNumber("flatPatternWidth").bigDecimalValue());
-                        p.setFlatObbLength(d.getJsonNumber("flatPatternLength").bigDecimalValue());                        
+                        p.setFlatObbLength(d.getJsonNumber("flatPatternLength").bigDecimalValue());
                     }
                     if (partType.equals("UNKNOWN")) {
-                        p.setShape(em.find(Category.class, 1L));
+                        p.setShape(em.find(Category.class, 4L));  // UNRECOGNIZED
                     }                    
                     // check 
                     definitionsEntityMap.put(persid, p);
@@ -548,14 +552,32 @@ public class ProjectController implements Serializable {
             System.out.println("\n=== Persisting to Database ===");
             f.setRoot(rootAssembly);
             em.persist(f);  // Cascades to parts via CADFile
-            em.persist(rootAssembly);  // Cascades to child assemblies and their parts
+            if (rootAssembly != null) {
+                em.persist(rootAssembly);  // Cascades to child assemblies and their parts
+                System.out.println("Successfully persisted CADFile and assembly tree");
+            } else {
+                System.out.println("Successfully persisted CADFile (single part, no assembly)");
+            }
 
-            System.out.println("Successfully persisted CADFile and assembly tree");
+        // STEP 4: Run amatix for folded sheet metal parts
+            System.out.println("\n=== Running Amatix for Folded Sheet Metal Parts ===");
+            System.out.println("CADFile has " + f.getParts().size() + " parts");
+            for (Object entity : definitionsEntityMap.values()) {
+                if (entity instanceof Part) {
+                    Part part = (Part) entity;
+                    System.out.println("Checking part: " + part.getName() + " with shape: " +
+                        (part.getShape() != null ? part.getShape().getKey() : "null"));
+                    if (part.getShape() != null && part.getShape().getKey().equals("SHEET_METAL_FOLDED")) {
+                        System.out.println("Found SHEET_METAL_FOLDED part: " + part.getName() + " persid: " + part.getPersid());
+                        runAmatix(filedest, part.getPersid());
+                    }
+                }
+            }
 
-        } catch (IOException ex) {         
+        } catch (IOException ex) {
             System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         }
-        
+
 
 
 
@@ -565,12 +587,70 @@ public class ProjectController implements Serializable {
         } catch (IOException e) {
             // Handle the IOException
             e.printStackTrace();
-        }        
+        }
+    }
+
+    private void runAmatix(String filedest, String persid) {
+        try {
+            String stepFile = filedest + "out_" + persid + "_1.step";
+            String outDir = filedest + persid + "-cam_simulation";
+
+            // Check if STEP file exists
+            if (!Files.exists(Paths.get(stepFile))) {
+                System.out.println("Amatix: STEP file not found: " + stepFile);
+                userController.sendUpdate("Skipping bend simulation - STEP file not found for " + persid);
+                return;
+            }
+
+            // Create output directory if it doesn't exist
+            Path outPath = Paths.get(outDir);
+            if (!Files.exists(outPath)) {
+                Files.createDirectories(outPath);
+            }
+
+            String command = String.format(
+                "/usr/local/bin/amatix %s --tool-dir /usr/local/share/amatix/tools --margin 0.005 --out-dir %s",
+                stepFile, outDir
+            );
+
+            System.out.println("* = - = * = - = Executing Amatix for " + persid + " * = - = * = - = *");
+            userController.sendUpdate("Running bend simulation for " + persid + "...");
+
+            Runtime rt = Runtime.getRuntime();
+            Process pr = rt.exec(command);
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println("amatix: " + line);
+                if (line.contains("info") || line.contains("error") || line.contains("warning")) {
+                    userController.sendUpdate(line);
+                }
+            }
+
+            BufferedReader errorReader = new BufferedReader(new InputStreamReader(pr.getErrorStream()));
+            while ((line = errorReader.readLine()) != null) {
+                System.out.println("amatix error: " + line);
+            }
+
+            int exitCode = pr.waitFor();
+            if (exitCode == 0) {
+                System.out.println("Amatix completed successfully for " + persid);
+                userController.sendUpdate("Bend simulation complete for " + persid);
+            } else {
+                System.out.println("Amatix failed with exit code " + exitCode + " for " + persid);
+                userController.sendUpdate("Bend simulation failed for " + persid);
+            }
+
+        } catch (IOException | InterruptedException ex) {
+            System.getLogger(ProjectController.class.getName()).log(System.Logger.Level.ERROR,
+                "Error running amatix for " + persid, ex);
+            userController.sendUpdate("Error running bend simulation for " + persid);
+        }
     }
 
 
-    
-    
+
     private Assembly traverseInstance(JsonObject instance, 
                                        Map<String, Object> definitionsEntityMap,
                                        CADFile cadFile) {
@@ -613,11 +693,18 @@ public class ProjectController implements Serializable {
                 }
             }
 
-            System.out.println("Built assembly: " + assembly.getName() + 
-                              " [" + assembly.getAssemblies().size() + " sub-assemblies, " + 
+            System.out.println("Built assembly: " + assembly.getName() +
+                              " [" + assembly.getAssemblies().size() + " sub-assemblies, " +
                               assembly.getParts().size() + " parts]");
 
             return assembly;
+        }
+
+        // Handle case where root is a single Part (not an Assembly)
+        if (entity instanceof Part) {
+            Part part = (Part) entity;
+            cadFile.getParts().add(part);
+            System.out.println("Added single part to CADFile: " + part.getName());
         }
 
         return null;
@@ -701,6 +788,258 @@ public class ProjectController implements Serializable {
     }
 
     
+    public Part getFirstPart() {
+        if (activeProject == null || activeProject.getCadfiles() == null) {
+            return null;
+        }
+        for (CADFile cf : activeProject.getCadfiles()) {
+            if (cf.getParts() != null && !cf.getParts().isEmpty()) {
+                return cf.getParts().iterator().next();
+            }
+        }
+        return null;
+    }
+
+    public CADFile getFirstCadFile() {
+        if (activeProject == null || activeProject.getCadfiles() == null || activeProject.getCadfiles().isEmpty()) {
+            return null;
+        }
+        return activeProject.getCadfiles().get(0);
+    }
+
+    public boolean hasSimulationData(Part part, CADFile cf) {
+        if (activeProject == null || part == null || cf == null) {
+            System.out.println("hasSimulationData: null check failed - activeProject=" + activeProject +
+                ", part=" + part + ", cf=" + cf);
+            return false;
+        }
+        String simPath = destination + activeProject.getUuid() + "/" +
+                        cf.getUuid() + "/" + part.getPersid() + "-cam_simulation/blueprint.json";
+        boolean exists = Files.exists(Paths.get(simPath));
+        System.out.println("hasSimulationData: checking path=" + simPath + " exists=" + exists);
+        return exists;
+    }
+
+    public String getSimulationPath(Part part, CADFile cf) {
+        if (activeProject == null || part == null || cf == null) {
+            return null;
+        }
+        return activeProject.getUuid() + "/" + cf.getUuid() + "/" + part.getPersid() + "-cam_simulation/";
+    }
+
+    public TreeNode<TreeNodeData> getAssemblyTree() {
+        TreeNode<TreeNodeData> root = new DefaultTreeNode<>(new TreeNodeData("Project", "project", null), null);
+
+        if (activeProject == null || activeProject.getId() == null) {
+            return root;
+        }
+
+        // Re-fetch project to ensure all relationships are loaded within transaction
+        Project project = em.find(Project.class, activeProject.getId());
+        if (project == null || project.getCadfiles() == null) {
+            return root;
+        }
+
+        for (CADFile cf : project.getCadfiles()) {
+            if (cf.getRoot() != null) {
+                // Has assembly structure
+                buildAssemblyTree(cf.getRoot(), root, cf);
+            } else if (cf.getParts() != null && !cf.getParts().isEmpty()) {
+                // Single parts without assembly structure
+                for (Part part : cf.getParts()) {
+                    TreeNodeData partData = new TreeNodeData(part.getName(), "part", part);
+                    partData.setCadfile(cf);
+                    partData.setPrice(BigDecimal.ZERO);
+                    partData.setQuantity(1);
+                    partData.setFoldedSheetMetal(isFoldedSheetMetal(part));
+                    partData.setHasSimulation(hasSimulationData(part, cf));
+                    partData.setSimulationPath(getSimulationPath(part, cf));
+                    new DefaultTreeNode<>("part", partData, root);
+                }
+            }
+        }
+
+        return root;
+    }
+
+    private void buildAssemblyTree(Assembly assembly, TreeNode<TreeNodeData> parentNode, CADFile cf) {
+        TreeNodeData data = new TreeNodeData(assembly.getName(), "assembly", null);
+        data.setAssembly(assembly);
+        data.setCadfile(cf);
+        TreeNode<TreeNodeData> assemblyNode = new DefaultTreeNode<>("assembly", data, parentNode);
+        assemblyNode.setExpanded(false);
+
+        // Track unique child assemblies by persid
+        Map<String, TreeNodeData> uniqueAssemblies = new HashMap<>();
+        Map<String, Assembly> assemblyMap = new HashMap<>();
+
+        if (assembly.getAssemblies() != null) {
+            for (Assembly childAssembly : assembly.getAssemblies()) {
+                String persid = childAssembly.getPersid();
+                if (uniqueAssemblies.containsKey(persid)) {
+                    uniqueAssemblies.get(persid).setQuantity(uniqueAssemblies.get(persid).getQuantity() + 1);
+                } else {
+                    TreeNodeData childData = new TreeNodeData(childAssembly.getName(), "assembly", null);
+                    childData.setAssembly(childAssembly);
+                    childData.setCadfile(cf);
+                    uniqueAssemblies.put(persid, childData);
+                    assemblyMap.put(persid, childAssembly);
+                }
+            }
+        }
+
+        // Add unique child assemblies and recurse
+        for (String persid : uniqueAssemblies.keySet()) {
+            TreeNodeData childData = uniqueAssemblies.get(persid);
+            TreeNode<TreeNodeData> childNode = new DefaultTreeNode<>("assembly", childData, assemblyNode);
+            childNode.setExpanded(false);
+
+            // Recurse into child assembly's children
+            Assembly childAssembly = assemblyMap.get(persid);
+            addChildrenToNode(childAssembly, childNode, cf);
+        }
+
+        // Track unique parts by persid
+        Map<String, TreeNodeData> uniqueParts = new HashMap<>();
+
+        if (assembly.getParts() != null) {
+            for (Part part : assembly.getParts()) {
+                String persid = part.getPersid();
+                if (uniqueParts.containsKey(persid)) {
+                    uniqueParts.get(persid).setQuantity(uniqueParts.get(persid).getQuantity() + 1);
+                } else {
+                    TreeNodeData partData = new TreeNodeData(part.getName(), "part", part);
+                    partData.setCadfile(cf);
+                    partData.setPrice(BigDecimal.ZERO);
+                    partData.setFoldedSheetMetal(isFoldedSheetMetal(part));
+                    partData.setHasSimulation(hasSimulationData(part, cf));
+                    partData.setSimulationPath(getSimulationPath(part, cf));
+                    uniqueParts.put(persid, partData);
+                }
+            }
+        }
+
+        // Add unique parts
+        for (TreeNodeData partData : uniqueParts.values()) {
+            new DefaultTreeNode<>("part", partData, assemblyNode);
+        }
+    }
+
+    private void addChildrenToNode(Assembly assembly, TreeNode<TreeNodeData> parentNode, CADFile cf) {
+        // Track unique child assemblies by persid
+        Map<String, TreeNodeData> uniqueAssemblies = new HashMap<>();
+        Map<String, Assembly> assemblyMap = new HashMap<>();
+
+        if (assembly.getAssemblies() != null) {
+            for (Assembly childAssembly : assembly.getAssemblies()) {
+                String persid = childAssembly.getPersid();
+                if (uniqueAssemblies.containsKey(persid)) {
+                    uniqueAssemblies.get(persid).setQuantity(uniqueAssemblies.get(persid).getQuantity() + 1);
+                } else {
+                    TreeNodeData childData = new TreeNodeData(childAssembly.getName(), "assembly", null);
+                    childData.setAssembly(childAssembly);
+                    childData.setCadfile(cf);
+                    uniqueAssemblies.put(persid, childData);
+                    assemblyMap.put(persid, childAssembly);
+                }
+            }
+        }
+
+        // Add unique child assemblies and recurse
+        for (String persid : uniqueAssemblies.keySet()) {
+            TreeNodeData childData = uniqueAssemblies.get(persid);
+            TreeNode<TreeNodeData> childNode = new DefaultTreeNode<>("assembly", childData, parentNode);
+            childNode.setExpanded(false);
+
+            Assembly childAssembly = assemblyMap.get(persid);
+            addChildrenToNode(childAssembly, childNode, cf);
+        }
+
+        // Track unique parts by persid
+        Map<String, TreeNodeData> uniqueParts = new HashMap<>();
+
+        if (assembly.getParts() != null) {
+            for (Part part : assembly.getParts()) {
+                String persid = part.getPersid();
+                if (uniqueParts.containsKey(persid)) {
+                    uniqueParts.get(persid).setQuantity(uniqueParts.get(persid).getQuantity() + 1);
+                } else {
+                    TreeNodeData partData = new TreeNodeData(part.getName(), "part", part);
+                    partData.setCadfile(cf);
+                    partData.setPrice(BigDecimal.ZERO);
+                    partData.setFoldedSheetMetal(isFoldedSheetMetal(part));
+                    partData.setHasSimulation(hasSimulationData(part, cf));
+                    partData.setSimulationPath(getSimulationPath(part, cf));
+                    uniqueParts.put(persid, partData);
+                }
+            }
+        }
+
+        // Add unique parts
+        for (TreeNodeData partData : uniqueParts.values()) {
+            new DefaultTreeNode<>("part", partData, parentNode);
+        }
+    }
+
+    private boolean isFoldedSheetMetal(Part part) {
+        if (part == null) {
+            System.out.println("isFoldedSheetMetal: part is null");
+            return false;
+        }
+        if (part.getShape() == null) {
+            System.out.println("isFoldedSheetMetal: part " + part.getName() + " (persid=" + part.getPersid() + ") has null shape");
+            return false;
+        }
+        String shapeKey = part.getShape().getKey();
+        boolean isFolded = "SHEET_METAL_FOLDED".equals(shapeKey);
+        System.out.println("isFoldedSheetMetal: part " + part.getName() + " (persid=" + part.getPersid() + ") shape=" + shapeKey + " isFolded=" + isFolded);
+        return isFolded;
+    }
+
+    public static class TreeNodeData {
+        private String name;
+        private String type;
+        private Part part;
+        private Assembly assembly;
+        private CADFile cadfile;
+        private BigDecimal price;
+        private int quantity;
+        private boolean hasSimulation;
+        private String simulationPath;
+        private boolean foldedSheetMetal;
+
+        public TreeNodeData(String name, String type, Part part) {
+            this.name = name;
+            this.type = type;
+            this.part = part;
+            this.price = BigDecimal.ZERO;
+            this.quantity = 1;
+            this.hasSimulation = false;
+            this.foldedSheetMetal = false;
+        }
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
+        public Part getPart() { return part; }
+        public void setPart(Part part) { this.part = part; }
+        public Assembly getAssembly() { return assembly; }
+        public void setAssembly(Assembly assembly) { this.assembly = assembly; }
+        public CADFile getCadfile() { return cadfile; }
+        public void setCadfile(CADFile cadfile) { this.cadfile = cadfile; }
+        public BigDecimal getPrice() { return price; }
+        public void setPrice(BigDecimal price) { this.price = price; }
+        public int getQuantity() { return quantity; }
+        public void setQuantity(int quantity) { this.quantity = quantity; }
+        public boolean isHasSimulation() { return hasSimulation; }
+        public void setHasSimulation(boolean hasSimulation) { this.hasSimulation = hasSimulation; }
+        public String getSimulationPath() { return simulationPath; }
+        public void setSimulationPath(String simulationPath) { this.simulationPath = simulationPath; }
+        public boolean isFoldedSheetMetal() { return foldedSheetMetal; }
+        public void setFoldedSheetMetal(boolean foldedSheetMetal) { this.foldedSheetMetal = foldedSheetMetal; }
+    }
+
     public class QuotedPart {
         private Part part;
         private BigDecimal price;

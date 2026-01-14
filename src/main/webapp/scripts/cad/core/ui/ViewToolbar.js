@@ -9,7 +9,7 @@ export class ViewToolbar {
         this.btnPersp = null;
         
         this.options = {
-            position: { top: '20px', right: '20px' },
+            position: { top: '100px', right: '20px' },
             activeColor: '#4a9eff',
             inactiveColor: '#888',
             ...options

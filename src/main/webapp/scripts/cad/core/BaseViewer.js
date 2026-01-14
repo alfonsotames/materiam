@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Coin3DControls } from './controls/Coin3DControls.js';
 import { StudioLighting } from './lighting/StudioLighting.js';
 import { PivotIndicator } from './helpers/PivotIndicator.js';
-import { ViewToolbar } from './ui/ViewToolbar.js';
+import { ViewControls } from './ui/ViewControls.js';
 import { ControlsHelp } from './ui/ControlsHelp.js';
 
 /**
@@ -29,7 +29,7 @@ export class BaseViewer {
             containerId: 'canvas-container',
             backgroundColor: 0x3a3a42,
             frustumSize: 300,
-            showToolbar: true,
+            showViewControls: true,
             showPivotIndicator: true,
             showControlsHelp: true,
             ...options
@@ -41,7 +41,7 @@ export class BaseViewer {
         this.controls = null;
         this.lighting = null;
         this.pivotIndicator = null;
-        this.toolbar = null;
+        this.viewControls = null;
         this.controlsHelp = null;
 
         this.frustumSize = this.options.frustumSize;
@@ -120,19 +120,19 @@ export class BaseViewer {
     }
 
     _initUI() {
-        if (this.options.showToolbar) {
-            this.toolbar = new ViewToolbar();
-            this.toolbar.create();
+        if (this.options.showViewControls) {
+            this.viewControls = new ViewControls();
+            this.viewControls.create();
 
-            this.toolbar.onProjectionChange = (mode) => {
+            this.viewControls.onProjectionChange = (mode) => {
                 this.setProjection(mode);
             };
 
-            this.toolbar.onViewSnap = (viewName) => {
+            this.viewControls.onViewSnap = (viewName) => {
                 this.controls.snap(viewName);
             };
 
-            // Default to perspective view to match toolbar
+            // Default to perspective view
             this.setProjection('persp');
         }
 
@@ -159,6 +159,9 @@ export class BaseViewer {
     _update() {
         if (this.pivotIndicator) {
             this.pivotIndicator.update(this.controls);
+        }
+        if (this.viewControls) {
+            this.viewControls.update(this.controls);
         }
     }
 
@@ -221,8 +224,8 @@ export class BaseViewer {
         this.controls.camera = newCam;
         this.camera.updateProjectionMatrix();
 
-        if (this.toolbar) {
-            this.toolbar.setProjectionMode(mode);
+        if (this.viewControls) {
+            this.viewControls.setProjectionMode(mode);
         }
     }
 
@@ -250,12 +253,12 @@ export class BaseViewer {
     }
 
     /**
-     * Fit the camera to show all objects in the scene
+     * Fit the camera to show all objects in the scene at isometric angle
      */
     fitToScene(object = null) {
         const target = object || this.scene;
         const box = new THREE.Box3().setFromObject(target);
-        
+
         if (box.isEmpty()) return;
 
         const center = box.getCenter(new THREE.Vector3());
@@ -263,11 +266,24 @@ export class BaseViewer {
         const maxDim = Math.max(size.x, size.y, size.z);
 
         this.controls.setSceneCenter(center);
-        this.controls.snap('iso');
 
         if (this.camera.isOrthographicCamera) {
+            this.controls.snap('iso');
             this.camera.zoom = this.frustumSize / (maxDim * 2);
             this.camera.updateProjectionMatrix();
+        } else {
+            // For perspective camera, calculate distance to fit object in view
+            const fov = this.camera.fov * (Math.PI / 180);
+            const distance = (maxDim / 2) / Math.tan(fov / 2) * 1.5; // 1.5x for padding
+
+            // Position camera at isometric angle
+            const isoDir = new THREE.Vector3(1, 1, 1).normalize();
+            this.camera.position.copy(center).addScaledVector(isoDir, distance);
+            this.camera.lookAt(center);
+            this.camera.updateProjectionMatrix();
+
+            // Update controls target
+            this.controls.setTarget(center);
         }
     }
 
@@ -310,8 +326,8 @@ export class BaseViewer {
         }
 
         // Dispose UI
-        if (this.toolbar) {
-            this.toolbar.dispose();
+        if (this.viewControls) {
+            this.viewControls.dispose();
         }
 
         if (this.controlsHelp) {

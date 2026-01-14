@@ -87,16 +87,24 @@ import org.primefaces.model.TreeNode;
 public class ProjectController implements Serializable {
     @Inject
     private HttpServletRequest request;
-    
+
     @Inject
     UserController userController;
-        
+
+    @Inject
+    QuotingEngine quotingEngine;
+
     @PersistenceContext(unitName = "materiam")
     private EntityManager em;
-    
+
     private Project activeProject;
-    
+
     private Map<String, Object> definitionsEntityMap;
+
+    // Cached assembly tree for quoting
+    private TreeNode<TreeNodeData> cachedAssemblyTree;
+    private Long cachedProjectId;
+    private boolean treeQuoted;
 
     
     
@@ -581,9 +589,12 @@ public class ProjectController implements Serializable {
 
 
 
+        // Invalidate cached tree since new data was added
+        invalidateAssemblyTree();
+
         // TODO: Do not redirect if it is the same page!!!
         try {
-            externalContext.redirect("project.xhtml"); 
+            externalContext.redirect("project.xhtml");
         } catch (IOException e) {
             // Handle the IOException
             e.printStackTrace();
@@ -828,11 +839,19 @@ public class ProjectController implements Serializable {
     }
 
     public TreeNode<TreeNodeData> getAssemblyTree() {
-        TreeNode<TreeNodeData> root = new DefaultTreeNode<>(new TreeNodeData("Project", "project", null), null);
-
         if (activeProject == null || activeProject.getId() == null) {
-            return root;
+            cachedAssemblyTree = null;
+            cachedProjectId = null;
+            return new DefaultTreeNode<>(new TreeNodeData("Project", "project", null), null);
         }
+
+        // Return cached tree if still valid for same project
+        if (cachedAssemblyTree != null && activeProject.getId().equals(cachedProjectId)) {
+            return cachedAssemblyTree;
+        }
+
+        // Build new tree
+        TreeNode<TreeNodeData> root = new DefaultTreeNode<>(new TreeNodeData("Project", "project", null), null);
 
         // Re-fetch project to ensure all relationships are loaded within transaction
         Project project = em.find(Project.class, activeProject.getId());
@@ -859,7 +878,113 @@ public class ProjectController implements Serializable {
             }
         }
 
+        // Cache the tree
+        cachedAssemblyTree = root;
+        cachedProjectId = activeProject.getId();
+        treeQuoted = false;
+
+        // Generate quotes for the tree
+        quotingEngine.processTree(root);
+        treeQuoted = true;
+
         return root;
+    }
+
+    /**
+     * Invalidate the cached assembly tree (call when project changes)
+     */
+    public void invalidateAssemblyTree() {
+        cachedAssemblyTree = null;
+        cachedProjectId = null;
+        treeQuoted = false;
+    }
+
+    /**
+     * Delete a part or assembly from the project
+     */
+    public void deleteNode(TreeNodeData nodeData) {
+        System.out.println("=== deleteNode START ===");
+        System.out.println("deleteNode called with: " + (nodeData != null ? nodeData.getType() + " - " + nodeData.getName() : "null"));
+
+        if (nodeData == null) {
+            System.out.println("nodeData is null, returning");
+            return;
+        }
+
+        try {
+            if ("part".equals(nodeData.getType()) && nodeData.getPart() != null) {
+                Long partId = nodeData.getPart().getId();
+                System.out.println("Attempting to delete part ID: " + partId);
+
+                Part part = em.find(Part.class, partId);
+                System.out.println("em.find returned: " + (part != null ? "part found" : "NULL"));
+
+                if (part != null) {
+                    // Remove from CADFile's parts collection
+                    CADFile cadfile = part.getCadfile();
+                    if (cadfile != null && cadfile.getParts() != null) {
+                        cadfile.getParts().remove(part);
+                        System.out.println("Removed part from CADFile.parts");
+                    }
+
+                    // Find and remove from parent Assembly's parts collection
+                    List<Assembly> parentAssemblies = em.createQuery(
+                        "SELECT a FROM Assembly a JOIN a.parts p WHERE p.id = :partId", Assembly.class)
+                        .setParameter("partId", partId)
+                        .getResultList();
+                    System.out.println("Found " + parentAssemblies.size() + " parent assemblies");
+
+                    for (Assembly parentAssembly : parentAssemblies) {
+                        parentAssembly.getParts().remove(part);
+                        System.out.println("Removed part from Assembly.parts");
+                    }
+
+                    // Now delete the part
+                    em.remove(part);
+                    em.flush();
+                    System.out.println("Part deleted successfully");
+                } else {
+                    System.out.println("Part not found in database!");
+                }
+            } else if ("assembly".equals(nodeData.getType()) && nodeData.getAssembly() != null) {
+                Long assemblyId = nodeData.getAssembly().getId();
+                System.out.println("Attempting to delete assembly ID: " + assemblyId);
+
+                Assembly assembly = em.find(Assembly.class, assemblyId);
+                System.out.println("em.find returned: " + (assembly != null ? "assembly found" : "NULL"));
+
+                if (assembly != null) {
+                    // Remove from parent's assemblies collection
+                    Assembly parent = assembly.getParent();
+                    if (parent != null) {
+                        parent.getAssemblies().remove(assembly);
+                        System.out.println("Removed assembly from parent");
+                    }
+
+                    // Also check if this is a root assembly in a CADFile
+                    for (CADFile cf : activeProject.getCadfiles()) {
+                        if (cf.getRoot() != null && cf.getRoot().getId().equals(assemblyId)) {
+                            cf.setRoot(null);
+                            System.out.println("Cleared CADFile root reference");
+                        }
+                    }
+
+                    // Delete the assembly (cascade should handle parts and children)
+                    em.remove(assembly);
+                    em.flush();
+                    System.out.println("Assembly deleted successfully");
+                } else {
+                    System.out.println("Assembly not found in database!");
+                }
+            }
+            invalidateAssemblyTree();
+            System.out.println("=== deleteNode END ===");
+        } catch (Exception e) {
+            System.out.println("Error deleting: " + e.getMessage());
+            e.printStackTrace();
+            FacesContext.getCurrentInstance().addMessage(null,
+                new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "Could not delete: " + e.getMessage()));
+        }
     }
 
     private void buildAssemblyTree(Assembly assembly, TreeNode<TreeNodeData> parentNode, CADFile cf) {
@@ -867,7 +992,7 @@ public class ProjectController implements Serializable {
         data.setAssembly(assembly);
         data.setCadfile(cf);
         TreeNode<TreeNodeData> assemblyNode = new DefaultTreeNode<>("assembly", data, parentNode);
-        assemblyNode.setExpanded(false);
+        assemblyNode.setExpanded(true);
 
         // Track unique child assemblies by persid
         Map<String, TreeNodeData> uniqueAssemblies = new HashMap<>();
@@ -892,7 +1017,7 @@ public class ProjectController implements Serializable {
         for (String persid : uniqueAssemblies.keySet()) {
             TreeNodeData childData = uniqueAssemblies.get(persid);
             TreeNode<TreeNodeData> childNode = new DefaultTreeNode<>("assembly", childData, assemblyNode);
-            childNode.setExpanded(false);
+            childNode.setExpanded(true);
 
             // Recurse into child assembly's children
             Assembly childAssembly = assemblyMap.get(persid);
@@ -949,7 +1074,7 @@ public class ProjectController implements Serializable {
         for (String persid : uniqueAssemblies.keySet()) {
             TreeNodeData childData = uniqueAssemblies.get(persid);
             TreeNode<TreeNodeData> childNode = new DefaultTreeNode<>("assembly", childData, parentNode);
-            childNode.setExpanded(false);
+            childNode.setExpanded(true);
 
             Assembly childAssembly = assemblyMap.get(persid);
             addChildrenToNode(childAssembly, childNode, cf);
@@ -1008,6 +1133,16 @@ public class ProjectController implements Serializable {
         private String simulationPath;
         private boolean foldedSheetMetal;
 
+        // Cost fields for BOM integration
+        private BigDecimal unitCost;
+        private BigDecimal materialCost;
+        private BigDecimal processingCost;
+        private Product rawMaterial;
+        private List<Product> availableMaterials;
+        private Category selectedAlloy;
+        private List<Category> availableAlloys;
+        private boolean quoted;
+
         public TreeNodeData(String name, String type, Part part) {
             this.name = name;
             this.type = type;
@@ -1016,6 +1151,11 @@ public class ProjectController implements Serializable {
             this.quantity = 1;
             this.hasSimulation = false;
             this.foldedSheetMetal = false;
+            this.unitCost = BigDecimal.ZERO;
+            this.materialCost = BigDecimal.ZERO;
+            this.processingCost = BigDecimal.ZERO;
+            this.availableMaterials = new ArrayList<>();
+            this.quoted = false;
         }
 
         public String getName() { return name; }
@@ -1038,6 +1178,53 @@ public class ProjectController implements Serializable {
         public void setSimulationPath(String simulationPath) { this.simulationPath = simulationPath; }
         public boolean isFoldedSheetMetal() { return foldedSheetMetal; }
         public void setFoldedSheetMetal(boolean foldedSheetMetal) { this.foldedSheetMetal = foldedSheetMetal; }
+
+        // Cost getters and setters
+        public BigDecimal getUnitCost() { return unitCost; }
+        public void setUnitCost(BigDecimal unitCost) { this.unitCost = unitCost; }
+        public BigDecimal getMaterialCost() { return materialCost; }
+        public void setMaterialCost(BigDecimal materialCost) { this.materialCost = materialCost; }
+        public BigDecimal getProcessingCost() { return processingCost; }
+        public void setProcessingCost(BigDecimal processingCost) { this.processingCost = processingCost; }
+        public Product getRawMaterial() { return rawMaterial; }
+        public void setRawMaterial(Product rawMaterial) { this.rawMaterial = rawMaterial; }
+        public List<Product> getAvailableMaterials() { return availableMaterials; }
+        public void setAvailableMaterials(List<Product> availableMaterials) { this.availableMaterials = availableMaterials; }
+        public Category getSelectedAlloy() { return selectedAlloy; }
+        public void setSelectedAlloy(Category selectedAlloy) { this.selectedAlloy = selectedAlloy; }
+        public List<Category> getAvailableAlloys() { return availableAlloys; }
+        public void setAvailableAlloys(List<Category> availableAlloys) { this.availableAlloys = availableAlloys; }
+        public boolean isQuoted() { return quoted; }
+        public void setQuoted(boolean quoted) { this.quoted = quoted; }
+
+        // Computed properties
+        public BigDecimal getTotalCost() {
+            return unitCost.multiply(BigDecimal.valueOf(quantity));
+        }
+
+        public String getMaterialName() {
+            if (rawMaterial != null) {
+                return rawMaterial.getName();
+            }
+            return "Not selected";
+        }
+
+        public String getShapeName() {
+            if (part != null && part.getShape() != null) {
+                return part.getShape().getName();
+            }
+            if (assembly != null) {
+                return "Assembly";
+            }
+            return "Unknown";
+        }
+
+        public String getShapeKey() {
+            if (part != null && part.getShape() != null) {
+                return part.getShape().getKey();
+            }
+            return null;
+        }
     }
 
     public class QuotedPart {

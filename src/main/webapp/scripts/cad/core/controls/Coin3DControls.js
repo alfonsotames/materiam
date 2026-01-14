@@ -302,21 +302,20 @@ export class Coin3DControls {
 
     /**
      * Rotate camera using trackpad deltas (in pixels)
+     * Uses trackball-style free rotation matching mouse behavior
      */
     _rotateCameraTrackpad(deltaX, deltaY) {
-        const angleX = deltaX * this.trackpadRotateSpeed;
-        const angleY = deltaY * this.trackpadRotateSpeed;
+        // Normalize deltas to match mouse coordinate scale
+        const dx = deltaX * this.trackpadRotateSpeed;
+        const dy = deltaY * this.trackpadRotateSpeed;
+        const angle = Math.sqrt(dx * dx + dy * dy);
 
-        // Horizontal rotation (around world Y axis)
-        if (Math.abs(angleX) > 0.0001) {
-            const axisY = new THREE.Vector3(0, 1, 0);
-            this._rotateCamera(axisY, angleX);
-        }
-
-        // Vertical rotation (around camera's right axis)
-        if (Math.abs(angleY) > 0.0001) {
-            const axisX = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
-            this._rotateCamera(axisX, angleY);
+        if (angle > 0.0001) {
+            // Compute rotation axis perpendicular to drag direction
+            // Adjusted to feel like dragging the surface with two fingers
+            const axisScreen = new THREE.Vector3(dy, dx, 0).normalize();
+            const axisWorld = axisScreen.applyQuaternion(this.camera.quaternion);
+            this._rotateCamera(axisWorld, angle);
         }
     }
 

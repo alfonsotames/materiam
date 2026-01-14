@@ -11,6 +11,51 @@
 
     <ui:define name="headscripts">
 
+        <style type="text/css">
+            /* Compact PrimeFaces tree - reduce indentation */
+            #formparts .ui-tree {
+                padding: 0 !important;
+            }
+            #formparts .ui-tree .ui-treenode {
+                padding: 0 !important;
+            }
+            #formparts .ui-tree .ui-treenode-children {
+                padding-left: 8px !important;
+            }
+            #formparts .ui-tree .ui-treenode-content {
+                padding: 2px 0 !important;
+            }
+            #formparts .ui-tree .ui-tree-toggler {
+                margin-right: 2px !important;
+            }
+            /* Compact PrimeFaces selectOneMenu styling */
+            .compact-dropdown.ui-selectonemenu {
+                min-width: 90px !important;
+                max-width: 110px !important;
+                height: 22px !important;
+            }
+            .compact-dropdown .ui-selectonemenu-label {
+                padding: 2px 4px !important;
+                font-size: 9px !important;
+                line-height: 16px !important;
+            }
+            .compact-dropdown .ui-selectonemenu-trigger {
+                width: 18px !important;
+                height: 20px !important;
+            }
+            .compact-dropdown .ui-selectonemenu-trigger .ui-icon {
+                margin-top: 2px !important;
+            }
+            /* Panel styling for the dropdown items */
+            .ui-selectonemenu-panel .ui-selectonemenu-items-wrapper {
+                max-height: 150px !important;
+            }
+            .ui-selectonemenu-panel .ui-selectonemenu-item {
+                padding: 3px 6px !important;
+                font-size: 10px !important;
+            }
+        </style>
+
         <script crossorigin="anonymous" type="importmap">
              {
                  "imports": {
@@ -219,37 +264,100 @@
                         
                         <h:form id="formparts" style="margin:0px;">
                      
-                            <!--<div style="background-color: #5a5a5a; color: white; padding: 5px; font-size: 14px;">Manufacturing Order:</div>-->
-                            <div style="color: white; background-color: #e9e9e9; overflow-y: scroll;  max-height: 60vh;">
+                            <!-- Assembly/Parts Tree -->
+                            <div style="background-color: #5a5a5a; color: white; padding: 8px 12px; font-size: 14px; font-weight: bold;">
+                                Assembly Tree
+                            </div>
+                            <div style="background-color: #e9e9e9; overflow-y: auto; overflow-x: hidden; max-height: 60vh; width: 100%;">
 
-                                
-                                
-                                
                                 <p:tree id="assemblyTree" value="#{projectController.assemblyTree}" var="node"
-                                       style="width:100%; border:none;">
+                                       style="width:100%; border:none; box-sizing: border-box;">
                                     <p:treeNode type="assembly">
-                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="display: flex; align-items: center; gap: 10px; position: relative;">
                                             <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 135px; background-color: white;">
                                                 <img style="width:130px; margin:2px; cursor: pointer; background-color: #ffffff;"
                                                      src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}"
                                                      onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}');"/>
                                             </div>
                                             <div style="flex: 1;">
+                                                <p:commandLink actionListener="#{projectController.deleteNode(node)}"
+                                                               process="@this"
+                                                               update=":formparts:assemblyTree :formparts:quoteTotals"
+                                                               style="position: absolute; top: 0; right: 0; color: #c00; font-size: 12px; padding: 4px; cursor: pointer;"
+                                                               title="Remove from project">
+                                                    &#128465;
+                                                </p:commandLink>
                                                 <div style="font-size: 13px; font-weight: bold; color: #333;">#{node.name}</div>
-                                                <div style="font-size: 11px; color: #888;">Qty: #{node.quantity}</div>
+                                                <div style="font-size: 11px; color: #888;">Assembly | Qty: #{node.quantity}</div>
+                                                <h:panelGroup rendered="#{node.quoted and node.unitCost.doubleValue() > 0}">
+                                                    <div style="font-size: 10px; color: #666; margin-top: 3px;">Subtotal:</div>
+                                                    <div style="font-size: 14px; color: #2196F3; font-weight: bold;">
+                                                        <h:outputText value="#{node.unitCost}">
+                                                            <f:convertNumber type="currency" currencySymbol="$" />
+                                                        </h:outputText>
+                                                        <h:panelGroup rendered="#{node.quantity > 1}">
+                                                            <span style="font-size: 11px; color: #666;"> x #{node.quantity} = </span>
+                                                            <h:outputText value="#{node.totalCost}">
+                                                                <f:convertNumber type="currency" currencySymbol="$" />
+                                                            </h:outputText>
+                                                        </h:panelGroup>
+                                                    </div>
+                                                </h:panelGroup>
+                                                <h:panelGroup rendered="#{node.quoted and node.unitCost.doubleValue() == 0}">
+                                                    <div style="font-size: 11px; color: #999; margin-top: 3px;">No quotable parts</div>
+                                                </h:panelGroup>
                                             </div>
                                         </div>
                                     </p:treeNode>
                                     <p:treeNode type="part">
-                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="display: flex; align-items: center; gap: 10px; position: relative;">
                                             <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 135px; background-color: white;">
                                                 <img style="width:130px; margin:2px; cursor: pointer; background-color: #ffffff;"
                                                      src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}"
                                                      onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}');"/>
                                             </div>
                                             <div style="flex: 1;">
+                                                <p:commandLink actionListener="#{projectController.deleteNode(node)}"
+                                                               process="@this"
+                                                               update=":formparts:assemblyTree :formparts:quoteTotals"
+                                                               style="position: absolute; top: 0; right: 0; color: #c00; font-size: 12px; padding: 4px; cursor: pointer;"
+                                                               title="Remove from project">
+                                                    &#128465;
+                                                </p:commandLink>
                                                 <div style="font-size: 13px; font-weight: bold; color: #333;">#{node.name}</div>
-                                                <div style="font-size: 11px; color: #666;">Qty: #{node.quantity} | $0.00</div>
+                                                <div style="font-size: 11px; color: #555;">#{node.shapeName}</div>
+                                                <h:panelGroup rendered="#{node.quoted and node.rawMaterial != null}">
+                                                    <div style="font-size: 10px; color: #666;">#{node.rawMaterial.name}</div>
+                                                </h:panelGroup>
+                                                <div style="font-size: 10px; color: #888;">Qty: #{node.quantity}</div>
+                                                <h:panelGroup rendered="#{node.quoted}">
+                                                    <h:panelGroup rendered="#{not empty node.availableAlloys}">
+                                                        <p:selectOneMenu value="#{node.selectedAlloy}"
+                                                                         converter="CategoryConverter"
+                                                                         style="width: 100px; font-size: 9px;"
+                                                                         styleClass="compact-dropdown">
+                                                            <f:selectItems value="#{node.availableAlloys}" var="alloy"
+                                                                           itemLabel="#{alloy.name}" itemValue="#{alloy}" />
+                                                            <p:ajax listener="#{quotingEngine.changeAlloy(node)}"
+                                                                    update=":formparts:assemblyTree :formparts:quoteTotals" />
+                                                        </p:selectOneMenu>
+                                                    </h:panelGroup>
+                                                    <h:panelGroup rendered="#{empty node.availableAlloys}">
+                                                        <span style="font-size: 9px; color: #c00;">No materials</span>
+                                                    </h:panelGroup>
+                                                    <div style="font-size: 13px; color: #4CAF50; font-weight: bold;">
+                                                        <h:outputText value="#{node.unitCost}"><f:convertNumber type="currency" currencySymbol="$" /></h:outputText>
+                                                        <h:panelGroup rendered="#{node.quantity > 1}">
+                                                            <span style="font-size: 10px; color: #666;"> x #{node.quantity} = </span>
+                                                            <h:outputText value="#{node.totalCost}"><f:convertNumber type="currency" currencySymbol="$" /></h:outputText>
+                                                        </h:panelGroup>
+                                                    </div>
+                                                </h:panelGroup>
+                                                <h:panelGroup rendered="#{not node.quoted}">
+                                                    <div style="font-size: 11px; color: #999; margin-top: 2px;">
+                                                        Not quotable
+                                                    </div>
+                                                </h:panelGroup>
                                                 <h:panelGroup rendered="#{node.foldedSheetMetal and node.hasSimulation}">
                                                     <button type="button"
                                                             onclick="loadSimulation('#{request.contextPath}/simserver/#{node.simulationPath}');"
@@ -266,32 +374,50 @@
                                         </div>
                                     </p:treeNode>
                                 </p:tree>
-                                
-                                
-                                
-                                
-                                
+
                             </div>
+
+                            <h:panelGroup id="quoteTotals">
+                                <div style="background-color: #e0e0e0; padding: 8px 12px; font-size: 12px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                        <span>Material Cost:</span>
+                                        <h:outputText value="#{quotingEngine.totalMaterialCost}">
+                                            <f:convertNumber type="currency" currencySymbol="$" />
+                                        </h:outputText>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                        <span>Processing Cost:</span>
+                                        <h:outputText value="#{quotingEngine.totalProcessingCost}">
+                                            <f:convertNumber type="currency" currencySymbol="$" />
+                                        </h:outputText>
+                                    </div>
+                                </div>
+                            </h:panelGroup>
 
                             <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-bottom-right-radius: 8px; border-bottom-left-radius: 8px; color: black;">
                                 <div class="grid_two">
                                     <div style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
-                                            Total 
+                                            Total
 
                                     </div>
-                                 
+
                                     <div style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
-                                        <h:outputText style="font-weight: bold;" value="#{projectController.total}" styleClass="product-price" >
+                                        <h:outputText style="font-weight: bold;" value="#{quotingEngine.totalCost}" styleClass="product-price" >
                                             <f:convertNumber currencySymbol="USD$" type="currency"/>
-                                        </h:outputText>                                           
+                                        </h:outputText>
                                     </div>
                                 </div>
-                                
+
                             </div>
-                        </h:form>   
+
+                            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade">
+                                <p:commandButton value="Yes" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check" />
+                                <p:commandButton value="No" type="button" styleClass="ui-confirmdialog-no" icon="pi pi-times" />
+                            </p:confirmDialog>
+                        </h:form>
                     </div>
 
-        
+
 
     </ui:define>
 

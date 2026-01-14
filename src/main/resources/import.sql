@@ -209,10 +209,16 @@ INSERT INTO public.product (id, name, sku, unit_id) VALUES (64, 'Rectangular Tub
 INSERT INTO public.product (id, name, sku, unit_id) VALUES (65, 'Rectangular Tube 4" x 2" 11Ga', 'RT_4x2_GA11_STEEL', 1);
 INSERT INTO public.product (id, name, sku, unit_id) VALUES (66, 'Rectangular Tube 4" x 2" 9Ga', 'RT_4x2_GA9_STEEL', 1);
 INSERT INTO public.product (id, name, sku, unit_id) VALUES (68, 'Rectangular Tube 4" x 2" 7Ga', 'RT_4x2_GA7_STEEL', 1);
+INSERT INTO public.product (id, name, sku, unit_id) VALUES (70, 'Rectangular Tube 4" x 3" 14Ga', 'RT_4x3_GA14_STEEL', 1);
+INSERT INTO public.product (id, name, sku, unit_id) VALUES (71, 'Rectangular Tube 4" x 3" 11Ga', 'RT_4x3_GA11_STEEL', 1);
+INSERT INTO public.product (id, name, sku, unit_id) VALUES (72, 'Rectangular Tube 4" x 3" 9Ga', 'RT_4x3_GA9_STEEL', 1);
+INSERT INTO public.product (id, name, sku, unit_id) VALUES (73, 'Rectangular Tube 4" x 3" 7Ga', 'RT_4x3_GA7_STEEL', 1);
+INSERT INTO public.product (id, name, sku, unit_id) VALUES (74, 'Rectangular Tube 4" x 4" 14Ga', 'RT_4x4_GA14_STEEL', 1);
+INSERT INTO public.product (id, name, sku, unit_id) VALUES (75, 'Rectangular Tube 4" x 4" 11Ga', 'RT_4x4_GA11_STEEL', 1);
+INSERT INTO public.product (id, name, sku, unit_id) VALUES (76, 'Rectangular Tube 4" x 4" 9Ga', 'RT_4x4_GA9_STEEL', 1);
+INSERT INTO public.product (id, name, sku, unit_id) VALUES (77, 'Rectangular Tube 4" x 4" 7Ga', 'RT_4x4_GA7_STEEL', 1);
 
-SELECT setval('product_id_seq', 69, true);
-
-
+SELECT setval('product_id_seq', 80, true);
 
 INSERT INTO public.category (id, key, name, parent_id) VALUES (1,  'GARS','Geometric Automatic Recognition Shape', NULL);
 INSERT INTO public.category (id, key, name, parent_id) VALUES (2,  'ALLOY','Alloy', NULL);
@@ -235,6 +241,8 @@ INSERT INTO public.category (id, key, name, parent_id) VALUES (18, 'SS304', 'Sta
 
 
 SELECT setval('category_id_seq', 18, true);
+
+
 
 INSERT INTO public.product_category (product_id, category_id) VALUES (1, 17);
 INSERT INTO public.product_category (product_id, category_id) VALUES (2, 17);
@@ -366,6 +374,23 @@ INSERT INTO public.product_category (product_id, category_id) VALUES (41, 7);
 INSERT INTO public.product_category (product_id, category_id) VALUES (41, 17);
 INSERT INTO public.product_category (product_id, category_id) VALUES (42, 7);
 INSERT INTO public.product_category (product_id, category_id) VALUES (42, 17);
+INSERT INTO public.product_category (product_id, category_id) VALUES (70, 7);
+INSERT INTO public.product_category (product_id, category_id) VALUES (70, 17);
+INSERT INTO public.product_category (product_id, category_id) VALUES (71, 7);
+INSERT INTO public.product_category (product_id, category_id) VALUES (71, 17);
+INSERT INTO public.product_category (product_id, category_id) VALUES (72, 7);
+INSERT INTO public.product_category (product_id, category_id) VALUES (72, 17);
+INSERT INTO public.product_category (product_id, category_id) VALUES (73, 7);
+INSERT INTO public.product_category (product_id, category_id) VALUES (73, 17);
+INSERT INTO public.product_category (product_id, category_id) VALUES (74, 7);
+INSERT INTO public.product_category (product_id, category_id) VALUES (74, 17);
+INSERT INTO public.product_category (product_id, category_id) VALUES (75, 7);
+INSERT INTO public.product_category (product_id, category_id) VALUES (75, 17);
+INSERT INTO public.product_category (product_id, category_id) VALUES (76, 7);
+INSERT INTO public.product_category (product_id, category_id) VALUES (76, 17);
+INSERT INTO public.product_category (product_id, category_id) VALUES (77, 7);
+INSERT INTO public.product_category (product_id, category_id) VALUES (77, 17);
+
 
 
 
@@ -593,7 +618,6 @@ INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) 
 INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (191, NULL, 4.600, 24, 6);
 INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (190, NULL, 4.600, 23, 6);
 INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (177, NULL, 0.720, 10, 6);
-INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (201, NULL, 0.720, 34, 6);
 INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (178, NULL, 0.720, 11, 6);
 INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (176, NULL, 0.720, 9, 6);
 INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (175, NULL, 0.720, 8, 6);
@@ -828,7 +852,64 @@ INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) 
 INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (469, NULL, 50.800, 68, 3);
 INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (467, NULL, 4.550, 68, 4);
 INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (468, NULL, NULL, 68, 7);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (478, NULL, 101.600, 70, 1);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (475, NULL, 6000.000, 70, 2);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (476, NULL, 76.200, 70, 3);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (479, NULL, 1.890, 70, 4);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (477, NULL, NULL, 70, 7);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (474, NULL, 7850.000, 70, 5);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (480, NULL, 0.720, 70, 6);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (485, NULL, 101.600, 71, 1);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (481, NULL, 6000.000, 71, 2);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (486, NULL, 76.200, 71, 3);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (484, NULL, 3.040, 71, 4);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (482, NULL, NULL, 71, 7);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (483, NULL, 7850.000, 71, 5);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (487, NULL, 0.720, 71, 6);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (490, NULL, 101.600, 72, 1);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (491, NULL, 6000.000, 72, 2);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (489, NULL, 76.200, 72, 3);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (488, NULL, 3.800, 72, 4);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (492, NULL, NULL, 72, 7);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (494, NULL, 7850.000, 72, 5);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (493, NULL, 0.720, 72, 6);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (496, NULL, 101.600, 73, 1);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (500, NULL, 6000.000, 73, 2);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (501, NULL, 76.200, 73, 3);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (498, NULL, 4.550, 73, 4);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (499, NULL, NULL, 73, 7);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (497, NULL, 7850.000, 73, 5);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (495, NULL, 0.720, 73, 6);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (508, NULL, 101.600, 74, 1);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (504, NULL, 6000.000, 74, 2);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (505, NULL, 101.600, 74, 3);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (506, NULL, 1.890, 74, 4);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (503, NULL, NULL, 74, 7);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (507, NULL, 7850.000, 74, 5);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (502, NULL, 0.720, 74, 6);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (512, NULL, 101.600, 75, 1);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (509, NULL, 6000.000, 75, 2);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (513, NULL, 101.600, 75, 3);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (511, NULL, 3.040, 75, 4);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (515, NULL, NULL, 75, 7);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (510, NULL, 7850.000, 75, 5);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (514, NULL, 0.720, 75, 6);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (522, NULL, 101.600, 76, 1);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (518, NULL, 6000.000, 76, 2);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (521, NULL, 101.600, 76, 3);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (520, NULL, 3.800, 76, 4);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (517, NULL, NULL, 76, 7);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (516, NULL, 7850.000, 76, 5);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (519, NULL, 0.720, 76, 6);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (527, NULL, 101.600, 77, 1);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (523, NULL, 6000.000, 77, 2);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (526, NULL, 101.600, 77, 3);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (524, NULL, 4.550, 77, 4);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (529, NULL, NULL, 77, 7);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (528, NULL, 7850.000, 77, 5);
+INSERT INTO public.property (id, textvalue, value, product_id, propertytype_id) VALUES (525, NULL, 0.720, 77, 6);
 
 
 
-SELECT setval('property_id_seq', 473, true);
+
+SELECT setval('property_id_seq', 600, true);

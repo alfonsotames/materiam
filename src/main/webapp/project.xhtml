@@ -152,6 +152,24 @@
                     viewer.assetPath = basePath;
                     viewer.loadPart('blueprint.json');
                 };
+
+                // Clear the viewer (called after deleting parts/assemblies)
+                window.clearViewer = function() {
+                    if (!viewer) return;
+
+                    // Clear GLB model
+                    if (currentModel) {
+                        viewer.getScene().remove(currentModel);
+                        currentModel = null;
+                    }
+
+                    // Clear sheet metal part if viewer supports it
+                    if (viewer.clearPart) {
+                        viewer.clearPart();
+                    }
+
+                    console.log('Viewer cleared');
+                };
             });
         </script>
 
@@ -273,20 +291,13 @@
                                 <p:tree id="assemblyTree" value="#{projectController.assemblyTree}" var="node"
                                        style="width:100%; border:none; box-sizing: border-box;">
                                     <p:treeNode type="assembly">
-                                        <div style="display: flex; align-items: center; gap: 10px; position: relative;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
                                             <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 135px; background-color: white;">
                                                 <img style="width:130px; margin:2px; cursor: pointer; background-color: #ffffff;"
                                                      src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}"
                                                      onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}');"/>
                                             </div>
                                             <div style="flex: 1;">
-                                                <p:commandLink actionListener="#{projectController.deleteNode(node)}"
-                                                               process="@this"
-                                                               update=":formparts:assemblyTree :formparts:quoteTotals"
-                                                               style="position: absolute; top: 0; right: 0; color: #c00; font-size: 12px; padding: 4px; cursor: pointer;"
-                                                               title="Remove from project">
-                                                    &#128465;
-                                                </p:commandLink>
                                                 <div style="font-size: 13px; font-weight: bold; color: #333;">#{node.name}</div>
                                                 <div style="font-size: 11px; color: #888;">Assembly | Qty: #{node.quantity}</div>
                                                 <h:panelGroup rendered="#{node.quoted and node.unitCost.doubleValue() > 0}">
@@ -306,24 +317,25 @@
                                                 <h:panelGroup rendered="#{node.quoted and node.unitCost.doubleValue() == 0}">
                                                     <div style="font-size: 11px; color: #999; margin-top: 3px;">No quotable parts</div>
                                                 </h:panelGroup>
+                                                <p:commandLink actionListener="#{projectController.deleteNode(node)}"
+                                                               process="@this"
+                                                               update=":formparts:assemblyTree :formparts:quoteTotals"
+                                                               oncomplete="clearViewer()"
+                                                               style="display: inline-block; margin-top: 5px; color: #c00; font-size: 14px; cursor: pointer;"
+                                                               title="Remove assembly from project">
+                                                    &#128465; Remove
+                                                </p:commandLink>
                                             </div>
                                         </div>
                                     </p:treeNode>
                                     <p:treeNode type="part">
-                                        <div style="display: flex; align-items: center; gap: 10px; position: relative;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
                                             <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 135px; background-color: white;">
                                                 <img style="width:130px; margin:2px; cursor: pointer; background-color: #ffffff;"
                                                      src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}"
                                                      onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}');"/>
                                             </div>
                                             <div style="flex: 1;">
-                                                <p:commandLink actionListener="#{projectController.deleteNode(node)}"
-                                                               process="@this"
-                                                               update=":formparts:assemblyTree :formparts:quoteTotals"
-                                                               style="position: absolute; top: 0; right: 0; color: #c00; font-size: 12px; padding: 4px; cursor: pointer;"
-                                                               title="Remove from project">
-                                                    &#128465;
-                                                </p:commandLink>
                                                 <div style="font-size: 13px; font-weight: bold; color: #333;">#{node.name}</div>
                                                 <div style="font-size: 11px; color: #555;">#{node.shapeName}</div>
                                                 <h:panelGroup rendered="#{node.quoted and node.rawMaterial != null}">
@@ -370,6 +382,14 @@
                                                         Bend Simulation Unavailable
                                                     </span>
                                                 </h:panelGroup>
+                                                <p:commandLink actionListener="#{projectController.deleteNode(node)}"
+                                                               process="@this"
+                                                               update=":formparts:assemblyTree :formparts:quoteTotals"
+                                                               oncomplete="clearViewer()"
+                                                               style="display: inline-block; margin-top: 5px; color: #c00; font-size: 14px; cursor: pointer;"
+                                                               title="Remove part from project">
+                                                    &#128465; Remove
+                                                </p:commandLink>
                                             </div>
                                         </div>
                                     </p:treeNode>

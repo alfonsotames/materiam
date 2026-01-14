@@ -853,11 +853,21 @@ public class ProjectController implements Serializable {
         // Build new tree
         TreeNode<TreeNodeData> root = new DefaultTreeNode<>(new TreeNodeData("Project", "project", null), null);
 
-        // Re-fetch project to ensure all relationships are loaded within transaction
-        Project project = em.find(Project.class, activeProject.getId());
+        // Re-fetch project using query to bypass cache and ensure fresh data
+        Project project;
+        try {
+            project = em.createQuery(
+                "SELECT DISTINCT p FROM Project p LEFT JOIN FETCH p.cadfiles cf LEFT JOIN FETCH cf.root WHERE p.id = :id", Project.class)
+                .setParameter("id", activeProject.getId())
+                .getSingleResult();
+        } catch (Exception e) {
+            System.out.println("Error fetching project: " + e.getMessage());
+            return root;
+        }
         if (project == null || project.getCadfiles() == null) {
             return root;
         }
+        System.out.println("Fetched project with " + project.getCadfiles().size() + " cadfiles");
 
         for (CADFile cf : project.getCadfiles()) {
             if (cf.getRoot() != null) {
@@ -897,6 +907,23 @@ public class ProjectController implements Serializable {
         cachedAssemblyTree = null;
         cachedProjectId = null;
         treeQuoted = false;
+
+        // Refresh activeProject from database to get fresh data
+        if (activeProject != null && activeProject.getId() != null) {
+            Long projectId = activeProject.getId();
+            // Use query to bypass EntityManager cache
+            try {
+                activeProject = em.createQuery(
+                    "SELECT DISTINCT p FROM Project p LEFT JOIN FETCH p.cadfiles cf LEFT JOIN FETCH cf.root WHERE p.id = :id", Project.class)
+                    .setParameter("id", projectId)
+                    .getSingleResult();
+                System.out.println("Refreshed activeProject from database, cadfiles count: " +
+                    (activeProject.getCadfiles() != null ? activeProject.getCadfiles().size() : 0));
+            } catch (Exception e) {
+                System.out.println("Project no longer exists: " + e.getMessage());
+                activeProject = null;
+            }
+        }
     }
 
     /**
@@ -941,7 +968,6 @@ public class ProjectController implements Serializable {
 
                     // Now delete the part
                     em.remove(part);
-                    em.flush();
                     System.out.println("Part deleted successfully");
                 } else {
                     System.out.println("Part not found in database!");
@@ -954,6 +980,27 @@ public class ProjectController implements Serializable {
                 System.out.println("em.find returned: " + (assembly != null ? "assembly found" : "NULL"));
 
                 if (assembly != null) {
+                    // Get CADFile info for filesystem cleanup BEFORE modifying entities
+                    CADFile cadfileForFiles = nodeData.getCadfile();
+                    String cadfileUuid = (cadfileForFiles != null) ? cadfileForFiles.getUuid() : null;
+
+                    // Collect all parts and assemblies for file deletion BEFORE modifying entities
+                    List<Part> allParts = new ArrayList<>();
+                    collectPartsFromAssembly(assembly, allParts);
+                    List<Assembly> allAssemblies = new ArrayList<>();
+                    collectAssembliesFromAssembly(assembly, allAssemblies);
+
+                    // Collect persids for file deletion
+                    List<String> partPersids = new ArrayList<>();
+                    for (Part p : allParts) {
+                        if (p.getPersid() != null) partPersids.add(p.getPersid());
+                    }
+                    List<String> assemblyPersids = new ArrayList<>();
+                    for (Assembly a : allAssemblies) {
+                        if (a.getPersid() != null) assemblyPersids.add(a.getPersid());
+                    }
+                    System.out.println("Collected " + allParts.size() + " parts and " + allAssemblies.size() + " assemblies");
+
                     // Remove from parent's assemblies collection
                     Assembly parent = assembly.getParent();
                     if (parent != null) {
@@ -961,18 +1008,69 @@ public class ProjectController implements Serializable {
                         System.out.println("Removed assembly from parent");
                     }
 
-                    // Also check if this is a root assembly in a CADFile
-                    for (CADFile cf : activeProject.getCadfiles()) {
-                        if (cf.getRoot() != null && cf.getRoot().getId().equals(assemblyId)) {
-                            cf.setRoot(null);
-                            System.out.println("Cleared CADFile root reference");
+                    // Remove parts from their CADFile collections
+                    for (Part part : allParts) {
+                        CADFile cf = part.getCadfile();
+                        if (cf != null) {
+                            CADFile managedCf = em.find(CADFile.class, cf.getId());
+                            if (managedCf != null && managedCf.getParts() != null) {
+                                managedCf.getParts().remove(part);
+                                System.out.println("Removed part " + part.getId() + " from CADFile " + managedCf.getId());
+                            }
                         }
+                    }
+
+                    // Find CADFiles that reference this assembly as root
+                    List<CADFile> referencingCadFiles = em.createQuery(
+                        "SELECT cf FROM CADFile cf WHERE cf.root.id = :assemblyId", CADFile.class)
+                        .setParameter("assemblyId", assemblyId)
+                        .getResultList();
+
+                    // Collect CADFile UUIDs for directory deletion
+                    List<String> cadfileUuidsToDelete = new ArrayList<>();
+                    for (CADFile cf : referencingCadFiles) {
+                        if (cf.getUuid() != null) cadfileUuidsToDelete.add(cf.getUuid());
+                    }
+
+                    // Clear CADFile root references before deleting assembly
+                    for (CADFile cf : referencingCadFiles) {
+                        cf.setRoot(null);
+                        System.out.println("Cleared CADFile root reference for CADFile ID: " + cf.getId());
                     }
 
                     // Delete the assembly (cascade should handle parts and children)
                     em.remove(assembly);
-                    em.flush();
                     System.out.println("Assembly deleted successfully");
+
+                    // Now delete the CADFiles that had this as root
+                    for (CADFile cf : referencingCadFiles) {
+                        System.out.println("Deleting CADFile (root assembly was deleted): " + cf.getId());
+
+                        // Remove from project's cadfiles collection (get managed version)
+                        Project managedProject = em.find(Project.class, activeProject.getId());
+                        if (managedProject != null && managedProject.getCadfiles() != null) {
+                            managedProject.getCadfiles().remove(cf);
+                        }
+
+                        // Delete the CADFile entity
+                        em.remove(cf);
+                        System.out.println("CADFile deleted: " + cf.getId());
+                    }
+
+                    // NOW delete files from filesystem (after all DB operations)
+                    if (activeProject != null && !cadfileUuidsToDelete.isEmpty()) {
+                        for (String cfUuid : cadfileUuidsToDelete) {
+                            deleteCadFileDirectoryByUuid(cfUuid);
+                        }
+                    } else if (activeProject != null && cadfileUuid != null) {
+                        // Delete individual part/assembly files if not deleting whole CADFile
+                        for (String persid : partPersids) {
+                            deletePartFilesByPersid(cadfileUuid, persid);
+                        }
+                        for (String persid : assemblyPersids) {
+                            deleteAssemblyFilesByPersid(cadfileUuid, persid);
+                        }
+                    }
                 } else {
                     System.out.println("Assembly not found in database!");
                 }
@@ -984,6 +1082,124 @@ public class ProjectController implements Serializable {
             e.printStackTrace();
             FacesContext.getCurrentInstance().addMessage(null,
                 new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "Could not delete: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete an entire project and all its contents.
+     */
+    public void deleteProject(Project project) {
+        System.out.println("=== deleteProject START ===");
+        if (project == null) {
+            System.out.println("Project is null, returning");
+            return;
+        }
+
+        try {
+            Long projectId = project.getId();
+            String projectUuid = project.getUuid();
+            System.out.println("Deleting project: " + project.getName() + " (ID: " + projectId + ")");
+
+            // Get managed project from database
+            Project managedProject = em.find(Project.class, projectId);
+            if (managedProject == null) {
+                System.out.println("Project not found in database");
+                return;
+            }
+
+            // FIRST: Remove from user's projects list (clears join table FK reference)
+            User user = em.find(User.class, userController.getUser().getId());
+            if (user != null && user.getProjects() != null) {
+                user.getProjects().remove(managedProject);
+                System.out.println("Removed project from user's list");
+            }
+
+            // Clear activeProject if it was the deleted project
+            if (activeProject != null && activeProject.getId().equals(projectId)) {
+                activeProject = null;
+                invalidateAssemblyTree();
+            }
+
+            // Manually delete all CADFiles and their contents
+            if (managedProject.getCadfiles() != null) {
+                // Create a copy to avoid ConcurrentModificationException
+                List<CADFile> cadfilesToDelete = new ArrayList<>(managedProject.getCadfiles());
+
+                for (CADFile cf : cadfilesToDelete) {
+                    System.out.println("Deleting CADFile: " + cf.getId());
+
+                    // Clear root reference first
+                    Assembly root = cf.getRoot();
+                    if (root != null) {
+                        cf.setRoot(null);
+
+                        // Delete the root assembly and all its children
+                        em.remove(root);
+                        System.out.println("Deleted root assembly: " + root.getId());
+                    }
+
+                    // Delete all parts
+                    if (cf.getParts() != null) {
+                        for (Part part : new ArrayList<>(cf.getParts())) {
+                            em.remove(part);
+                        }
+                        cf.getParts().clear();
+                        System.out.println("Deleted parts for CADFile: " + cf.getId());
+                    }
+
+                    // Remove from project's cadfiles list
+                    managedProject.getCadfiles().remove(cf);
+
+                    // Delete the CADFile
+                    em.remove(cf);
+                    System.out.println("Deleted CADFile: " + cf.getId());
+                }
+            }
+
+            // Delete the project
+            em.remove(managedProject);
+            System.out.println("Project deleted from database");
+
+            // Delete project directory from filesystem
+            if (projectUuid != null) {
+                deleteProjectDirectory(projectUuid);
+            }
+
+            System.out.println("=== deleteProject END ===");
+        } catch (Exception e) {
+            System.out.println("Error deleting project: " + e.getMessage());
+            e.printStackTrace();
+            FacesContext.getCurrentInstance().addMessage(null,
+                new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "Could not delete project: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Deletes the entire project directory from the filesystem.
+     */
+    private void deleteProjectDirectory(String projectUuid) {
+        if (projectUuid == null) {
+            return;
+        }
+
+        String dirPath = destination + projectUuid;
+        try {
+            Path dir = Paths.get(dirPath);
+            if (Files.exists(dir) && Files.isDirectory(dir)) {
+                Files.walk(dir)
+                    .sorted((a, b) -> b.compareTo(a)) // Reverse order to delete contents first
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                            System.out.println("Deleted: " + path);
+                        } catch (IOException e) {
+                            System.out.println("Error deleting " + path + ": " + e.getMessage());
+                        }
+                    });
+                System.out.println("Deleted project directory: " + dirPath);
+            }
+        } catch (IOException e) {
+            System.out.println("Error deleting project directory: " + e.getMessage());
         }
     }
 
@@ -1119,6 +1335,230 @@ public class ProjectController implements Serializable {
         boolean isFolded = "SHEET_METAL_FOLDED".equals(shapeKey);
         System.out.println("isFoldedSheetMetal: part " + part.getName() + " (persid=" + part.getPersid() + ") shape=" + shapeKey + " isFolded=" + isFolded);
         return isFolded;
+    }
+
+    /**
+     * Recursively collects all parts from an assembly and its child assemblies.
+     */
+    private void collectPartsFromAssembly(Assembly assembly, List<Part> allParts) {
+        if (assembly == null) return;
+
+        // Add direct parts
+        if (assembly.getParts() != null) {
+            allParts.addAll(assembly.getParts());
+        }
+
+        // Recurse into child assemblies
+        if (assembly.getAssemblies() != null) {
+            for (Assembly child : assembly.getAssemblies()) {
+                collectPartsFromAssembly(child, allParts);
+            }
+        }
+    }
+
+    /**
+     * Recursively collects all assemblies from an assembly hierarchy (including the root).
+     */
+    private void collectAssembliesFromAssembly(Assembly assembly, List<Assembly> allAssemblies) {
+        if (assembly == null) return;
+
+        allAssemblies.add(assembly);
+
+        if (assembly.getAssemblies() != null) {
+            for (Assembly child : assembly.getAssemblies()) {
+                collectAssembliesFromAssembly(child, allAssemblies);
+            }
+        }
+    }
+
+    /**
+     * Deletes all files associated with a part from the filesystem.
+     */
+    private void deletePartFiles(CADFile cadfile, Part part) {
+        if (activeProject == null || cadfile == null || part == null || part.getPersid() == null) {
+            return;
+        }
+
+        String basePath = destination + activeProject.getUuid() + "/" + cadfile.getUuid() + "/";
+        String persid = part.getPersid().replaceAll(":", "-");
+
+        // Files to delete for a part
+        String[] filesToDelete = {
+            "out_" + persid + "_1.glb",
+            "out_" + persid + "_1.step",
+            "image_" + persid + "_1.png"
+        };
+
+        for (String filename : filesToDelete) {
+            try {
+                Path filePath = Paths.get(basePath + filename);
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                    System.out.println("Deleted file: " + filePath);
+                }
+            } catch (IOException e) {
+                System.out.println("Error deleting file " + filename + ": " + e.getMessage());
+            }
+        }
+
+        // Delete simulation directory if exists
+        String simDirPath = basePath + persid + "-cam_simulation";
+        try {
+            Path simDir = Paths.get(simDirPath);
+            if (Files.exists(simDir) && Files.isDirectory(simDir)) {
+                Files.walk(simDir)
+                    .sorted((a, b) -> b.compareTo(a)) // Reverse order to delete contents first
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                            System.out.println("Deleted: " + path);
+                        } catch (IOException e) {
+                            System.out.println("Error deleting " + path + ": " + e.getMessage());
+                        }
+                    });
+                System.out.println("Deleted simulation directory: " + simDirPath);
+            }
+        } catch (IOException e) {
+            System.out.println("Error deleting simulation directory: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Deletes all files associated with an assembly from the filesystem.
+     */
+    private void deleteAssemblyFiles(CADFile cadfile, Assembly assembly) {
+        if (activeProject == null || cadfile == null || assembly == null || assembly.getPersid() == null) {
+            return;
+        }
+
+        String basePath = destination + activeProject.getUuid() + "/" + cadfile.getUuid() + "/";
+        String persid = assembly.getPersid().replaceAll(":", "-");
+
+        // Files to delete for an assembly
+        String[] filesToDelete = {
+            "out_" + persid + "_1.glb",
+            "image_" + persid + "_1.png"
+        };
+
+        for (String filename : filesToDelete) {
+            try {
+                Path filePath = Paths.get(basePath + filename);
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                    System.out.println("Deleted file: " + filePath);
+                }
+            } catch (IOException e) {
+                System.out.println("Error deleting file " + filename + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Deletes the entire directory for a CADFile from the filesystem using UUID.
+     */
+    private void deleteCadFileDirectoryByUuid(String cadfileUuid) {
+        if (activeProject == null || cadfileUuid == null) {
+            return;
+        }
+
+        String dirPath = destination + activeProject.getUuid() + "/" + cadfileUuid;
+        try {
+            Path dir = Paths.get(dirPath);
+            if (Files.exists(dir) && Files.isDirectory(dir)) {
+                Files.walk(dir)
+                    .sorted((a, b) -> b.compareTo(a)) // Reverse order to delete contents first
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                            System.out.println("Deleted: " + path);
+                        } catch (IOException e) {
+                            System.out.println("Error deleting " + path + ": " + e.getMessage());
+                        }
+                    });
+                System.out.println("Deleted CADFile directory: " + dirPath);
+            }
+        } catch (IOException e) {
+            System.out.println("Error deleting CADFile directory: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Deletes part files using persid string.
+     */
+    private void deletePartFilesByPersid(String cadfileUuid, String persid) {
+        if (activeProject == null || cadfileUuid == null || persid == null) {
+            return;
+        }
+
+        String basePath = destination + activeProject.getUuid() + "/" + cadfileUuid + "/";
+        String safePersid = persid.replaceAll(":", "-");
+
+        String[] filesToDelete = {
+            "out_" + safePersid + "_1.glb",
+            "out_" + safePersid + "_1.step",
+            "image_" + safePersid + "_1.png"
+        };
+
+        for (String filename : filesToDelete) {
+            try {
+                Path filePath = Paths.get(basePath + filename);
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                    System.out.println("Deleted file: " + filePath);
+                }
+            } catch (IOException e) {
+                System.out.println("Error deleting file " + filename + ": " + e.getMessage());
+            }
+        }
+
+        // Delete simulation directory if exists
+        String simDirPath = basePath + safePersid + "-cam_simulation";
+        try {
+            Path simDir = Paths.get(simDirPath);
+            if (Files.exists(simDir) && Files.isDirectory(simDir)) {
+                Files.walk(simDir)
+                    .sorted((a, b) -> b.compareTo(a))
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            System.out.println("Error deleting " + path + ": " + e.getMessage());
+                        }
+                    });
+                System.out.println("Deleted simulation directory: " + simDirPath);
+            }
+        } catch (IOException e) {
+            System.out.println("Error deleting simulation directory: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Deletes assembly files using persid string.
+     */
+    private void deleteAssemblyFilesByPersid(String cadfileUuid, String persid) {
+        if (activeProject == null || cadfileUuid == null || persid == null) {
+            return;
+        }
+
+        String basePath = destination + activeProject.getUuid() + "/" + cadfileUuid + "/";
+        String safePersid = persid.replaceAll(":", "-");
+
+        String[] filesToDelete = {
+            "out_" + safePersid + "_1.glb",
+            "image_" + safePersid + "_1.png"
+        };
+
+        for (String filename : filesToDelete) {
+            try {
+                Path filePath = Paths.get(basePath + filename);
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                    System.out.println("Deleted file: " + filePath);
+                }
+            } catch (IOException e) {
+                System.out.println("Error deleting file " + filename + ": " + e.getMessage());
+            }
+        }
     }
 
     public static class TreeNodeData {

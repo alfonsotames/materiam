@@ -4,6 +4,7 @@
  */
 package com.materiam.servlets;
 
+import com.materiam.config.PathConfig;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -21,7 +22,7 @@ import java.io.OutputStream;
 @WebServlet(name = "simserver", urlPatterns = {"/simserver/*"})
 public class simserver extends HttpServlet {
 
-    private static final String BASE_PATH = "/Users/mufufu/Downloads/materiam/data/projects/";
+    private static final String BASE_PATH = PathConfig.getProjectsPath();
     private static final String TOOLS_PATH = "/usr/local/share/amatix/tools/";
 
     @Override

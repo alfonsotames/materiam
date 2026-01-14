@@ -4,6 +4,7 @@
  */
 package com.materiam.servlets;
 
+import com.materiam.config.PathConfig;
 import com.materiam.entities.Project;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
@@ -29,8 +30,7 @@ public class projectimage extends HttpServlet {
         ServletContext sc = getServletContext();
         String projectid = ((Project)request.getSession().getAttribute("activeProject")).getId().toString();
 
-        //String filename = "/home/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+"image.png";
-        String filename = "/Users/mufufu/Downloads/materiam/data/projects/"+projectid+"/"+"image.png";
+        String filename = PathConfig.getProjectsPath()+projectid+"/"+"image.png";
         
                 
         /*    

@@ -4,6 +4,7 @@
  */
 package com.materiam.controllers;
 
+import com.materiam.config.PathConfig;
 import com.materiam.entities.Assembly;
 import com.materiam.entities.CADFile;
 import com.materiam.entities.Category;
@@ -108,8 +109,7 @@ public class ProjectController implements Serializable {
 
     
     
-    //private String destination = "/home/mufufu/Downloads/materiam/data/projects/";
-    private String destination = "/Users/mufufu/Downloads/materiam/data/projects/";
+    private String destination = PathConfig.getProjectsPath();
         
     
     @PostConstruct

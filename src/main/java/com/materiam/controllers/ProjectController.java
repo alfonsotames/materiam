@@ -175,14 +175,36 @@ public class ProjectController implements Serializable {
     }
 
     public void save() {
-        
+
         if (activeProject != null) {
             System.out.println("************* -------- Saving name ----------- ***************"+activeProject.getName());
             Project p = em.find(Project.class, activeProject.getId());
             p.setName(activeProject.getName());
         }
 
-        
+
+    }
+
+    public void savePartName(TreeNodeData nodeData) {
+        if (nodeData == null || nodeData.getPart() == null) {
+            return;
+        }
+        Part part = em.find(Part.class, nodeData.getPart().getId());
+        if (part != null) {
+            part.setName(nodeData.getName());
+            System.out.println("Saved part name: " + nodeData.getName());
+        }
+    }
+
+    public void saveAssemblyName(TreeNodeData nodeData) {
+        if (nodeData == null || nodeData.getAssembly() == null) {
+            return;
+        }
+        Assembly assembly = em.find(Assembly.class, nodeData.getAssembly().getId());
+        if (assembly != null) {
+            assembly.setName(nodeData.getName());
+            System.out.println("Saved assembly name: " + nodeData.getName());
+        }
     }
     
     public Set<Part> getParts(Long cfid) {
@@ -1530,6 +1552,32 @@ public class ProjectController implements Serializable {
         } catch (IOException e) {
             System.out.println("Error deleting simulation directory: " + e.getMessage());
         }
+    }
+
+    /**
+     * Counts the total number of elements (parts + assemblies) in an assembly recursively.
+     * This includes all nested sub-assemblies and their parts.
+     */
+    public int getTotalElementCount(Assembly assembly) {
+        if (assembly == null) {
+            return 0;
+        }
+        int count = 0;
+
+        // Count direct parts
+        if (assembly.getParts() != null) {
+            count += assembly.getParts().size();
+        }
+
+        // Count child assemblies and recurse into them
+        if (assembly.getAssemblies() != null) {
+            count += assembly.getAssemblies().size();
+            for (Assembly child : assembly.getAssemblies()) {
+                count += getTotalElementCount(child);
+            }
+        }
+
+        return count;
     }
 
     /**

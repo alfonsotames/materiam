@@ -221,7 +221,7 @@
                     <div id="info" style="position: absolute;   position: absolute;  z-index: 10;
                             top: 10px;
                             left: 10px;
-                            padding: 0px; width: 380px; ">
+                            padding: 0px; width: 430px; ">
                         <h:form id="form" onkeypress="if (event.keyCode == 13) { saver(); event.preventDefault();}" style="margin-bottom: 0px;">
                             <p:remoteCommand name="saver" actionListener="#{projectController.save()}" update="nombre"  />
                             
@@ -298,8 +298,14 @@
                                                      onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}');"/>
                                             </div>
                                             <div style="flex: 1;">
-                                                <div style="font-size: 13px; font-weight: bold; color: #333;">#{node.name}</div>
-                                                <div style="font-size: 11px; color: #888;">Assembly | Qty: #{node.quantity}</div>
+                                                <div style="font-size: 13px; font-weight: bold; color: #333;">
+                                                    <p:inplace editor="true">
+                                                        <p:inputText value="#{node.name}" required="true" style="font-size: 13px; font-weight: bold;"
+                                                                     onkeydown="if(event.keyCode === 13) { $(this).closest('.ui-inplace').find('.ui-inplace-save').click(); return false; }"/>
+                                                        <p:ajax event="save" listener="#{projectController.saveAssemblyName(node)}"/>
+                                                    </p:inplace>
+                                                </div>
+                                                <div style="font-size: 11px; color: #888;">Assembly | Qty: #{node.quantity} | #{projectController.getTotalElementCount(node.assembly)} elements</div>
                                                 <h:panelGroup rendered="#{node.quoted and node.unitCost.doubleValue() > 0}">
                                                     <div style="font-size: 10px; color: #666; margin-top: 3px;">Subtotal:</div>
                                                     <div style="font-size: 14px; color: #2196F3; font-weight: bold;">
@@ -323,7 +329,7 @@
                                                                oncomplete="clearViewer()"
                                                                style="display: inline-block; margin-top: 5px; color: #c00; font-size: 14px; cursor: pointer;"
                                                                title="Remove assembly from project">
-                                                    &#128465; Remove
+                                                    &#128465;
                                                 </p:commandLink>
                                             </div>
                                         </div>
@@ -336,10 +342,19 @@
                                                      onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}');"/>
                                             </div>
                                             <div style="flex: 1;">
-                                                <div style="font-size: 13px; font-weight: bold; color: #333;">#{node.name}</div>
+                                                <div style="font-size: 13px; font-weight: bold; color: #333;">
+                                                    <p:inplace editor="true">
+                                                        <p:inputText value="#{node.name}" required="true" style="font-size: 13px; font-weight: bold;"
+                                                                     onkeydown="if(event.keyCode === 13) { $(this).closest('.ui-inplace').find('.ui-inplace-save').click(); return false; }"/>
+                                                        <p:ajax event="save" listener="#{projectController.savePartName(node)}"/>
+                                                    </p:inplace>
+                                                </div>
                                                 <div style="font-size: 11px; color: #555;">#{node.shapeName}</div>
                                                 <h:panelGroup rendered="#{node.quoted and node.rawMaterial != null}">
                                                     <div style="font-size: 10px; color: #666;">#{node.rawMaterial.name}</div>
+                                                </h:panelGroup>
+                                                <h:panelGroup rendered="#{node.shapeKey == 'SHEET_METAL_FLAT' or node.shapeKey == 'SHEET_METAL_FOLDED'}">
+                                                    <div style="font-size: 10px; color: #888;">Thickness: #{node.part.thickness} mm</div>
                                                 </h:panelGroup>
                                                 <div style="font-size: 10px; color: #888;">Qty: #{node.quantity}</div>
                                                 <h:panelGroup rendered="#{node.quoted}">
@@ -388,7 +403,7 @@
                                                                oncomplete="clearViewer()"
                                                                style="display: inline-block; margin-top: 5px; color: #c00; font-size: 14px; cursor: pointer;"
                                                                title="Remove part from project">
-                                                    &#128465; Remove
+                                                    &#128465;
                                                 </p:commandLink>
                                             </div>
                                         </div>

@@ -196,6 +196,8 @@ public class QuotingEngine implements Serializable {
 
     /**
      * Find sheet metal materials that can accommodate the part's flat pattern.
+     * First tries exact thickness match with fitting dimensions.
+     * Falls back to closest dimensional match if no exact match found.
      */
     private List<Product> findSheetMetalMaterials(Part part) {
         BigDecimal thickness = part.getThickness();
@@ -224,8 +226,15 @@ public class QuotingEngine implements Serializable {
             length = temp;
         }
 
+        final BigDecimal targetWidth = width;
+        final BigDecimal targetLength = length;
+        final BigDecimal targetThickness = thickness;
+
+        System.out.println("findSheetMetalMaterials: width=" + width + ", length=" + length + ", thickness=" + thickness);
+
         try {
-            return em.createQuery(
+            // First try: exact thickness match with dimensions that fit
+            List<Product> results = em.createQuery(
                 "SELECT p FROM Product p " +
                 "JOIN p.categories shape " +
                 "JOIN p.properties w " +
@@ -244,10 +253,85 @@ public class QuotingEngine implements Serializable {
                 .setParameter("thickness", thickness.setScale(2, RoundingMode.HALF_UP))
                 .setMaxResults(10)
                 .getResultList();
+
+            System.out.println("Found " + results.size() + " sheet metal materials with exact match");
+
+            // Fallback: if no exact match, find all sheet metals and sort by closest dimensions
+            if (results.isEmpty()) {
+                System.out.println("No exact match found, falling back to closest dimensional match");
+                results = em.createQuery(
+                    "SELECT DISTINCT p FROM Product p " +
+                    "JOIN p.categories shape " +
+                    "WHERE shape.key = 'SHEET_METAL_FLAT' OR shape.key = 'SHEET_METAL_FOLDED'", Product.class)
+                    .getResultList();
+
+                System.out.println("Found " + results.size() + " total sheet metal materials");
+
+                // Sort by closest dimensional match (thickness weighted heavily)
+                results.sort((p1, p2) -> {
+                    BigDecimal diff1 = calculateSheetMetalDimensionDiff(p1, targetWidth, targetLength, targetThickness);
+                    BigDecimal diff2 = calculateSheetMetalDimensionDiff(p2, targetWidth, targetLength, targetThickness);
+                    return diff1.compareTo(diff2);
+                });
+
+                if (results.size() > 10) {
+                    results = results.subList(0, 10);
+                }
+            }
+
+            if (!results.isEmpty()) {
+                Product best = results.get(0);
+                System.out.println("Best match: " + best.getName() +
+                    " (W=" + getPropertyValue(best, "WIDTH") +
+                    ", L=" + getPropertyValue(best, "LENGTH") +
+                    ", T=" + getPropertyValue(best, "THICKNESS") + ")");
+            }
+
+            return results;
         } catch (Exception e) {
             System.err.println("Error finding sheet metal materials: " + e.getMessage());
+            e.printStackTrace();
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * Calculate dimension difference for sheet metal, considering both orientations.
+     * Thickness is weighted heavily (10x) since it's critical for manufacturing.
+     */
+    private BigDecimal calculateSheetMetalDimensionDiff(Product product, BigDecimal targetWidth, BigDecimal targetLength, BigDecimal targetThickness) {
+        BigDecimal w = getPropertyValue(product, "WIDTH");
+        BigDecimal l = getPropertyValue(product, "LENGTH");
+        BigDecimal t = getPropertyValue(product, "THICKNESS");
+
+        if (w == null) w = BigDecimal.ZERO;
+        if (l == null) l = BigDecimal.ZERO;
+        if (t == null) t = BigDecimal.ZERO;
+
+        // Calculate how much the part exceeds the material dimensions (penalty for not fitting)
+        // Or how much waste there is (smaller penalty for oversized material)
+        BigDecimal widthDiff = targetWidth.subtract(w).max(BigDecimal.ZERO).multiply(new BigDecimal("2"))  // Penalty if part doesn't fit
+            .add(w.subtract(targetWidth).max(BigDecimal.ZERO));  // Smaller penalty for waste
+
+        BigDecimal lengthDiff = targetLength.subtract(l).max(BigDecimal.ZERO).multiply(new BigDecimal("2"))
+            .add(l.subtract(targetLength).max(BigDecimal.ZERO));
+
+        // Try swapped orientation (width <-> length)
+        BigDecimal widthDiff2 = targetWidth.subtract(l).max(BigDecimal.ZERO).multiply(new BigDecimal("2"))
+            .add(l.subtract(targetWidth).max(BigDecimal.ZERO));
+
+        BigDecimal lengthDiff2 = targetLength.subtract(w).max(BigDecimal.ZERO).multiply(new BigDecimal("2"))
+            .add(w.subtract(targetLength).max(BigDecimal.ZERO));
+
+        // Use better orientation
+        BigDecimal dimDiff1 = widthDiff.add(lengthDiff);
+        BigDecimal dimDiff2 = widthDiff2.add(lengthDiff2);
+        BigDecimal dimDiff = dimDiff1.compareTo(dimDiff2) <= 0 ? dimDiff1 : dimDiff2;
+
+        // Thickness difference is weighted 10x more heavily
+        BigDecimal thicknessDiff = targetThickness.subtract(t).abs().multiply(BigDecimal.TEN);
+
+        return dimDiff.add(thicknessDiff);
     }
 
     /**

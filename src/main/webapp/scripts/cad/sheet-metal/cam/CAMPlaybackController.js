@@ -26,11 +26,43 @@ export class CAMPlaybackController {
         this._stepProgress = 0;
         this._animating = false;
         this._colorsEnabled = false;
+        this._toolsVisible = true;  // Tools are visible by default
         this._unfoldMode = false;  // true = start folded, unfold; false = start flat, fold
+        this._presentationMode = false;  // When true, no symmetry compensation (base flange stays fixed)
 
         // Callbacks
         this.onStepChange = null;
         this.onProgressChange = null;
+        this.onToolsVisibilityChange = null;
+        this.onStateReady = null;  // Called after all state setup is complete (including fold mode hinge unfold)
+        this.onPresentationUpdate = null;  // Called immediately after hinge update in presentation mode
+        this.onPresentationHingeUpdate = null;  // Called to update hinge in presentation mode (bendId, progress) => void
+        this.onPresentationBegin = null;  // Called before batch hinge updates in presentation mode (hide part)
+        this.onPresentationEnd = null;  // Called after batch hinge updates in presentation mode (show part)
+    }
+
+    /**
+     * Check if tools are currently visible
+     * @returns {boolean}
+     */
+    getToolsVisible() {
+        return this._toolsVisible;
+    }
+
+    /**
+     * Set presentation mode (no symmetry compensation, base flange stays fixed)
+     * @param {boolean} enabled - Whether presentation mode is enabled
+     */
+    setPresentationMode(enabled) {
+        this._presentationMode = enabled;
+    }
+
+    /**
+     * Check if presentation mode is enabled
+     * @returns {boolean}
+     */
+    getPresentationMode() {
+        return this._presentationMode;
     }
 
     /**
@@ -130,6 +162,9 @@ export class CAMPlaybackController {
 
                 <!-- Color Toggle -->
                 <button id="cam-btn-colors" class="cam-ctrl-btn" title="Toggle Flange Colors">🎨</button>
+
+                <!-- Tools Toggle -->
+                <button id="cam-btn-tools" class="cam-ctrl-btn" title="Toggle Tools/Machine Parts" style="color: #4a9eff;">🔧</button>
 
                 <!-- Divider -->
                 <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.1); margin: 0 4px;"></div>
@@ -272,6 +307,23 @@ export class CAMPlaybackController {
         this._styleElement = style;
 
         document.body.appendChild(this.container);
+
+        // Add version label at bottom right
+        this._versionLabel = document.createElement('div');
+        this._versionLabel.id = 'cam-version-label';
+        this._versionLabel.textContent = 'MATERIAM CAM v0.1';
+        this._versionLabel.style.cssText = `
+            position: fixed;
+            bottom: 8px;
+            right: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.25);
+            z-index: 50;
+            pointer-events: none;
+            user-select: none;
+        `;
+        document.body.appendChild(this._versionLabel);
     }
 
     _createTimelineSteps() {
@@ -311,6 +363,21 @@ export class CAMPlaybackController {
                 this.sheetMetalPart.setFlangeColors(this._colorsEnabled);
             }
             colorBtn.style.color = this._colorsEnabled ? '#4a9eff' : '#ccc';
+        });
+
+        // Tools toggle
+        const toolsBtn = document.getElementById('cam-btn-tools');
+        toolsBtn?.addEventListener('click', () => {
+            this._toolsVisible = !this._toolsVisible;
+            if (this.camSimulation) {
+                this.camSimulation.setToolsVisible(this._toolsVisible);
+            }
+            toolsBtn.style.color = this._toolsVisible ? '#4a9eff' : '#ccc';
+
+            // Notify listener about tools visibility change
+            if (this.onToolsVisibilityChange) {
+                this.onToolsVisibilityChange(this._toolsVisible);
+            }
         });
 
         // Progress slider
@@ -372,6 +439,12 @@ export class CAMPlaybackController {
                 case 'End':
                     e.preventDefault();
                     this.goToStep(this.steps.length);
+                    break;
+                case 'a':
+                case 'A':
+                    e.preventDefault();
+                    // Animate all bends simultaneously
+                    this.playAllBendsSimultaneously();
                     break;
             }
         };
@@ -484,9 +557,11 @@ export class CAMPlaybackController {
         this._stepProgress = 0;
 
         // Set initial state based on mode
+        // In presentation mode, don't reset root transform
+        const shouldResetRoot = !this._presentationMode;
         if (this._unfoldMode) {
             // Unfold starts with everything folded
-            this.sheetMetalPart.foldAll();
+            this.sheetMetalPart.foldAll(shouldResetRoot);
         } else {
             // Fold starts with everything unfolded
             // Instead of rebuilding from scratch, just unfold all hinges
@@ -530,10 +605,28 @@ export class CAMPlaybackController {
         this._stepProgress = 0;
 
         if (this.currentStepIndex === 0) {
+            // In presentation mode, don't reset root transform
+            const shouldResetRoot = !this._presentationMode;
             if (this._unfoldMode) {
-                this.sheetMetalPart.foldAll();
+                // In presentation mode, hide part before updates
+                if (this._presentationMode && this.onPresentationBegin) {
+                    this.onPresentationBegin();
+                }
+
+                this.sheetMetalPart.foldAll(shouldResetRoot);
+
+                // In presentation mode, fix flange position and show part
+                if (this._presentationMode) {
+                    if (this.onPresentationUpdate) {
+                        this.onPresentationUpdate();
+                    }
+                    if (this.onPresentationEnd) {
+                        this.onPresentationEnd();
+                    }
+                }
             } else {
                 // Fold mode at step 0 should show fully unfolded with compensation
+                // (onPresentationBegin/End is called inside _unfoldAllWithCompensation)
                 this._unfoldAllWithCompensation();
             }
             this.camSimulation.setActiveStep(0);
@@ -546,21 +639,42 @@ export class CAMPlaybackController {
 
         // In fold mode, after partWorldTransform is applied, unfold the current hinge
         // WITH compensation to match what unfold mode would look like at end of animation
+        // (unless in presentation mode where we don't compensate)
         if (this._foldModeNeedsCurrentHingeUnfold && this._foldModeCurrentBendId !== undefined) {
-            // Use setUnfoldProgress WITH compensation (true) to match unfold mode end state
-            this.sheetMetalPart.setUnfoldProgress(this._foldModeCurrentBendId, 1, true);
+            // In presentation mode, hide part before this additional update
+            if (this._presentationMode && this.onPresentationBegin) {
+                this.onPresentationBegin();
+            }
+
+            const shouldCompensate = !this._presentationMode;
+            this.sheetMetalPart.setUnfoldProgress(this._foldModeCurrentBendId, 1, shouldCompensate);
             this._foldModeNeedsCurrentHingeUnfold = false;
             this._foldModeCurrentBendId = undefined;
 
             // Update CAM simulation to show tools at starting position (progress=0)
             // In fold mode, this means punch at home position ready for rapid approach
             this.camSimulation.setProgress(0, true);
+
+            // In presentation mode, fix flange position and show part
+            if (this._presentationMode) {
+                if (this.onPresentationUpdate) {
+                    this.onPresentationUpdate();
+                }
+                if (this.onPresentationEnd) {
+                    this.onPresentationEnd();
+                }
+            }
         }
 
         // Update slider to show starting position
         const progressSlider = document.getElementById('cam-progress-slider');
         if (progressSlider) {
             progressSlider.value = this._stepProgress * 100;
+        }
+
+        // Notify that all state setup is complete
+        if (this.onStateReady) {
+            this.onStateReady();
         }
     }
 
@@ -591,9 +705,22 @@ export class CAMPlaybackController {
 
         const actualStepIdx = this.steps[actualStep - 1];
 
+        // Determine if we should apply symmetry compensation
+        // In presentation mode, no compensation (base flange stays fixed)
+        const shouldCompensate = !this._presentationMode;
+
+        // In presentation mode, don't reset the root transform - just fold hinges
+        // This prevents any flashing from intermediate states
+        const shouldResetRoot = !this._presentationMode;
+
+        // In presentation mode, hide part before batch updates to prevent flashing
+        if (this._presentationMode && this.onPresentationBegin) {
+            this.onPresentationBegin();
+        }
+
         if (this._unfoldMode) {
             // Unfold mode: start folded, unfold completed steps with compensation
-            this.sheetMetalPart.foldAll();
+            this.sheetMetalPart.foldAll(shouldResetRoot);
 
             // Unfold completed steps in order, using setUnfoldProgress for proper compensation
             for (let i = 1; i < this.currentStepIndex; i++) {
@@ -601,7 +728,7 @@ export class CAMPlaybackController {
                 const stepIdx = this.steps[stepNum - 1];
                 const step = this.camSimulation.getStep(stepIdx);
                 if (step) {
-                    this.sheetMetalPart.setUnfoldProgress(step.bendId, 1);
+                    this.sheetMetalPart.setUnfoldProgress(step.bendId, 1, shouldCompensate);
                 }
             }
             // Current step hinge is at 0 (folded), will animate 0→1
@@ -620,15 +747,16 @@ export class CAMPlaybackController {
             // then unfold the current hinge WITHOUT compensation after partWorldTransform is applied.
             // We'll do this by setting a flag and handling it after _onCAMStepChanged.
             //
-            // Start from fully folded (resets root transform)
-            this.sheetMetalPart.foldAll();
+            // Start from fully folded (resets root transform only if not in presentation mode)
+            this.sheetMetalPart.foldAll(shouldResetRoot);
 
             // Unfold hinges 1..(actualStep-1) WITH compensation - same as unfold mode
+            // (unless in presentation mode)
             for (let i = 1; i < actualStep; i++) {
                 const stepIdx = this.steps[i - 1];
                 const step = this.camSimulation.getStep(stepIdx);
                 if (step) {
-                    this.sheetMetalPart.setUnfoldProgress(step.bendId, 1);
+                    this.sheetMetalPart.setUnfoldProgress(step.bendId, 1, shouldCompensate);
                 }
             }
             // Current hinge (actualStep) stays at 0 - same as unfold mode
@@ -642,6 +770,19 @@ export class CAMPlaybackController {
         // Set CAM tools to current step
         this.camSimulation.setActiveStep(actualStepIdx);
         this.camSimulation.setProgress(0, !this._unfoldMode);
+
+        // In presentation mode, fix flange position and show part
+        // IMPORTANT: In fold mode, DON'T show part yet - the current hinge is still folded
+        // and will be unfolded in goToStep. Showing it now would cause a flash.
+        if (this._presentationMode) {
+            if (this.onPresentationUpdate) {
+                this.onPresentationUpdate();
+            }
+            // Only show part if we're NOT waiting to unfold the current hinge
+            if (this.onPresentationEnd && !this._foldModeNeedsCurrentHingeUnfold) {
+                this.onPresentationEnd();
+            }
+        }
     }
 
     /**
@@ -650,16 +791,37 @@ export class CAMPlaybackController {
      * Uses the same code path as unfold mode to ensure identical results.
      */
     _unfoldAllWithCompensation() {
-        // Start from fully folded (this resets root transform)
-        this.sheetMetalPart.foldAll();
+        // Start from fully folded
+        // In presentation mode, don't reset root transform to prevent flashing
+        const shouldResetRoot = !this._presentationMode;
+
+        // In presentation mode, hide part before batch updates
+        if (this._presentationMode && this.onPresentationBegin) {
+            this.onPresentationBegin();
+        }
+
+        this.sheetMetalPart.foldAll(shouldResetRoot);
+
+        // Determine if we should apply symmetry compensation
+        const shouldCompensate = !this._presentationMode;
 
         // Unfold each step WITH compensation - use same pattern as unfold mode
+        // (unless in presentation mode)
         for (let i = 1; i <= this.steps.length; i++) {
             const stepIdx = this.steps[i - 1];
             const step = this.camSimulation.getStep(stepIdx);
             if (step) {
-                // Match unfold mode: no explicit compensate parameter (defaults to true)
-                this.sheetMetalPart.setUnfoldProgress(step.bendId, 1);
+                this.sheetMetalPart.setUnfoldProgress(step.bendId, 1, shouldCompensate);
+            }
+        }
+
+        // In presentation mode, fix flange position and show part
+        if (this._presentationMode) {
+            if (this.onPresentationUpdate) {
+                this.onPresentationUpdate();
+            }
+            if (this.onPresentationEnd) {
+                this.onPresentationEnd();
             }
         }
     }
@@ -707,7 +869,18 @@ export class CAMPlaybackController {
             // Apply compensation in BOTH modes to keep the part visually centered during animation.
             // In fold mode, we applied compensation when setting up the initial unfolded state,
             // so we need to continue applying it during animation for consistency.
-            this.sheetMetalPart.setUnfoldProgress(actualStepData.bendId, hingeProgress, true);
+            // In presentation mode, use special callback that hides/shows to prevent flashing.
+            if (this._presentationMode && this.onPresentationHingeUpdate) {
+                this.onPresentationHingeUpdate(actualStepData.bendId, hingeProgress);
+            } else {
+                const shouldCompensate = !this._presentationMode;
+                this.sheetMetalPart.setUnfoldProgress(actualStepData.bendId, hingeProgress, shouldCompensate);
+
+                // In presentation mode, immediately notify so the viewer can fix flange position
+                if (this._presentationMode && this.onPresentationUpdate) {
+                    this.onPresentationUpdate();
+                }
+            }
         }
 
         this.camSimulation.setProgress(this._stepProgress, !this._unfoldMode);
@@ -759,6 +932,142 @@ export class CAMPlaybackController {
     }
 
     /**
+     * Animate all bends simultaneously.
+     * In fold mode: all hinges fold from 1 to 0 together
+     * In unfold mode: all hinges unfold from 0 to 1 together
+     */
+    playAllBendsSimultaneously() {
+        // Stop any current animation
+        this.stop();
+
+        // Get all bend IDs from steps
+        const allBendIds = [];
+        for (let i = 0; i < this.steps.length; i++) {
+            const stepIdx = this.steps[i];
+            const step = this.camSimulation.getStep(stepIdx);
+            if (step && step.bendId !== undefined) {
+                allBendIds.push(step.bendId);
+            }
+        }
+
+        if (allBendIds.length === 0) return;
+
+        // Set initial state based on mode
+        const shouldResetRoot = !this._presentationMode;
+
+        // In presentation mode, hide part before setup
+        if (this._presentationMode && this.onPresentationBegin) {
+            this.onPresentationBegin();
+        }
+
+        if (this._unfoldMode) {
+            // Start folded
+            this.sheetMetalPart.foldAll(shouldResetRoot);
+        } else {
+            // Start unfolded - unfold all hinges
+            this.sheetMetalPart.foldAll(shouldResetRoot);
+            for (const bendId of allBendIds) {
+                this.sheetMetalPart.setUnfoldProgress(bendId, 1, !this._presentationMode);
+            }
+        }
+
+        // Fix flange in presentation mode
+        if (this._presentationMode) {
+            if (this.onPresentationUpdate) {
+                this.onPresentationUpdate();
+            }
+            if (this.onPresentationEnd) {
+                this.onPresentationEnd();
+            }
+        }
+
+        // Hide tools during simultaneous animation
+        this.camSimulation.setActiveStep(0);
+
+        // Start simultaneous animation
+        this._simultaneousBendIds = allBendIds;
+        this._simultaneousProgress = 0;
+        this._isPlayingSimultaneous = true;
+
+        let lastTime = performance.now();
+
+        const animateSimultaneous = (currentTime) => {
+            if (!this._isPlayingSimultaneous) return;
+
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            // Use same speed as regular playback
+            const progressIncrement = deltaTime / this.playbackSpeed;
+            this._simultaneousProgress += progressIncrement;
+
+            if (this._simultaneousProgress >= 1) {
+                this._simultaneousProgress = 1;
+                this._updateAllBendsProgress(1);
+                this._isPlayingSimultaneous = false;
+                return;
+            }
+
+            this._updateAllBendsProgress(this._simultaneousProgress);
+            this._simultaneousAnimationFrame = requestAnimationFrame(animateSimultaneous);
+        };
+
+        this._simultaneousAnimationFrame = requestAnimationFrame(animateSimultaneous);
+    }
+
+    /**
+     * Update all bends to the same progress value simultaneously
+     * @param {number} progress - Progress from 0 to 1
+     */
+    _updateAllBendsProgress(progress) {
+        if (!this._simultaneousBendIds || this._simultaneousBendIds.length === 0) return;
+
+        // Calculate hinge progress based on mode
+        let hingeProgress;
+        if (this._unfoldMode) {
+            // Unfold: 0 -> 1
+            hingeProgress = progress;
+        } else {
+            // Fold: 1 -> 0
+            hingeProgress = 1 - progress;
+        }
+
+        if (this._presentationMode) {
+            // In presentation mode, remove from scene, update all hinges, fix, then add back
+            const root = this.sheetMetalPart.getRoot();
+            const partParent = root.parent;
+            if (partParent) {
+                partParent.remove(root);
+            }
+
+            // Update all hinges without compensation
+            for (const bendId of this._simultaneousBendIds) {
+                this.sheetMetalPart.setUnfoldProgress(bendId, hingeProgress, false);
+            }
+
+            // Fix flange position
+            if (this.onPresentationUpdate) {
+                this.onPresentationUpdate();
+            }
+
+            // Add back to scene (onPresentationUpdate may have already done this via _fixLargestFlangeInPlace)
+            if (!root.parent && partParent) {
+                partParent.add(root);
+            }
+        } else {
+            // Normal mode with compensation
+            for (const bendId of this._simultaneousBendIds) {
+                this.sheetMetalPart.setUnfoldProgress(bendId, hingeProgress, true);
+            }
+        }
+
+        // Notify progress change
+        if (this.onProgressChange) {
+            this.onProgressChange(progress);
+        }
+    }
+
+    /**
      * Start playback
      */
     play() {
@@ -792,7 +1101,19 @@ export class CAMPlaybackController {
     stop() {
         this.isPlaying = false;
         this._stopAnimation();
+        this._stopSimultaneousAnimation();
         this._updateDisplay();
+    }
+
+    /**
+     * Stop simultaneous bend animation
+     */
+    _stopSimultaneousAnimation() {
+        this._isPlayingSimultaneous = false;
+        if (this._simultaneousAnimationFrame) {
+            cancelAnimationFrame(this._simultaneousAnimationFrame);
+            this._simultaneousAnimationFrame = null;
+        }
     }
 
     _startAnimation() {
@@ -834,6 +1155,35 @@ export class CAMPlaybackController {
                         this._applyFullState();
                         this._updateDisplay();
                         this._notifyStepChange();
+
+                        // In fold mode, unfold the current hinge (same as in goToStep)
+                        if (this._foldModeNeedsCurrentHingeUnfold && this._foldModeCurrentBendId !== undefined) {
+                            if (this._presentationMode && this.onPresentationBegin) {
+                                this.onPresentationBegin();
+                            }
+
+                            const shouldCompensate = !this._presentationMode;
+                            this.sheetMetalPart.setUnfoldProgress(this._foldModeCurrentBendId, 1, shouldCompensate);
+                            this._foldModeNeedsCurrentHingeUnfold = false;
+                            this._foldModeCurrentBendId = undefined;
+
+                            this.camSimulation.setProgress(0, true);
+
+                            if (this._presentationMode) {
+                                if (this.onPresentationUpdate) {
+                                    this.onPresentationUpdate();
+                                }
+                                if (this.onPresentationEnd) {
+                                    this.onPresentationEnd();
+                                }
+                            }
+                        }
+
+                        // Call onStateReady after state transition
+                        if (this.onStateReady) {
+                            this.onStateReady();
+                        }
+
                         this._startAnimation();
                     } else {
                         // Finished all steps
@@ -893,6 +1243,11 @@ export class CAMPlaybackController {
         if (this.container) {
             this.container.remove();
             this.container = null;
+        }
+
+        if (this._versionLabel) {
+            this._versionLabel.remove();
+            this._versionLabel = null;
         }
     }
 }

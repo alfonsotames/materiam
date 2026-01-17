@@ -533,6 +533,22 @@ export class CAMSimulation {
     }
 
     /**
+     * Set visibility of all tools and machine parts
+     * @param {boolean} visible - Whether tools should be visible
+     */
+    setToolsVisible(visible) {
+        this.container.visible = visible;
+    }
+
+    /**
+     * Get current tools visibility
+     * @returns {boolean}
+     */
+    getToolsVisible() {
+        return this.container.visible;
+    }
+
+    /**
      * Get the hierarchy data
      */
     getHierarchy() {

@@ -12,47 +12,622 @@
     <ui:define name="headscripts">
 
         <style type="text/css">
-            /* Compact PrimeFaces tree - reduce indentation */
-            #formparts .ui-tree {
+            /* ========== Dark Glassmorphic Theme ========== */
+
+            /* Main info panel */
+            #info {
+                background: rgba(20, 20, 25, 0.92);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border-radius: 5px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                overflow: hidden;
+            }
+
+            /* Project name header */
+            .panel-header {
+                background: rgba(255, 255, 255, 0.03);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                padding: 14px 16px;
+            }
+            .panel-header .ui-inplace-display {
+                color: #ffffff !important;
+                font-size: 20px !important;
+                font-weight: 600 !important;
+            }
+            .panel-header .ui-inplace-content input {
+                background: rgba(255, 255, 255, 0.1) !important;
+                border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                color: #ffffff !important;
+                border-radius: 6px !important;
+                padding: 6px 10px !important;
+            }
+
+            /* Dropzone section */
+            .dropzone-section {
+                background: rgba(255, 255, 255, 0.02);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                padding: 12px;
+            }
+            .dropzone-box {
+                border: 1px dashed rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                padding: 12px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                transition: border-color 0.2s, background 0.2s;
+            }
+            .dropzone-box:hover {
+                border-color: rgba(74, 158, 255, 0.4);
+                background: rgba(74, 158, 255, 0.05);
+            }
+            .dropzone-text {
+                color: #888;
+                font-size: 12px;
+            }
+
+            /* Section headers */
+            .section-header {
+                background: rgba(74, 158, 255, 0.1);
+                color: #4a9eff;
+                padding: 8px 12px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            /* View toggle switch */
+            .view-toggle {
+                display: flex;
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            .view-toggle-btn {
+                background: transparent;
+                border: none;
+                color: #666;
+                padding: 4px 10px;
+                font-size: 10px;
+                cursor: pointer;
+                transition: all 0.15s;
+                text-transform: uppercase;
+            }
+            .view-toggle-btn:hover {
+                color: #aaa;
+            }
+            .view-toggle-btn.active {
+                background: rgba(74, 158, 255, 0.3);
+                color: #4a9eff;
+            }
+
+            /* BOM Table */
+            .bom-container {
+                max-height: 50vh;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            .bom-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+            }
+            .bom-table th {
+                background: rgba(255, 255, 255, 0.05);
+                color: #888;
+                padding: 6px 8px;
+                text-align: left;
+                font-weight: 500;
+                text-transform: uppercase;
+                font-size: 9px;
+                letter-spacing: 0.3px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            }
+            .bom-table td {
+                padding: 8px;
+                color: #ccc;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+                vertical-align: middle;
+            }
+            .bom-table tr:hover td {
+                background: rgba(255, 255, 255, 0.03);
+            }
+            .bom-table .bom-name {
+                color: #fff;
+                font-weight: 500;
+                max-width: 80px;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+            .bom-table .bom-qty {
+                text-align: center;
+                color: #4a9eff;
+                font-weight: 600;
+            }
+            .bom-table .bom-price {
+                text-align: right;
+                color: #4CAF50;
+                font-weight: 600;
+            }
+            .bom-table .bom-material {
+                color: #888;
+                font-size: 9px;
+                margin-top: 2px;
+            }
+            .bom-thumb {
+                width: 40px;
+                height: 40px;
+                border-radius: 4px;
+                overflow: hidden;
+                background: rgba(0, 0, 0, 0.3);
+            }
+            .bom-thumb img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .bom-price-edit .ui-inplace-display {
+                color: #4CAF50 !important;
+                cursor: pointer;
+                padding: 2px 4px;
+                border-radius: 3px;
+                transition: background 0.15s;
+            }
+            .bom-price-edit .ui-inplace-display:hover {
+                background: rgba(76, 175, 80, 0.15);
+            }
+            .bom-price-edit .ui-inplace-content input {
+                background: rgba(255, 255, 255, 0.1) !important;
+                border: 1px solid rgba(76, 175, 80, 0.3) !important;
+                color: #4CAF50 !important;
+                border-radius: 3px !important;
+                padding: 2px 6px !important;
+                font-size: 11px !important;
+                width: 70px !important;
+                text-align: right;
+            }
+            .bom-price-edit .ui-inplace-content .ui-button {
+                background: rgba(76, 175, 80, 0.3) !important;
+                border: none !important;
+                border-radius: 3px !important;
+                width: 20px !important;
+                height: 20px !important;
+                min-width: 20px !important;
+                cursor: pointer !important;
+                margin-left: 2px !important;
+            }
+            .bom-price-edit .ui-inplace-content .ui-button:hover {
+                background: rgba(76, 175, 80, 0.5) !important;
+            }
+
+            /* Tree container */
+            .tree-container {
+                background: transparent;
+                max-height: 50vh;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 0;
+                margin: 0;
+            }
+            .tree-container::-webkit-scrollbar {
+                width: 6px;
+            }
+            .tree-container::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.02);
+            }
+            .tree-container::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 3px;
+            }
+            .tree-container::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            /* Custom tree styles */
+            .tree-node {
+                transition: margin-left 0.15s ease;
+                position: relative;
+            }
+            .tree-toggle.ui-button {
+                position: absolute !important;
+                top: 8px !important;
+                right: 8px !important;
+                width: 24px !important;
+                height: 24px !important;
+                min-width: 24px !important;
                 padding: 0 !important;
+                color: #4a9eff !important;
+                cursor: pointer !important;
+                border-radius: 3px !important;
+                transition: background 0.15s !important;
+                z-index: 10 !important;
+                background: transparent !important;
+                border: none !important;
+                font-size: 12px !important;
             }
-            #formparts .ui-tree .ui-treenode {
+            .tree-toggle.ui-button:hover {
+                background: rgba(74, 158, 255, 0.2) !important;
+            }
+            .tree-toggle.ui-button .ui-button-text {
                 padding: 0 !important;
+                line-height: 24px !important;
             }
-            #formparts .ui-tree .ui-treenode-children {
-                padding-left: 8px !important;
+
+            /* Node rows - compact list style */
+            .node-row {
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 4px 4px 4px 4px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+                transition: background 0.15s;
             }
-            #formparts .ui-tree .ui-treenode-content {
-                padding: 2px 0 !important;
+            .node-row:hover {
+                background: rgba(255, 255, 255, 0.04);
             }
-            #formparts .ui-tree .ui-tree-toggler {
-                margin-right: 2px !important;
+            .node-thumb {
+                width: 144px;
+                height: 144px;
+                border-radius: 4px;
+                overflow: hidden;
+                background: rgba(0, 0, 0, 0.3);
+                flex-shrink: 0;
             }
-            /* Compact PrimeFaces selectOneMenu styling */
+            .node-thumb img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                cursor: pointer;
+                transition: opacity 0.15s;
+            }
+            .node-thumb img:hover {
+                opacity: 0.8;
+            }
+            .node-info {
+                flex: 1;
+                min-width: 0;
+            }
+            .node-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+            }
+            .node-table td {
+                padding: 1px 0;
+                vertical-align: top;
+            }
+            .node-table .label {
+                color: #666;
+                width: 55px;
+                white-space: nowrap;
+            }
+            .node-table .value {
+                color: #ccc;
+            }
+            .node-name {
+                color: #ffffff;
+                font-size: 12px;
+                font-weight: 500;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                display: block;
+            }
+            .node-name .ui-inplace {
+                display: block;
+                margin-left: 0;
+                max-width: 100%;
+            }
+            .node-name .ui-inplace-display {
+                display: block;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color: #ffffff !important;
+                cursor: pointer;
+                padding-left: 0 !important;
+            }
+            .node-tags {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-wrap: wrap;
+                margin-top: 2px;
+            }
+            .node-tags > * {
+                display: inline-flex;
+                align-items: center;
+            }
+            .node-material-name {
+                color: #888;
+                font-size: 9px;
+                margin-top: 1px;
+            }
+            .node-name .ui-inplace-content input {
+                background: rgba(255, 255, 255, 0.1) !important;
+                border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                color: #ffffff !important;
+                border-radius: 3px !important;
+                padding: 2px 6px !important;
+                font-size: 11px !important;
+                width: 100px !important;
+            }
+            .node-name .ui-inplace-content .ui-button {
+                background: rgba(74, 158, 255, 0.3) !important;
+                border: none !important;
+                border-radius: 3px !important;
+                width: 20px !important;
+                height: 20px !important;
+                min-width: 20px !important;
+                cursor: pointer !important;
+                margin-left: 2px !important;
+            }
+            .node-name .ui-inplace-content .ui-button:hover {
+                background: rgba(74, 158, 255, 0.5) !important;
+            }
+            .node-name .ui-inplace-content .ui-button .ui-icon {
+                color: #fff !important;
+            }
+            .node-badge {
+                font-size: 8px;
+                padding: 1px 4px;
+                border-radius: 2px;
+                background: rgba(74, 158, 255, 0.2);
+                color: #4a9eff;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                margin-left: 4px;
+            }
+            .node-badge.part {
+                background: rgba(76, 175, 80, 0.2);
+                color: #4CAF50;
+            }
+            .node-price {
+                color: #4CAF50;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .node-price.assembly {
+                color: #4a9eff;
+            }
+            .node-price-detail {
+                color: #888;
+                font-size: 10px;
+                font-weight: normal;
+            }
+            .node-actions {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                margin-top: 2px;
+            }
+
+            /* Delete button */
+            .delete-btn {
+                color: rgba(255, 100, 100, 0.4) !important;
+                font-size: 14px !important;
+                padding: 4px;
+                border-radius: 3px;
+                transition: color 0.15s, background 0.15s;
+                text-decoration: none !important;
+                flex-shrink: 0;
+            }
+            .delete-btn:hover {
+                color: #ff6b6b !important;
+                background: rgba(255, 100, 100, 0.1);
+            }
+
+            /* Simulation button - compact */
+            .sim-btn {
+                background: rgba(76, 175, 80, 0.2);
+                color: #4CAF50;
+                border: none;
+                border-radius: 3px;
+                padding: 2px 6px;
+                font-size: 9px;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+            .sim-btn:hover {
+                background: rgba(76, 175, 80, 0.3);
+            }
+            .sim-btn-disabled {
+                background: rgba(255, 255, 255, 0.05);
+                color: #555;
+                cursor: default;
+            }
+            .sim-btn-disabled:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            /* Weld button */
+            .weld-btn {
+                background: rgba(255, 152, 0, 0.2);
+                color: #ff9800;
+                border: none;
+                border-radius: 3px;
+                padding: 2px 6px;
+                font-size: 9px;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+            .weld-btn:hover {
+                background: rgba(255, 152, 0, 0.35);
+            }
+            .weld-btn.active {
+                background: rgba(255, 152, 0, 0.5);
+                box-shadow: 0 0 8px rgba(255, 152, 0, 0.4);
+            }
+
+            /* Simulation status indicators */
+            .sim-status {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 9px;
+                padding: 2px 6px;
+                border-radius: 3px;
+                margin-left: 4px;
+            }
+            .sim-status.infeasible {
+                background: rgba(255, 82, 82, 0.2);
+                color: #ff5252;
+                border: 1px solid rgba(255, 82, 82, 0.3);
+            }
+            .sim-status.warnings {
+                background: rgba(255, 193, 7, 0.2);
+                color: #ffc107;
+                border: 1px solid rgba(255, 193, 7, 0.3);
+            }
+            .sim-status.ok {
+                background: rgba(76, 175, 80, 0.2);
+                color: #4CAF50;
+                border: 1px solid rgba(76, 175, 80, 0.3);
+            }
+            .sim-status-icon {
+                font-size: 10px;
+            }
+
+            /* Tooltip for warnings */
+            .warning-tooltip {
+                position: relative;
+                cursor: help;
+            }
+            .warning-tooltip:hover::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                left: 0;
+                top: 100%;
+                background: rgba(30, 30, 35, 0.98);
+                border: 1px solid rgba(255, 193, 7, 0.3);
+                border-radius: 4px;
+                padding: 6px 8px;
+                font-size: 10px;
+                color: #ccc;
+                white-space: pre-wrap;
+                max-width: 250px;
+                z-index: 1000;
+                margin-top: 4px;
+            }
+
+            /* Compact dropdown styling */
             .compact-dropdown.ui-selectonemenu {
-                min-width: 90px !important;
-                max-width: 110px !important;
-                height: 22px !important;
+                min-width: 70px !important;
+                max-width: 90px !important;
+                height: 18px !important;
+                background: rgba(255, 255, 255, 0.06) !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                border-radius: 3px !important;
             }
             .compact-dropdown .ui-selectonemenu-label {
-                padding: 2px 4px !important;
+                padding: 1px 4px !important;
                 font-size: 9px !important;
-                line-height: 16px !important;
+                line-height: 14px !important;
+                color: #aaa !important;
+                background: transparent !important;
             }
             .compact-dropdown .ui-selectonemenu-trigger {
-                width: 18px !important;
-                height: 20px !important;
+                width: 16px !important;
+                height: 16px !important;
+                background: rgba(255, 255, 255, 0.03) !important;
+                border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
             }
             .compact-dropdown .ui-selectonemenu-trigger .ui-icon {
-                margin-top: 2px !important;
+                margin-top: 1px !important;
+                color: #666 !important;
             }
-            /* Panel styling for the dropdown items */
+
+            /* Dropdown panel */
+            .ui-selectonemenu-panel {
+                background: rgba(30, 30, 35, 0.98) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                border-radius: 6px !important;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+            }
             .ui-selectonemenu-panel .ui-selectonemenu-items-wrapper {
                 max-height: 150px !important;
             }
             .ui-selectonemenu-panel .ui-selectonemenu-item {
-                padding: 3px 6px !important;
-                font-size: 10px !important;
+                padding: 6px 10px !important;
+                font-size: 11px !important;
+                color: #ccc !important;
+                background: transparent !important;
+            }
+            .ui-selectonemenu-panel .ui-selectonemenu-item:hover {
+                background: rgba(74, 158, 255, 0.15) !important;
+                color: #fff !important;
+            }
+            .ui-selectonemenu-panel .ui-selectonemenu-item.ui-state-highlight {
+                background: rgba(74, 158, 255, 0.25) !important;
+                color: #fff !important;
+            }
+
+            /* Quote totals section */
+            .quote-totals {
+                background: rgba(255, 255, 255, 0.02);
+                border-top: 1px solid rgba(255, 255, 255, 0.06);
+                padding: 12px 16px;
+            }
+            .quote-row {
+                display: flex;
+                justify-content: space-between;
+                color: #aaa;
+                font-size: 12px;
+                margin-bottom: 6px;
+            }
+            .quote-row span:last-child {
+                color: #ccc;
+            }
+
+            /* Grand total section */
+            .grand-total {
+                background: linear-gradient(135deg, rgba(74, 158, 255, 0.1), rgba(74, 158, 255, 0.05));
+                border-top: 1px solid rgba(74, 158, 255, 0.2);
+                padding: 14px 16px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .grand-total-label {
+                color: #888;
+                font-size: 14px;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .grand-total-value {
+                color: #4a9eff;
+                font-size: 22px;
+                font-weight: 700;
+            }
+
+            /* File upload styling */
+            .dropzone-section .ui-fileupload {
+                display: none;
+            }
+
+            /* PrimeFaces inplace editor buttons */
+            .ui-inplace-editor .ui-button {
+                background: rgba(74, 158, 255, 0.2) !important;
+                border: none !important;
+                border-radius: 4px !important;
+                margin-left: 4px !important;
+            }
+            .ui-inplace-editor .ui-button:hover {
+                background: rgba(74, 158, 255, 0.3) !important;
+            }
+            .ui-inplace-editor .ui-button .ui-icon {
+                color: #4a9eff !important;
             }
         </style>
 
@@ -67,12 +642,14 @@
 
         <script type="module">
             import { SheetMetalViewer } from '#{request.contextPath}/scripts/cad/sheet-metal/index.js';
+            import { WeldingMode } from '#{request.contextPath}/scripts/cad/welding/index.js';
             import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
             import * as THREE from 'three';
 
             let viewer = null;
             let gltfLoader = null;
             let currentModel = null;
+            let weldingMode = null;
 
             // Initialize the viewer when DOM is ready
             document.addEventListener('DOMContentLoaded', function() {
@@ -86,9 +663,47 @@
                 gltfLoader = new GLTFLoader();
                 window.cadViewer = viewer;
 
+                // Initialize welding mode
+                weldingMode = new WeldingMode(viewer);
+                window.weldingMode = weldingMode;
+
+                // Toggle welding mode for an assembly
+                window.toggleWeldingMode = function(assemblyPersid, cadfileUuid) {
+                    if (weldingMode) {
+                        // Store for callback
+                        window._weldingParams = { assemblyPersid, cadfileUuid };
+                        // Fetch instance data from server
+                        fetchWeldingData([
+                            {name: 'assemblyPersid', value: assemblyPersid},
+                            {name: 'cadfileUuid', value: cadfileUuid}
+                        ]);
+                    }
+                };
+
+                // Handle welding data response from server
+                window.handleWeldingData = function(args) {
+                    if (args.instances &amp;&amp; window._weldingParams) {
+                        const instances = JSON.parse(args.instances);
+                        const weldInterfaces = args.weldInterfaces ? JSON.parse(args.weldInterfaces) : null;
+                        console.log('Received instances:', instances.length);
+                        console.log('Received weld interfaces:', weldInterfaces);
+                        weldingMode.activateWithInstances(
+                            window._weldingParams.assemblyPersid,
+                            window._weldingParams.cadfileUuid,
+                            instances,
+                            weldInterfaces
+                        );
+                    }
+                };
+
                 // Load GLB file into the viewer
                 window.loadGLB = function(url) {
                     if (!viewer) return;
+
+                    // Exit welding mode if active
+                    if (weldingMode &amp;&amp; weldingMode.active) {
+                        weldingMode.deactivate();
+                    }
 
                     // Clear previous model
                     if (currentModel) {
@@ -132,7 +747,7 @@
                             }
                         },
                         (err) => {
-                            console.error('Error loading GLB:', err);
+                            console.error('Error loading GLB: ',url, err);
                         }
                     );
                 };
@@ -157,6 +772,11 @@
                 window.clearViewer = function() {
                     if (!viewer) return;
 
+                    // Exit welding mode if active
+                    if (weldingMode &amp;&amp; weldingMode.active) {
+                        weldingMode.deactivate();
+                    }
+
                     // Clear GLB model
                     if (currentModel) {
                         viewer.getScene().remove(currentModel);
@@ -174,6 +794,23 @@
         </script>
 
         <c:choose>
+            <!-- Priority: Load last uploaded part if available -->
+            <c:when test="#{not empty projectController.lastUploadedGlbUrl}">
+                <script type="text/javascript">
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var lastUploadedUrl = '#{request.contextPath}/#{projectController.lastUploadedGlbUrl}';
+                        function tryLoadGLB() {
+                            if (typeof window.loadGLB === 'function') {
+                                window.loadGLB(lastUploadedUrl);
+                            } else {
+                                setTimeout(tryLoadGLB, 100);
+                            }
+                        }
+                        setTimeout(tryLoadGLB, 100);
+                    });
+                </script>
+                <ui:fragment rendered="#{projectController.clearLastUploaded() == null}"/>
+            </c:when>
             <c:when test="#{projectController.activeProject != null and not empty projectController.activeProject.cadfiles and projectController.activeProject.cadfiles[0].root != null}">
                 <script type="text/javascript">
                     document.addEventListener('DOMContentLoaded', function() {
@@ -217,233 +854,369 @@
 
 
     <ui:define name="content">
+        <script>
+            function dragging() {
+                const div = document.getElementById("statusimage");
+                div.style.backgroundImage = "url('images/plus.svg')";
+                div.style.opacity = "1";
+            }
+
+            function dragout() {
+                const div = document.getElementById("statusimage");
+                div.style.backgroundImage = "url('images/sheetmetal.png')";
+                div.style.opacity = "0.6";
+            }
+
+            function drop() {
+                const div = document.getElementById("statusimage");
+                div.style.backgroundImage = "url('images/spinner.svg')";
+                div.style.opacity = "1";
+            }
+        </script>
                     <div style="color: white; "><div id="viewport"  /></div>
-                    <div id="info" style="position: absolute;   position: absolute;  z-index: 10;
-                            top: 10px;
-                            left: 10px;
-                            padding: 0px; width: 430px; ">
-                        <h:form id="form" onkeypress="if (event.keyCode == 13) { saver(); event.preventDefault();}" style="margin-bottom: 0px;">
-                            <p:remoteCommand name="saver" actionListener="#{projectController.save()}" update="nombre"  />
-                            
-                            <div style="background-color: #dedede; padding-top: 9px; padding-bottom: 7px;  border-top-right-radius: 8px; border-top-left-radius: 8px; color: black;">
+                    <div id="info" style="position: absolute; z-index: 10; top: 20px; left: 20px; width: 420px;">
+                        <h:form id="form" onkeypress="if (event.keyCode == 13) { saver(); event.preventDefault();}" style="margin: 0;">
+                            <p:remoteCommand name="saver" actionListener="#{projectController.save()}" update="nombre" />
+                            <p:remoteCommand name="fetchWeldingData"
+                                             action="#{projectController.prepareWeldingData}"
+                                             oncomplete="handleWeldingData(args)"/>
 
-                                    <span style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
-                                        <p:inplace id="nombre" editor="true" rendered="#{projectController.activeProject != null}">
-                                            <p:inputText  value="#{projectController.activeProject.name}" required="true" label="text"/>
-
-                                            <p:ajax event="save" listener="#{projectController.saveName}" update="nombre"/>
-                                        </p:inplace>
-                                    </span>
+                            <div class="panel-header">
+                                <p:inplace id="nombre" editor="true" rendered="#{projectController.activeProject != null}">
+                                    <p:inputText value="#{projectController.activeProject.name}" required="true" label="text"/>
+                                    <p:ajax event="save" listener="#{projectController.saveName}" update="nombre"/>
+                                </p:inplace>
                                 <c:if test="#{projectController.activeProject == null}">
-                                    <span style="margin-left: 7px; font-family: Materiam; font-size: 14px;">CREATE A NEW PROJECT BY DROPPING FILES</span>
+                                    <span style="color: #888; font-size: 13px;">Drop files to create a new project</span>
                                 </c:if>
                             </div>
                         </h:form>
-                        <div ondragover="dragging()" ondragleave="dragout()" ondrop="drop()" style="background-color: #f0f0f0;  padding: 0px; ">
 
-
-                            <h:form id="dropzone"  enctype="multipart/form-data" style="margin-top: 0px; margin-bottom: 0px;">
+                        <div class="dropzone-section" ondragover="dragging()" ondragleave="dragout()" ondrop="drop()">
+                            <h:form id="dropzone" enctype="multipart/form-data" style="margin: 0;">
                                 <h:inputHidden id="wsid" value="#{userController.wsid}" />
-
-                                <div style=" padding: 5px; ">
-
-                                    
-                                    <div class="grid_two" style="border:1px dashed grey; margin-bottom: 5px;">    
-                                        <div id="statusimage"  style="background-image: url('images/sheetmetal.png'); 
-                                            width:80px; height:70px;
-
-                                            margin-left: 40px;
-                                            background-size:     80px 60px;                      
-                                            background-repeat:   no-repeat;
-                                            background-position: center center;  
-                                                ">
-
-                                            <div id="updates" style="align-content: center; width:100%"></div>
-                                        </div>
-                                        <div style="margin-top:10px;">Drag &amp; drop additional files to project.</div>
+                                <div class="dropzone-box">
+                                    <div id="statusimage" style="background-image: url('images/sheetmetal.png');
+                                         width: 50px; height: 40px;
+                                         background-size: contain;
+                                         background-repeat: no-repeat;
+                                         background-position: center;
+                                         opacity: 0.6;
+                                         flex-shrink: 0;">
+                                        <div id="updates"></div>
                                     </div>
-                                    <p:fileUpload listener="#{projectController.upload}"
-                                                  dropZone="dropzone"
-                                                  mode="advanced"
-                                                  auto="true" 
-                                                  multiple="true"
-                                                  process="@all @form wsid"
-                                                  >
-
-                                    </p:fileUpload>
-                                    <p:growl id="messages" showDetail="true" />   
-
+                                    <div class="dropzone-text">Drop additional CAD files here</div>
                                 </div>
-
-                            </h:form> 
-
+                                <p:fileUpload listener="#{projectController.uploadCadFile}"
+                                              dropZone="dropzone"
+                                              mode="advanced"
+                                              auto="true"
+                                              multiple="true"
+                                              process="@all @form wsid" />
+                                <p:growl id="messages" showDetail="true" />
+                            </h:form>
                         </div>              
                         
                         
-                        <h:form id="formparts" style="margin:0px;">
-                     
-                            <!-- Assembly/Parts Tree -->
-                            <div style="background-color: #5a5a5a; color: white; padding: 8px 12px; font-size: 14px; font-weight: bold;">
-                                Assembly Tree
+                        <h:form id="formparts" style="margin: 0;">
+                            <!-- View Toggle Header -->
+                            <div class="section-header">
+                                <span>#{projectController.bomViewActive ? 'Bill of Materials' : 'Assembly Tree'}</span>
+                                <div class="view-toggle">
+                                    <p:commandLink styleClass="view-toggle-btn #{!projectController.bomViewActive ? 'active' : ''}"
+                                                   action="#{projectController.setBomViewActive(false)}"
+                                                   update="formparts"
+                                                   process="@this">
+                                        Tree
+                                    </p:commandLink>
+                                    <p:commandLink styleClass="view-toggle-btn #{projectController.bomViewActive ? 'active' : ''}"
+                                                   action="#{projectController.setBomViewActive(true)}"
+                                                   update="formparts"
+                                                   process="@this">
+                                        BOM
+                                    </p:commandLink>
+                                </div>
                             </div>
-                            <div style="background-color: #e9e9e9; overflow-y: auto; overflow-x: hidden; max-height: 60vh; width: 100%;">
 
-                                <p:tree id="assemblyTree" value="#{projectController.assemblyTree}" var="node"
-                                       style="width:100%; border:none; box-sizing: border-box;">
-                                    <p:treeNode type="assembly">
-                                        <div style="display: flex; align-items: center; gap: 10px;">
-                                            <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 135px; background-color: white;">
-                                                <img style="width:130px; margin:2px; cursor: pointer; background-color: #ffffff;"
-                                                     src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}"
-                                                     onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}');"/>
-                                            </div>
-                                            <div style="flex: 1;">
-                                                <div style="font-size: 13px; font-weight: bold; color: #333;">
-                                                    <p:inplace editor="true">
-                                                        <p:inputText value="#{node.name}" required="true" style="font-size: 13px; font-weight: bold;"
-                                                                     onkeydown="if(event.keyCode === 13) { $(this).closest('.ui-inplace').find('.ui-inplace-save').click(); return false; }"/>
-                                                        <p:ajax event="save" listener="#{projectController.saveAssemblyName(node)}"/>
-                                                    </p:inplace>
+                            <!-- Custom Assembly Tree View -->
+                            <h:panelGroup id="assemblyTree" rendered="#{!projectController.bomViewActive}">
+                            <div class="tree-container">
+                                <ui:repeat value="#{projectController.flatTreeNodes}" var="node">
+                                    <h:panelGroup rendered="#{node.visible}">
+                                        <div class="tree-node">
+                                            <!-- Assembly Node -->
+                                            <h:panelGroup rendered="#{node.type == 'assembly'}">
+                                                <h:panelGroup rendered="#{node.hasChildren}">
+                                                    <p:commandButton styleClass="tree-toggle"
+                                                                     action="#{projectController.toggleNode(node.nodeId)}"
+                                                                     update=":formparts:assemblyTree"
+                                                                     process="@this"
+                                                                     value="#{node.expanded ? '▼' : '▶'}"/>
+                                                </h:panelGroup>
+                                                <div class="node-row">
+                                                    <div class="node-thumb">
+                                                        <img src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}"
+                                                             onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.assembly.persid}');"/>
+                                                    </div>
+                                                    <div class="node-info">
+                                                        <table class="node-table">
+                                                            <tr>
+                                                                <td colspan="2" class="value">
+                                                                    <span class="node-name">
+                                                                        <p:inplace editor="true">
+                                                                            <p:inputText value="#{node.data.name}" required="true"
+                                                                                         onkeydown="if(event.keyCode === 13) { $(this).closest('.ui-inplace').find('.ui-inplace-save').click(); return false; }"/>
+                                                                            <p:ajax event="save" listener="#{projectController.saveAssemblyName(node.data)}" update="@form"/>
+                                                                        </p:inplace>
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="value">
+                                                                    <div class="node-tags">
+                                                                        <span class="node-badge">asm</span>
+                                                                        <button type="button" class="weld-btn"
+                                                                                onclick="toggleWeldingMode('#{node.assembly.persid}', '#{node.cadfile.uuid}');"
+                                                                                title="Define welds for this assembly">&#9878; Weld</button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="label">Elements</td>
+                                                                <td class="value">#{projectController.getTotalElementCount(node.assembly)}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="label">Qty</td>
+                                                                <td class="value">#{node.quantity}</td>
+                                                            </tr>
+                                                            <h:panelGroup rendered="#{node.quoted and node.unitCost.doubleValue() > 0}">
+                                                                <tr>
+                                                                    <td class="label">Price</td>
+                                                                    <td class="value">
+                                                                        <span class="node-price assembly">
+                                                                            <h:outputText value="#{node.unitCost}"><f:convertNumber type="currency" currencySymbol="$" /></h:outputText>
+                                                                        </span>
+                                                                        <h:panelGroup rendered="#{node.quantity > 1}">
+                                                                            <span class="node-price-detail"> × #{node.quantity} = </span>
+                                                                            <span class="node-price assembly">
+                                                                                <h:outputText value="#{node.totalCost}"><f:convertNumber type="currency" currencySymbol="$" /></h:outputText>
+                                                                            </span>
+                                                                        </h:panelGroup>
+                                                                    </td>
+                                                                </tr>
+                                                            </h:panelGroup>
+                                                            <tr>
+                                                                <td class="label"></td>
+                                                                <td class="value">
+                                                                    <p:commandLink actionListener="#{projectController.deleteNode(node.data)}"
+                                                                                   process="@this"
+                                                                                   update=":formparts:assemblyTree :formparts:quoteTotals"
+                                                                                   oncomplete="clearViewer()"
+                                                                                   styleClass="delete-btn"
+                                                                                   title="Remove">
+                                                                        &#128465;
+                                                                    </p:commandLink>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
                                                 </div>
-                                                <div style="font-size: 11px; color: #888;">Assembly | Qty: #{node.quantity} | #{projectController.getTotalElementCount(node.assembly)} elements</div>
-                                                <h:panelGroup rendered="#{node.quoted and node.unitCost.doubleValue() > 0}">
-                                                    <div style="font-size: 10px; color: #666; margin-top: 3px;">Subtotal:</div>
-                                                    <div style="font-size: 14px; color: #2196F3; font-weight: bold;">
-                                                        <h:outputText value="#{node.unitCost}">
-                                                            <f:convertNumber type="currency" currencySymbol="$" />
-                                                        </h:outputText>
-                                                        <h:panelGroup rendered="#{node.quantity > 1}">
-                                                            <span style="font-size: 11px; color: #666;"> x #{node.quantity} = </span>
-                                                            <h:outputText value="#{node.totalCost}">
-                                                                <f:convertNumber type="currency" currencySymbol="$" />
-                                                            </h:outputText>
-                                                        </h:panelGroup>
-                                                    </div>
-                                                </h:panelGroup>
-                                                <h:panelGroup rendered="#{node.quoted and node.unitCost.doubleValue() == 0}">
-                                                    <div style="font-size: 11px; color: #999; margin-top: 3px;">No quotable parts</div>
-                                                </h:panelGroup>
-                                                <p:commandLink actionListener="#{projectController.deleteNode(node)}"
-                                                               process="@this"
-                                                               update=":formparts:assemblyTree :formparts:quoteTotals"
-                                                               oncomplete="clearViewer()"
-                                                               style="display: inline-block; margin-top: 5px; color: #c00; font-size: 14px; cursor: pointer;"
-                                                               title="Remove assembly from project">
-                                                    &#128465;
-                                                </p:commandLink>
-                                            </div>
-                                        </div>
-                                    </p:treeNode>
-                                    <p:treeNode type="part">
-                                        <div style="display: flex; align-items: center; gap: 10px;">
-                                            <div style="box-shadow: 1px 1px 4px 0px rgba(0, 0, 0, 0.2); width: 135px; background-color: white;">
-                                                <img style="width:130px; margin:2px; cursor: pointer; background-color: #ffffff;"
-                                                     src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}"
-                                                     onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}');"/>
-                                            </div>
-                                            <div style="flex: 1;">
-                                                <div style="font-size: 13px; font-weight: bold; color: #333;">
-                                                    <p:inplace editor="true">
-                                                        <p:inputText value="#{node.name}" required="true" style="font-size: 13px; font-weight: bold;"
-                                                                     onkeydown="if(event.keyCode === 13) { $(this).closest('.ui-inplace').find('.ui-inplace-save').click(); return false; }"/>
-                                                        <p:ajax event="save" listener="#{projectController.savePartName(node)}"/>
-                                                    </p:inplace>
-                                                </div>
-                                                <div style="font-size: 11px; color: #555;">#{node.shapeName}</div>
-                                                <h:panelGroup rendered="#{node.quoted and node.rawMaterial != null}">
-                                                    <div style="font-size: 10px; color: #666;">#{node.rawMaterial.name}</div>
-                                                </h:panelGroup>
-                                                <h:panelGroup rendered="#{node.shapeKey == 'SHEET_METAL_FLAT' or node.shapeKey == 'SHEET_METAL_FOLDED'}">
-                                                    <div style="font-size: 10px; color: #888;">Thickness: #{node.part.thickness} mm</div>
-                                                </h:panelGroup>
-                                                <div style="font-size: 10px; color: #888;">Qty: #{node.quantity}</div>
-                                                <h:panelGroup rendered="#{node.quoted}">
-                                                    <h:panelGroup rendered="#{not empty node.availableAlloys}">
-                                                        <p:selectOneMenu value="#{node.selectedAlloy}"
-                                                                         converter="CategoryConverter"
-                                                                         style="width: 100px; font-size: 9px;"
-                                                                         styleClass="compact-dropdown">
-                                                            <f:selectItems value="#{node.availableAlloys}" var="alloy"
-                                                                           itemLabel="#{alloy.name}" itemValue="#{alloy}" />
-                                                            <p:ajax listener="#{quotingEngine.changeAlloy(node)}"
-                                                                    update=":formparts:assemblyTree :formparts:quoteTotals" />
-                                                        </p:selectOneMenu>
-                                                    </h:panelGroup>
-                                                    <h:panelGroup rendered="#{empty node.availableAlloys}">
-                                                        <span style="font-size: 9px; color: #c00;">No materials</span>
-                                                    </h:panelGroup>
-                                                    <div style="font-size: 13px; color: #4CAF50; font-weight: bold;">
-                                                        <h:outputText value="#{node.unitCost}"><f:convertNumber type="currency" currencySymbol="$" /></h:outputText>
-                                                        <h:panelGroup rendered="#{node.quantity > 1}">
-                                                            <span style="font-size: 10px; color: #666;"> x #{node.quantity} = </span>
-                                                            <h:outputText value="#{node.totalCost}"><f:convertNumber type="currency" currencySymbol="$" /></h:outputText>
-                                                        </h:panelGroup>
-                                                    </div>
-                                                </h:panelGroup>
-                                                <h:panelGroup rendered="#{not node.quoted}">
-                                                    <div style="font-size: 11px; color: #999; margin-top: 2px;">
-                                                        Not quotable
-                                                    </div>
-                                                </h:panelGroup>
-                                                <h:panelGroup rendered="#{node.foldedSheetMetal and node.hasSimulation}">
-                                                    <button type="button"
-                                                            onclick="loadSimulation('#{request.contextPath}/simserver/#{node.simulationPath}');"
-                                                            style="margin-top: 5px; padding: 4px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
-                                                        &#9658; Play Bend Simulation
-                                                    </button>
-                                                </h:panelGroup>
-                                                <h:panelGroup rendered="#{node.foldedSheetMetal and not node.hasSimulation}">
-                                                    <span style="margin-top: 5px; padding: 4px 10px; background-color: #888; color: white; border: none; border-radius: 4px; font-size: 11px; display: inline-block;">
-                                                        Bend Simulation Unavailable
-                                                    </span>
-                                                </h:panelGroup>
-                                                <p:commandLink actionListener="#{projectController.deleteNode(node)}"
-                                                               process="@this"
-                                                               update=":formparts:assemblyTree :formparts:quoteTotals"
-                                                               oncomplete="clearViewer()"
-                                                               style="display: inline-block; margin-top: 5px; color: #c00; font-size: 14px; cursor: pointer;"
-                                                               title="Remove part from project">
-                                                    &#128465;
-                                                </p:commandLink>
-                                            </div>
-                                        </div>
-                                    </p:treeNode>
-                                </p:tree>
+                                            </h:panelGroup>
 
+                                            <!-- Part Node -->
+                                            <h:panelGroup rendered="#{node.type == 'part'}">
+                                                <div class="node-row">
+                                                    <div class="node-thumb">
+                                                        <img src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}"
+                                                             onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{node.cadfile.uuid}&amp;persid=#{node.part.persid}');"/>
+                                                    </div>
+                                                    <div class="node-info">
+                                                        <table class="node-table">
+                                                            <tr>
+                                                                <td colspan="2" class="value">
+                                                                    <span class="node-name">
+                                                                        <p:inplace editor="true">
+                                                                            <p:inputText value="#{node.data.name}" required="true"
+                                                                                         onkeydown="if(event.keyCode === 13) { $(this).closest('.ui-inplace').find('.ui-inplace-save').click(); return false; }"/>
+                                                                            <p:ajax event="save" listener="#{projectController.savePartName(node.data)}" update="@form"/>
+                                                                        </p:inplace>
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="value">
+                                                                    <div class="node-tags">
+                                                                        <span class="node-badge part">part</span>
+                                                                        <h:panelGroup rendered="#{node.foldedSheetMetal and node.hasSimulation}">
+                                                                            <button type="button" class="sim-btn"
+                                                                                    onclick="loadSimulation('#{request.contextPath}/simserver/#{node.simulationPath}');">▶ Sim</button>
+                                                                        </h:panelGroup>
+                                                                        <h:panelGroup rendered="#{node.foldedSheetMetal and node.hasSimulation and node.infeasible}">
+                                                                            <span class="sim-status infeasible" title="Part has collisions and cannot be manufactured">
+                                                                                <span class="sim-status-icon">&#9888;</span> Infeasible
+                                                                            </span>
+                                                                        </h:panelGroup>
+                                                                        <h:panelGroup rendered="#{node.foldedSheetMetal and node.hasSimulation and not node.infeasible and node.hasManufacturingWarnings}">
+                                                                            <span class="sim-status warnings" title="#{node.simulationWarnings}">
+                                                                                <span class="sim-status-icon">&#9888;</span> Warnings
+                                                                            </span>
+                                                                        </h:panelGroup>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="label">Type</td>
+                                                                <td class="value">
+                                                                    <div>#{node.shapeName}</div>
+                                                                    <h:panelGroup rendered="#{node.rawMaterial != null}">
+                                                                        <div class="node-material-name">#{node.materialName}</div>
+                                                                    </h:panelGroup>
+                                                                </td>
+                                                            </tr>
+                                                            <h:panelGroup rendered="#{node.shapeKey == 'SHEET_METAL_FLAT' or node.shapeKey == 'SHEET_METAL_FOLDED'}">
+                                                                <tr>
+                                                                    <td class="label">Thickness</td>
+                                                                    <td class="value"><h:outputText value="#{node.part.thickness}"><f:convertNumber maxFractionDigits="2"/></h:outputText> mm</td>
+                                                                </tr>
+                                                            </h:panelGroup>
+                                                            <h:panelGroup rendered="#{node.quoted and not empty node.availableAlloys}">
+                                                                <tr>
+                                                                    <td class="label">Material</td>
+                                                                    <td class="value">
+                                                                        <p:selectOneMenu value="#{node.data.selectedAlloy}"
+                                                                                         converter="CategoryConverter"
+                                                                                         styleClass="compact-dropdown">
+                                                                            <f:selectItems value="#{node.availableAlloys}" var="alloy"
+                                                                                           itemLabel="#{alloy.name}" itemValue="#{alloy}" />
+                                                                            <p:ajax listener="#{quotingEngine.changeAlloy(node.data)}"
+                                                                                    update=":formparts:assemblyTree :formparts:quoteTotals" />
+                                                                        </p:selectOneMenu>
+                                                                    </td>
+                                                                </tr>
+                                                            </h:panelGroup>
+                                                            <tr>
+                                                                <td class="label">Qty</td>
+                                                                <td class="value">#{node.quantity}</td>
+                                                            </tr>
+                                                            <h:panelGroup rendered="#{node.quoted}">
+                                                                <tr>
+                                                                    <td class="label">Price</td>
+                                                                    <td class="value">
+                                                                        <span class="node-price">
+                                                                            <h:outputText value="#{node.unitCost}"><f:convertNumber type="currency" currencySymbol="$" /></h:outputText>
+                                                                        </span>
+                                                                        <h:panelGroup rendered="#{node.quantity > 1}">
+                                                                            <span class="node-price-detail"> × #{node.quantity} = </span>
+                                                                            <span class="node-price">
+                                                                                <h:outputText value="#{node.totalCost}"><f:convertNumber type="currency" currencySymbol="$" /></h:outputText>
+                                                                            </span>
+                                                                        </h:panelGroup>
+                                                                    </td>
+                                                                </tr>
+                                                            </h:panelGroup>
+                                                            <tr>
+                                                                <td class="label"></td>
+                                                                <td class="value">
+                                                                    <p:commandLink actionListener="#{projectController.deleteNode(node.data)}"
+                                                                                   process="@this"
+                                                                                   update=":formparts:assemblyTree :formparts:quoteTotals"
+                                                                                   oncomplete="clearViewer()"
+                                                                                   styleClass="delete-btn"
+                                                                                   title="Remove">
+                                                                        &#128465;
+                                                                    </p:commandLink>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </h:panelGroup>
+                                        </div>
+                                    </h:panelGroup>
+                                </ui:repeat>
                             </div>
+                            </h:panelGroup>
+
+                            <!-- BOM View -->
+                            <h:panelGroup rendered="#{projectController.bomViewActive}">
+                                <div class="bom-container">
+                                    <table class="bom-table">
+                                        <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th style="width: 80px;">Part Name</th>
+                                                <th>Type</th>
+                                                <th style="width: 50px;">Thick</th>
+                                                <th style="text-align: center; width: 35px;">Qty</th>
+                                                <th style="text-align: right;">Unit</th>
+                                                <th style="text-align: right;">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <ui:repeat value="#{projectController.bomItems}" var="item">
+                                                <tr>
+                                                    <td>
+                                                        <div class="bom-thumb">
+                                                            <img src="#{request.contextPath}/imageserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{item.cadfile.uuid}&amp;persid=#{item.part.persid}"
+                                                                 onclick="loadGLB('#{request.contextPath}/glbserver?projectid=#{projectController.activeProject.uuid}&amp;cadfile=#{item.cadfile.uuid}&amp;persid=#{item.part.persid}');"/>
+                                                        </div>
+                                                    </td>
+                                                    <td class="bom-name">#{item.name}</td>
+                                                    <td>
+                                                        <div>#{item.shapeName}</div>
+                                                        <div class="bom-material">#{item.materialName}</div>
+                                                    </td>
+                                                    <td>
+                                                        <h:panelGroup rendered="#{item.sheetMetal}">
+                                                            <h:outputText value="#{item.thickness}"><f:convertNumber maxFractionDigits="2"/></h:outputText> mm
+                                                        </h:panelGroup>
+                                                        <h:panelGroup rendered="#{!item.sheetMetal}">-</h:panelGroup>
+                                                    </td>
+                                                    <td class="bom-qty">#{item.totalQuantity}</td>
+                                                    <td class="bom-price">
+                                                        <span class="bom-price-edit">
+                                                            <p:inplace editor="true">
+                                                                <p:inputNumber value="#{item.unitCost}" decimalPlaces="2" decimalSeparator="." thousandSeparator=","
+                                                                               onkeydown="if(event.keyCode === 13) { $(this).closest('.ui-inplace').find('.ui-inplace-save').click(); return false; }"/>
+                                                                <p:ajax event="save" listener="#{projectController.saveBomItemPrice(item)}" update="formparts"/>
+                                                            </p:inplace>
+                                                        </span>
+                                                    </td>
+                                                    <td class="bom-price">
+                                                        <h:outputText value="#{item.totalCost}"><f:convertNumber type="currency" currencySymbol="$" /></h:outputText>
+                                                    </td>
+                                                </tr>
+                                            </ui:repeat>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </h:panelGroup>
 
                             <h:panelGroup id="quoteTotals">
-                                <div style="background-color: #e0e0e0; padding: 8px 12px; font-size: 12px;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                        <span>Material Cost:</span>
+                                <div class="quote-totals">
+                                    <div class="quote-row">
+                                        <span>Material Cost</span>
                                         <h:outputText value="#{quotingEngine.totalMaterialCost}">
                                             <f:convertNumber type="currency" currencySymbol="$" />
                                         </h:outputText>
                                     </div>
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                        <span>Processing Cost:</span>
+                                    <div class="quote-row">
+                                        <span>Processing Cost</span>
                                         <h:outputText value="#{quotingEngine.totalProcessingCost}">
                                             <f:convertNumber type="currency" currencySymbol="$" />
                                         </h:outputText>
                                     </div>
                                 </div>
-                            </h:panelGroup>
 
-                            <div style="background-color: white;padding-top: 9px; padding-bottom: 7px;  border-bottom-right-radius: 8px; border-bottom-left-radius: 8px; color: black;">
-                                <div class="grid_two">
-                                    <div style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
-                                            Total
-
-                                    </div>
-
-                                    <div style="margin-left: 7px; font-family: Materiam; font-size: 24px;">
-                                        <h:outputText style="font-weight: bold;" value="#{quotingEngine.totalCost}" styleClass="product-price" >
-                                            <f:convertNumber currencySymbol="USD$" type="currency"/>
+                                <div class="grand-total">
+                                    <span class="grand-total-label">Total</span>
+                                    <span class="grand-total-value">
+                                        <h:outputText value="#{quotingEngine.totalCost}">
+                                            <f:convertNumber currencySymbol="$" type="currency"/>
                                         </h:outputText>
-                                    </div>
+                                    </span>
                                 </div>
-
-                            </div>
+                            </h:panelGroup>
 
                             <p:confirmDialog global="true" showEffect="fade" hideEffect="fade">
                                 <p:commandButton value="Yes" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check" />

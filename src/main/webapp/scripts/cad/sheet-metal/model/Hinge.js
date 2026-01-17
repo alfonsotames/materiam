@@ -19,11 +19,15 @@ export class Hinge {
         this._matrixParentToHingeArray = bendData.matrixParentToHinge;
         this._matrixHingeToChildArray = bendData.matrixHingeToChild;
 
+        // Bisector direction in hinge local space (points into the V)
+        this._bisector = bendData.bisector || [0, -1, 0];
+
         this.hingeRoot = null;
         this.axisPivot = null;
         this.childWrapper = null;
         this.parentArc = null;
         this.childArc = null;
+        this.axisHelper = null;
 
         this._progress = 0;
         this.bendDirection = Math.sign(this.restAngle) || 1;
@@ -175,10 +179,137 @@ export class Hinge {
     }
 
     /**
+     * Get the bisector direction in hinge local space
+     * @returns {THREE.Vector3}
+     */
+    getBisectorLocal() {
+        return new THREE.Vector3(
+            this._bisector[0],
+            this._bisector[1],
+            this._bisector[2]
+        );
+    }
+
+    /**
+     * Get the bisector direction in world space
+     * @returns {THREE.Vector3}
+     */
+    getBisectorWorld() {
+        if (!this.axisPivot) return this.getBisectorLocal();
+
+        const bisectorLocal = this.getBisectorLocal();
+        // Transform from hinge local to world space
+        const worldMatrix = new THREE.Matrix4();
+        this.axisPivot.updateWorldMatrix(true, false);
+        worldMatrix.copy(this.axisPivot.matrixWorld);
+
+        // Extract rotation only (no translation for direction vectors)
+        const rotationMatrix = new THREE.Matrix4();
+        rotationMatrix.extractRotation(worldMatrix);
+
+        return bisectorLocal.applyMatrix4(rotationMatrix).normalize();
+    }
+
+    /**
+     * Create axis helper visualization for bend direction
+     * Shows red arrows along the hinge axis (Z direction in hinge local space)
+     * and a yellow arrow pointing towards the bend V (bisector direction)
+     * @param {number} length - Length of the axis arrow (default: width + 20)
+     */
+    createAxisHelper(length = null) {
+        if (this.axisHelper) return; // Already created
+
+        const arrowLength = length || (this.width + 20);
+        const axisColor = 0xff0000; // Red for hinge axis
+        const bisectorColor = 0xffff00; // Yellow for bend direction
+
+        // Create a group to hold all axis visualization elements
+        this.axisHelper = new THREE.Group();
+        this.axisHelper.name = 'AxisHelper_' + this.id;
+
+        // Create arrow pointing in positive Z direction (hinge axis)
+        const arrowPositive = new THREE.ArrowHelper(
+            new THREE.Vector3(0, 0, 1),  // Direction (positive Z)
+            new THREE.Vector3(0, 0, 0),  // Origin at hinge center
+            arrowLength / 2,
+            axisColor,
+            arrowLength * 0.12,  // Head length
+            arrowLength * 0.06   // Head width
+        );
+        this.axisHelper.add(arrowPositive);
+
+        // Create arrow pointing in negative Z direction (hinge axis)
+        const arrowNegative = new THREE.ArrowHelper(
+            new THREE.Vector3(0, 0, -1),  // Direction (negative Z)
+            new THREE.Vector3(0, 0, 0),   // Origin at hinge center
+            arrowLength / 2,
+            axisColor,
+            arrowLength * 0.12,  // Head length
+            arrowLength * 0.06   // Head width
+        );
+        this.axisHelper.add(arrowNegative);
+
+        // Add a small ring/torus at the center to mark the pivot point
+        const ringGeometry = new THREE.TorusGeometry(this.radius * 0.3, this.radius * 0.05, 8, 24);
+        const ringMaterial = new THREE.MeshBasicMaterial({ color: axisColor });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        // Rotate ring to lie in XY plane (perpendicular to Z axis)
+        ring.rotation.x = Math.PI / 2;
+        this.axisHelper.add(ring);
+
+        // Create yellow arrow pointing towards the bend V (bisector direction)
+        // The bisector is computed in C++ as normalize(n1 + n2) where n1, n2 are flange normals
+        // It points INTO the V, where the punch goes during bending
+        const bisectorDir = new THREE.Vector3(
+            this._bisector[0],
+            this._bisector[1],
+            this._bisector[2]
+        ).normalize();
+
+        // Arrow length for bisector
+        const bisectorLength = this.radius * 4 + 5;
+
+        const bisectorArrow = new THREE.ArrowHelper(
+            bisectorDir,
+            new THREE.Vector3(0, 0, 0),  // Origin at hinge center
+            bisectorLength,
+            bisectorColor,
+            bisectorLength * 0.2,  // Head length
+            bisectorLength * 0.12  // Head width
+        );
+        this.axisHelper.add(bisectorArrow);
+
+        this.axisPivot.add(this.axisHelper);
+    }
+
+    /**
+     * Set axis helper visibility
+     * @param {boolean} visible - Whether to show the axis helper
+     */
+    setAxisVisible(visible) {
+        if (visible && !this.axisHelper) {
+            this.createAxisHelper();
+        }
+        if (this.axisHelper) {
+            this.axisHelper.visible = visible;
+        }
+    }
+
+    /**
      * Dispose of resources
      */
     dispose() {
         if (this.parentArc) this.parentArc.dispose();
         if (this.childArc) this.childArc.dispose();
+        if (this.axisHelper) {
+            // Dispose all children (arrows and ring)
+            this.axisHelper.traverse((child) => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+            });
+            if (this.axisHelper.parent) {
+                this.axisHelper.parent.remove(this.axisHelper);
+            }
+        }
     }
 }

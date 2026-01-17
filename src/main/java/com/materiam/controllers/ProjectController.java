@@ -107,8 +107,17 @@ public class ProjectController implements Serializable {
     private Long cachedProjectId;
     private boolean treeQuoted;
 
-    
-    
+    // BOM view toggle
+    private boolean bomViewActive = false;
+
+    // Last uploaded part info for auto-loading in viewer
+    private String lastUploadedCadfileUuid;
+    private String lastUploadedPartPersid;
+
+    // Flat tree for custom HTML rendering
+    private List<FlatTreeNode> flatTreeNodes;
+    private Set<String> expandedNodes = new HashSet<>();
+
     private String destination = PathConfig.getProjectsPath();
         
     
@@ -599,7 +608,7 @@ public class ProjectController implements Serializable {
                         (part.getShape() != null ? part.getShape().getKey() : "null"));
                     if (part.getShape() != null && part.getShape().getKey().equals("SHEET_METAL_FOLDED")) {
                         System.out.println("Found SHEET_METAL_FOLDED part: " + part.getName() + " persid: " + part.getPersid());
-                        runAmatix(filedest, part.getPersid());
+                        runAmatix(filedest, part);
                     }
                 }
             }
@@ -614,6 +623,20 @@ public class ProjectController implements Serializable {
         // Invalidate cached tree since new data was added
         invalidateAssemblyTree();
 
+        // Store last uploaded part info for auto-loading in viewer
+        // Clear first to avoid stale data mismatch
+        lastUploadedCadfileUuid = null;
+        lastUploadedPartPersid = null;
+
+        if (!f.getParts().isEmpty()) {
+            lastUploadedCadfileUuid = f.getUuid();
+            lastUploadedPartPersid = f.getParts().iterator().next().getPersid();
+        } else if (f.getRoot() != null) {
+            lastUploadedCadfileUuid = f.getUuid();
+            lastUploadedPartPersid = f.getRoot().getPersid();
+        }
+        // If neither condition is true, both remain null and hasLastUploaded returns false
+
         // TODO: Do not redirect if it is the same page!!!
         try {
             externalContext.redirect("project.xhtml");
@@ -623,7 +646,8 @@ public class ProjectController implements Serializable {
         }
     }
 
-    private void runAmatix(String filedest, String persid) {
+    private void runAmatix(String filedest, Part part) {
+        String persid = part.getPersid();
         try {
             String stepFile = filedest + "out_" + persid + "_1.step";
             String outDir = filedest + persid + "-cam_simulation";
@@ -670,6 +694,9 @@ public class ProjectController implements Serializable {
             if (exitCode == 0) {
                 System.out.println("Amatix completed successfully for " + persid);
                 userController.sendUpdate("Bend simulation complete for " + persid);
+
+                // Parse simulation.json to check for collisions and warnings
+                parseSimulationResults(outDir, part);
             } else {
                 System.out.println("Amatix failed with exit code " + exitCode + " for " + persid);
                 userController.sendUpdate("Bend simulation failed for " + persid);
@@ -682,9 +709,78 @@ public class ProjectController implements Serializable {
         }
     }
 
+    /**
+     * Parse simulation.json to extract collision and warning information.
+     */
+    private void parseSimulationResults(String outDir, Part part) {
+        Path simulationFile = Paths.get(outDir, "simulation.json");
+
+        if (!Files.exists(simulationFile)) {
+            System.out.println("simulation.json not found at: " + simulationFile);
+            return;
+        }
+
+        try {
+            String jsonContent = Files.readString(simulationFile);
+            JsonReader jsonReader = Json.createReader(new java.io.StringReader(jsonContent));
+            JsonObject simulation = jsonReader.readObject();
+            jsonReader.close();
+
+            // Check for warnings
+            JsonArray warnings = simulation.getJsonArray("warnings");
+            boolean hasWarnings = warnings != null && !warnings.isEmpty();
+            part.setHasWarnings(hasWarnings);
+
+            if (hasWarnings) {
+                // Store warnings as JSON string
+                part.setSimulationWarnings(warnings.toString());
+                System.out.println("Part " + part.getName() + " has " + warnings.size() + " warnings");
+                for (int i = 0; i < warnings.size(); i++) {
+                    System.out.println("  Warning: " + warnings.getString(i));
+                }
+            }
+
+            // Check for collisions in any bend sequence step
+            boolean hasCollisions = false;
+            JsonArray sequence = simulation.getJsonArray("sequence");
+            if (sequence != null) {
+                for (int i = 0; i < sequence.size(); i++) {
+                    JsonObject step = sequence.getJsonObject(i);
+                    JsonArray collisions = step.getJsonArray("collisions");
+                    if (collisions != null && !collisions.isEmpty()) {
+                        hasCollisions = true;
+                        System.out.println("Part " + part.getName() + " has collisions at step " +
+                            step.getInt("stepIndex") + ": " + collisions.toString());
+                        break;
+                    }
+                }
+            }
+            part.setHasCollisions(hasCollisions);
+
+            if (hasCollisions) {
+                System.out.println("Part " + part.getName() + " is INFEASIBLE (has collisions)");
+                userController.sendUpdate("WARNING: Part " + part.getName() + " has collisions - infeasible!");
+            } else if (hasWarnings) {
+                System.out.println("Part " + part.getName() + " is feasible but has warnings");
+                userController.sendUpdate("Part " + part.getName() + " has manufacturing warnings");
+            } else {
+                System.out.println("Part " + part.getName() + " is fully feasible");
+            }
+
+            // Part is already managed by EntityManager, changes will be persisted
+            em.merge(part);
+
+        } catch (IOException e) {
+            System.err.println("Error reading simulation.json: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error parsing simulation.json: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
 
-    private Assembly traverseInstance(JsonObject instance, 
+
+    private Assembly traverseInstance(JsonObject instance,
                                        Map<String, Object> definitionsEntityMap,
                                        CADFile cadFile) {
         if (instance == null) {
@@ -722,6 +818,15 @@ public class ProjectController implements Serializable {
                         Part childPart = (Part) childEntity;
                         assembly.getParts().add(childPart);
                         cadFile.getParts().add(childPart);  // Also add to CADFile's flat list
+
+                        // Create Instance entity with transformation
+                        Instance inst = createInstanceFromJson(childInstance, childPart, null, cadFile);
+                        if (inst != null) {
+                            em.persist(inst);
+                            System.out.println("Created instance for part: " + childPart.getName() +
+                                             " persid: " + inst.getPersid() +
+                                             " hasTransform: " + inst.hasTransform());
+                        }
                     }
                 }
             }
@@ -738,9 +843,49 @@ public class ProjectController implements Serializable {
             Part part = (Part) entity;
             cadFile.getParts().add(part);
             System.out.println("Added single part to CADFile: " + part.getName());
+
+            // Create Instance entity for root part
+            Instance inst = createInstanceFromJson(instance, part, null, cadFile);
+            if (inst != null) {
+                em.persist(inst);
+                System.out.println("Created instance for root part: " + part.getName());
+            }
         }
 
         return null;
+    }
+
+    /**
+     * Create an Instance entity from the assembly.json instance node.
+     * Extracts the transformation matrix if present.
+     */
+    private Instance createInstanceFromJson(JsonObject instanceJson, Part part, Assembly assembly, CADFile cadFile) {
+        Instance inst = new Instance();
+        inst.setCadfile(cadFile);
+        inst.setPart(part);
+        inst.setAssembly(assembly);
+
+        // Get the instance persid from JSON
+        String persid = instanceJson.getString("id");
+        inst.setPersid(persid);
+
+        // Extract transformation matrix if present
+        if (instanceJson.containsKey("transform") && !instanceJson.isNull("transform")) {
+            JsonArray transformArray = instanceJson.getJsonArray("transform");
+            if (transformArray != null && transformArray.size() == 16) {
+                double[] transform = new double[16];
+                for (int i = 0; i < 16; i++) {
+                    transform[i] = transformArray.getJsonNumber(i).doubleValue();
+                }
+                inst.setTransformFromArray(transform);
+                System.out.println("  Transform set for " + persid + ": Tx=" +
+                    String.format("%.2f", inst.getTranslationX()) + " Ty=" +
+                    String.format("%.2f", inst.getTranslationY()) + " Tz=" +
+                    String.format("%.2f", inst.getTranslationZ()));
+            }
+        }
+
+        return inst;
     }    
 
     
@@ -884,6 +1029,10 @@ public class ProjectController implements Serializable {
                 .getSingleResult();
         } catch (Exception e) {
             System.out.println("Error fetching project: " + e.getMessage());
+            // Reset activeProject if it doesn't exist in the database
+            activeProject = null;
+            cachedAssemblyTree = null;
+            cachedProjectId = null;
             return root;
         }
         if (project == null || project.getCadfiles() == null) {
@@ -1581,6 +1730,180 @@ public class ProjectController implements Serializable {
     }
 
     /**
+     * Gets/sets BOM view toggle state.
+     */
+    public boolean isBomViewActive() {
+        // Don't show BOM view if there's no active project
+        if (activeProject == null) {
+            return false;
+        }
+        return bomViewActive;
+    }
+
+    public void setBomViewActive(boolean bomViewActive) {
+        this.bomViewActive = bomViewActive;
+    }
+
+    public void toggleBomView() {
+        this.bomViewActive = !this.bomViewActive;
+    }
+
+    /**
+     * Returns the GLB URL for auto-loading the last uploaded part in the viewer.
+     * Returns null if no recent upload or if the info has been cleared.
+     */
+    public String getLastUploadedGlbUrl() {
+        if (lastUploadedCadfileUuid != null && lastUploadedPartPersid != null && activeProject != null) {
+            return "glbserver?projectid=" + activeProject.getUuid() +
+                   "&cadfile=" + lastUploadedCadfileUuid +
+                   "&persid=" + lastUploadedPartPersid;
+        }
+        return null;
+    }
+
+    /**
+     * Clears the last uploaded part info after it has been loaded in the viewer.
+     */
+    public void clearLastUploaded() {
+        lastUploadedCadfileUuid = null;
+        lastUploadedPartPersid = null;
+    }
+
+    public boolean getHasLastUploaded() {
+        return lastUploadedCadfileUuid != null && lastUploadedPartPersid != null && activeProject != null;
+    }
+
+    /**
+     * Gets consolidated BOM (Bill of Materials) from the assembly tree.
+     * Parts are grouped by name and their quantities are summed.
+     */
+    public List<BOMItem> getBomItems() {
+        List<BOMItem> bomItems = new ArrayList<>();
+
+        if (activeProject == null) {
+            return bomItems;
+        }
+
+        Map<String, BOMItem> bomMap = new HashMap<>();
+
+        TreeNode<TreeNodeData> tree = getAssemblyTree();
+        if (tree != null) {
+            collectBomItems(tree, bomMap);
+        }
+
+        bomItems.addAll(bomMap.values());
+        // Sort by name
+        bomItems.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        return bomItems;
+    }
+
+    private void collectBomItems(TreeNode<TreeNodeData> node, Map<String, BOMItem> bomMap) {
+        TreeNodeData data = node.getData();
+        if (data != null && "part".equals(data.getType())) {
+            String key = data.getName() + "_" + (data.getPart() != null ? data.getPart().getId() : "");
+            BOMItem existing = bomMap.get(key);
+            if (existing != null) {
+                existing.setTotalQuantity(existing.getTotalQuantity() + data.getQuantity());
+            } else {
+                BOMItem item = new BOMItem();
+                item.setName(data.getName());
+                item.setTotalQuantity(data.getQuantity());
+                item.setShapeName(data.getShapeName());
+                item.setPart(data.getPart());
+                item.setCadfile(data.getCadfile());
+                item.setQuoted(data.isQuoted());
+                item.setMaterialName(data.getMaterialName());
+
+                // Use manual price if set, otherwise use calculated unit cost
+                if (data.getPart() != null) {
+                    item.setThickness(data.getPart().getThickness());
+                    if (data.getPart().getManualPrice() != null) {
+                        item.setUnitCost(data.getPart().getManualPrice());
+                        item.setQuoted(true); // Manual price means it's quoted
+                    } else {
+                        item.setUnitCost(data.getUnitCost());
+                    }
+                } else {
+                    item.setUnitCost(data.getUnitCost());
+                }
+
+                bomMap.put(key, item);
+            }
+        }
+
+        for (TreeNode<TreeNodeData> child : node.getChildren()) {
+            collectBomItems(child, bomMap);
+        }
+    }
+
+    /**
+     * Saves the unit price for a BOM item and updates the part in the database.
+     */
+    public void saveBomItemPrice(BOMItem item) {
+        if (item == null || item.getPart() == null) {
+            return;
+        }
+        Part part = em.find(Part.class, item.getPart().getId());
+        if (part != null) {
+            part.setManualPrice(item.getUnitCost());
+            System.out.println("Saved manual price for part " + item.getName() + ": " + item.getUnitCost());
+            // Invalidate the cached tree to force recalculation
+            cachedAssemblyTree = null;
+        }
+    }
+
+    /**
+     * BOM Item class for consolidated parts view.
+     */
+    public static class BOMItem {
+        private String name;
+        private int totalQuantity;
+        private String shapeName;
+        private BigDecimal unitCost;
+        private BigDecimal thickness;
+        private Part part;
+        private CADFile cadfile;
+        private boolean quoted;
+        private String materialName;
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+
+        public int getTotalQuantity() { return totalQuantity; }
+        public void setTotalQuantity(int totalQuantity) { this.totalQuantity = totalQuantity; }
+
+        public String getShapeName() { return shapeName; }
+        public void setShapeName(String shapeName) { this.shapeName = shapeName; }
+
+        public BigDecimal getUnitCost() { return unitCost; }
+        public void setUnitCost(BigDecimal unitCost) { this.unitCost = unitCost; }
+
+        public BigDecimal getThickness() { return thickness; }
+        public void setThickness(BigDecimal thickness) { this.thickness = thickness; }
+
+        public Part getPart() { return part; }
+        public void setPart(Part part) { this.part = part; }
+
+        public CADFile getCadfile() { return cadfile; }
+        public void setCadfile(CADFile cadfile) { this.cadfile = cadfile; }
+
+        public boolean isQuoted() { return quoted; }
+        public void setQuoted(boolean quoted) { this.quoted = quoted; }
+
+        public BigDecimal getTotalCost() {
+            if (unitCost == null) return BigDecimal.ZERO;
+            return unitCost.multiply(BigDecimal.valueOf(totalQuantity));
+        }
+
+        public boolean isSheetMetal() {
+            return shapeName != null && (shapeName.contains("Sheet") || shapeName.contains("Folded"));
+        }
+
+        public String getMaterialName() { return materialName; }
+        public void setMaterialName(String materialName) { this.materialName = materialName; }
+    }
+
+    /**
      * Deletes assembly files using persid string.
      */
     private void deleteAssemblyFilesByPersid(String cadfileUuid, String persid) {
@@ -1713,6 +2036,39 @@ public class ProjectController implements Serializable {
             }
             return null;
         }
+
+        // Simulation feasibility methods
+        public boolean isInfeasible() {
+            return part != null && Boolean.TRUE.equals(part.getHasCollisions());
+        }
+
+        public boolean isHasManufacturingWarnings() {
+            return part != null && Boolean.TRUE.equals(part.getHasWarnings());
+        }
+
+        public String getSimulationWarnings() {
+            if (part != null && part.getSimulationWarnings() != null) {
+                return part.getSimulationWarnings();
+            }
+            return null;
+        }
+
+        /**
+         * Get a user-friendly status for the simulation.
+         * Returns: "infeasible", "warnings", "ok", or null if not applicable
+         */
+        public String getSimulationStatus() {
+            if (!foldedSheetMetal || !hasSimulation) {
+                return null;
+            }
+            if (isInfeasible()) {
+                return "infeasible";
+            }
+            if (isHasManufacturingWarnings()) {
+                return "warnings";
+            }
+            return "ok";
+        }
     }
 
     public class QuotedPart {
@@ -1744,8 +2100,360 @@ public class ProjectController implements Serializable {
          */
         public void setPrice(BigDecimal price) {
             this.price = price;
-        }  
+        }
     }
-    
+
+    /**
+     * FlatTreeNode wraps TreeNodeData with depth and state info for custom HTML tree rendering.
+     */
+    public static class FlatTreeNode {
+        private String nodeId;
+        private TreeNodeData data;
+        private int depth;
+        private boolean hasChildren;
+        private boolean expanded;
+        private boolean visible;
+
+        public FlatTreeNode(String nodeId, TreeNodeData data, int depth, boolean hasChildren) {
+            this.nodeId = nodeId;
+            this.data = data;
+            this.depth = depth;
+            this.hasChildren = hasChildren;
+            this.expanded = true; // Default expanded
+            this.visible = true;
+        }
+
+        public String getNodeId() { return nodeId; }
+        public TreeNodeData getData() { return data; }
+        public int getDepth() { return depth; }
+        public boolean isHasChildren() { return hasChildren; }
+        public boolean isExpanded() { return expanded; }
+        public void setExpanded(boolean expanded) { this.expanded = expanded; }
+        public boolean isVisible() { return visible; }
+        public void setVisible(boolean visible) { this.visible = visible; }
+
+        // Convenience getters that delegate to TreeNodeData
+        public String getName() { return data.getName(); }
+        public String getType() { return data.getType(); }
+        public Part getPart() { return data.getPart(); }
+        public Assembly getAssembly() { return data.getAssembly(); }
+        public CADFile getCadfile() { return data.getCadfile(); }
+        public int getQuantity() { return data.getQuantity(); }
+        public boolean isFoldedSheetMetal() { return data.isFoldedSheetMetal(); }
+        public boolean isHasSimulation() { return data.isHasSimulation(); }
+        public String getSimulationPath() { return data.getSimulationPath(); }
+        public BigDecimal getUnitCost() { return data.getUnitCost(); }
+        public BigDecimal getTotalCost() { return data.getTotalCost(); }
+        public boolean isQuoted() { return data.isQuoted(); }
+        public String getShapeName() { return data.getShapeName(); }
+        public String getShapeKey() { return data.getShapeKey(); }
+        public String getMaterialName() { return data.getMaterialName(); }
+        public Product getRawMaterial() { return data.getRawMaterial(); }
+        public Category getSelectedAlloy() { return data.getSelectedAlloy(); }
+        public void setSelectedAlloy(Category alloy) { data.setSelectedAlloy(alloy); }
+        public List<Category> getAvailableAlloys() { return data.getAvailableAlloys(); }
+        public boolean isInfeasible() { return data.isInfeasible(); }
+        public boolean isHasManufacturingWarnings() { return data.isHasManufacturingWarnings(); }
+        public String getSimulationWarnings() { return data.getSimulationWarnings(); }
+
+        public int getIndentPx() { return depth * 20; }
+    }
+
+    /**
+     * Get flat tree nodes for custom HTML tree rendering.
+     */
+    public List<FlatTreeNode> getFlatTreeNodes() {
+        TreeNode<TreeNodeData> tree = getAssemblyTree();
+        List<FlatTreeNode> result = new ArrayList<>();
+
+        if (tree != null) {
+            flattenTree(tree, result, -1, ""); // Start at -1 so root children are at depth 0
+        }
+
+        // Initialize expanded state - default all expanded
+        if (expandedNodes.isEmpty() && !result.isEmpty()) {
+            for (FlatTreeNode node : result) {
+                if (node.isHasChildren()) {
+                    expandedNodes.add(node.getNodeId());
+                }
+            }
+        }
+
+        // Update visibility and expanded state
+        updateTreeVisibility(result);
+
+        return result;
+    }
+
+    private void flattenTree(TreeNode<TreeNodeData> node, List<FlatTreeNode> result, int depth, String parentId) {
+        TreeNodeData data = node.getData();
+
+        // Skip the virtual root node (type "project")
+        if (data != null && !"project".equals(data.getType())) {
+            String nodeId = parentId + "_" + result.size();
+            boolean hasChildren = !node.getChildren().isEmpty();
+            FlatTreeNode flatNode = new FlatTreeNode(nodeId, data, depth, hasChildren);
+            result.add(flatNode);
+
+            for (TreeNode<TreeNodeData> child : node.getChildren()) {
+                flattenTree(child, result, depth + 1, nodeId);
+            }
+        } else {
+            // Process children of root node
+            for (TreeNode<TreeNodeData> child : node.getChildren()) {
+                flattenTree(child, result, depth + 1, parentId);
+            }
+        }
+    }
+
+    private void updateTreeVisibility(List<FlatTreeNode> nodes) {
+        Set<String> visibleParents = new HashSet<>();
+
+        for (FlatTreeNode node : nodes) {
+            node.setExpanded(expandedNodes.contains(node.getNodeId()));
+
+            // Root level nodes are always visible
+            if (node.getDepth() == 0) {
+                node.setVisible(true);
+                if (node.isExpanded()) {
+                    visibleParents.add(node.getNodeId());
+                }
+            } else {
+                // Check if parent is visible and expanded
+                String parentPrefix = node.getNodeId().substring(0, node.getNodeId().lastIndexOf('_'));
+                boolean parentVisible = false;
+                for (String vp : visibleParents) {
+                    if (node.getNodeId().startsWith(vp)) {
+                        parentVisible = true;
+                        break;
+                    }
+                }
+                node.setVisible(parentVisible);
+                if (node.isVisible() && node.isExpanded() && node.isHasChildren()) {
+                    visibleParents.add(node.getNodeId());
+                }
+            }
+        }
+    }
+
+    /**
+     * Toggle node expansion state.
+     */
+    public void toggleNode(String nodeId) {
+        System.out.println("Toggle node called with: " + nodeId);
+        if (expandedNodes.contains(nodeId)) {
+            expandedNodes.remove(nodeId);
+            System.out.println("Node collapsed: " + nodeId);
+        } else {
+            expandedNodes.add(nodeId);
+            System.out.println("Node expanded: " + nodeId);
+        }
+    }
+
+    /**
+     * Delete a node from the flat tree (delegates to existing deleteNode logic).
+     */
+    public void deleteFlatNode(FlatTreeNode flatNode) {
+        // Find the corresponding TreeNode and call existing delete
+        TreeNode<TreeNodeData> tree = getAssemblyTree();
+        TreeNode<TreeNodeData> nodeToDelete = findTreeNode(tree, flatNode.getData());
+        if (nodeToDelete != null) {
+            deleteNode(nodeToDelete.getData());
+        }
+    }
+
+    private TreeNode<TreeNodeData> findTreeNode(TreeNode<TreeNodeData> root, TreeNodeData target) {
+        if (root.getData() == target) {
+            return root;
+        }
+        for (TreeNode<TreeNodeData> child : root.getChildren()) {
+            TreeNode<TreeNodeData> found = findTreeNode(child, target);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get all instances for a CADFile.
+     */
+    public List<Instance> getInstancesForCadFile(CADFile cadFile) {
+        if (cadFile == null) {
+            return new ArrayList<>();
+        }
+        return em.createQuery("SELECT i FROM Instance i WHERE i.cadfile = :cadfile", Instance.class)
+                 .setParameter("cadfile", cadFile)
+                 .getResultList();
+    }
+
+    /**
+     * Get all instances for an assembly by its persid.
+     * Returns instances whose part belongs to the assembly or its descendants.
+     */
+    public List<Instance> getInstancesForAssembly(String assemblyPersid, CADFile cadFile) {
+        if (assemblyPersid == null || cadFile == null) {
+            return new ArrayList<>();
+        }
+
+        // Get all instances for this CADFile
+        List<Instance> allInstances = getInstancesForCadFile(cadFile);
+
+        // Filter to instances whose persid starts with the assembly persid
+        // (e.g., assembly "0-1" contains instances "0-1-0", "0-1-1", etc.)
+        List<Instance> result = new ArrayList<>();
+        for (Instance inst : allInstances) {
+            if (inst.getPersid() != null && inst.getPersid().startsWith(assemblyPersid + "-")) {
+                result.add(inst);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Get instances as JSON for the welding module.
+     * Returns a list of instance data with part info and transforms.
+     * The glbUrl is relative (needs context path prepended by the caller).
+     */
+    public String getInstancesJson(String assemblyPersid, String cadfileUuid) {
+        if (activeProject == null || cadfileUuid == null) {
+            return "[]";
+        }
+
+        // Find the CADFile
+        CADFile cadFile = null;
+        for (CADFile cf : activeProject.getCadfiles()) {
+            if (cadfileUuid.equals(cf.getUuid())) {
+                cadFile = cf;
+                break;
+            }
+        }
+
+        if (cadFile == null) {
+            return "[]";
+        }
+
+        List<Instance> instances = (assemblyPersid != null)
+            ? getInstancesForAssembly(assemblyPersid, cadFile)
+            : getInstancesForCadFile(cadFile);
+
+        System.out.println("getInstancesJson: Found " + instances.size() + " instances for assembly " + assemblyPersid);
+
+        StringBuilder json = new StringBuilder("[");
+        boolean first = true;
+        int withPart = 0;
+        int withoutPart = 0;
+
+        for (Instance inst : instances) {
+            if (!first) json.append(",");
+            first = false;
+
+            json.append("{");
+            json.append("\"persid\":\"").append(escapeJson(inst.getPersid())).append("\",");
+
+            if (inst.getPart() != null) {
+                withPart++;
+                json.append("\"partPersid\":\"").append(escapeJson(inst.getPart().getPersid())).append("\",");
+                json.append("\"partName\":\"").append(escapeJson(inst.getPart().getName())).append("\",");
+                // GLB URL - use part persid (glbserver serves one GLB per unique part)
+                json.append("\"glbUrl\":\"glbserver?projectid=").append(activeProject.getUuid())
+                    .append("&cadfile=").append(cadfileUuid)
+                    .append("&persid=").append(inst.getPart().getPersid()).append("\",");
+            } else {
+                withoutPart++;
+                System.out.println("  Instance " + inst.getPersid() + " has no Part!");
+            }
+
+            json.append("\"transform\":[");
+            double[] t = inst.getTransformAsArray();
+            for (int i = 0; i < 16; i++) {
+                if (i > 0) json.append(",");
+                json.append(t[i]);
+            }
+            json.append("],");
+
+            json.append("\"hasTransform\":").append(inst.hasTransform());
+            json.append("}");
+        }
+
+        json.append("]");
+        System.out.println("getInstancesJson: " + withPart + " with Part, " + withoutPart + " without Part");
+        return json.toString();
+    }
+
+    /**
+     * Escape special characters for JSON string.
+     */
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+    }
+
+    // Fields to hold welding request parameters (set via f:setPropertyActionListener)
+    private String weldingAssemblyPersid;
+    private String weldingCadfileUuid;
+
+    public String getWeldingAssemblyPersid() { return weldingAssemblyPersid; }
+    public void setWeldingAssemblyPersid(String weldingAssemblyPersid) { this.weldingAssemblyPersid = weldingAssemblyPersid; }
+
+    public String getWeldingCadfileUuid() { return weldingCadfileUuid; }
+    public void setWeldingCadfileUuid(String weldingCadfileUuid) { this.weldingCadfileUuid = weldingCadfileUuid; }
+
+    /**
+     * Action method for welding remoteCommand.
+     * Returns instance data and weld interfaces via PrimeFaces callback parameters.
+     */
+    public void prepareWeldingData() {
+        // Get parameters from request
+        Map<String, String> params = FacesContext.getCurrentInstance()
+            .getExternalContext().getRequestParameterMap();
+        String assemblyPersid = params.get("assemblyPersid");
+        String cadfileUuid = params.get("cadfileUuid");
+
+        String instancesJson = getInstancesJson(assemblyPersid, cadfileUuid);
+        org.primefaces.PrimeFaces.current().ajax().addCallbackParam("instances", instancesJson);
+
+        // Read weld_interfaces JSON file
+        String weldInterfacesJson = getWeldInterfacesJson(assemblyPersid, cadfileUuid);
+        org.primefaces.PrimeFaces.current().ajax().addCallbackParam("weldInterfaces", weldInterfacesJson);
+
+        System.out.println("Prepared welding data for assembly: " + assemblyPersid +
+                          " cadfile: " + cadfileUuid);
+    }
+
+    /**
+     * Read the weld_interfaces JSON file for an assembly.
+     * @param assemblyPersid The assembly persid (e.g., "0-1-1-1")
+     * @param cadfileUuid The CAD file UUID
+     * @return The weld interfaces JSON string, or empty object if not found
+     */
+    private String getWeldInterfacesJson(String assemblyPersid, String cadfileUuid) {
+        if (activeProject == null || assemblyPersid == null || cadfileUuid == null) {
+            return "{}";
+        }
+
+        String projectUuid = activeProject.getUuid();
+        String basePath = PathConfig.getProjectsPath() + projectUuid + "/" + cadfileUuid + "/";
+        String fileName = "weld_interfaces_" + assemblyPersid + ".json";
+        String filePath = basePath + fileName;
+
+        java.io.File file = new java.io.File(filePath);
+        if (!file.exists()) {
+            System.out.println("Weld interfaces file not found: " + filePath);
+            return "{}";
+        }
+
+        try {
+            return new String(java.nio.file.Files.readAllBytes(file.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            System.err.println("Error reading weld interfaces file: " + e.getMessage());
+            return "{}";
+        }
+    }
 
 }

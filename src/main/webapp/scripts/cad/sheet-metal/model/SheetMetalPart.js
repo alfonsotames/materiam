@@ -21,6 +21,9 @@ export class SheetMetalPart {
         this._initialRootQuaternion = null;
         this._initialRootScale = null;
 
+        // Presentation mode transform (overrides initial when set)
+        this._presentationQuaternion = null;
+
         this.flangeMaterials = [];
         this.steelMaterial = null;
         this.isLoaded = false;
@@ -32,6 +35,8 @@ export class SheetMetalPart {
             roughness: 0.6,
             side: THREE.DoubleSide
         });
+
+        this.showHinges = false;
     }
 
     _initMaterials() {
@@ -65,9 +70,17 @@ export class SheetMetalPart {
 
             this.blueprint = await response.json();
 
+            // Read showHinges flag from blueprint
+            this.showHinges = this.blueprint.showHinges === true;
+
             this._initMaterials();
             this._createFlanges();
             this._assembleHierarchy();
+
+            // Create axis helpers if showHinges is enabled
+            if (this.showHinges) {
+                this._createAxisHelpers();
+            }
 
             // Store initial root transform for reset capability
             this._initialRootPosition = this.root.position.clone();
@@ -144,6 +157,26 @@ export class SheetMetalPart {
 
                 queue.push(bendData.childId);
             }
+        }
+    }
+
+    /**
+     * Create axis helpers for all hinges to visualize bend directions
+     */
+    _createAxisHelpers() {
+        for (const hinge of this.hinges.values()) {
+            hinge.createAxisHelper();
+        }
+    }
+
+    /**
+     * Toggle hinge axis visibility
+     * @param {boolean} visible - Whether to show hinge axes
+     */
+    setHingeAxesVisible(visible) {
+        this.showHinges = visible;
+        for (const hinge of this.hinges.values()) {
+            hinge.setAxisVisible(visible);
         }
     }
 
@@ -279,25 +312,48 @@ export class SheetMetalPart {
     }
 
     /**
-     * Reset the root transform to its initial state.
+     * Reset the root transform to its initial state (or presentation state if set).
      * This clears any accumulated symmetry compensation.
      */
     resetRootTransform() {
-        if (this._initialRootPosition) {
+        if (this._presentationQuaternion) {
+            // In presentation mode: use fixed presentation orientation
+            this.root.position.set(0, 0, 0);
+            this.root.quaternion.copy(this._presentationQuaternion);
+            this.root.scale.set(1, 1, 1);
+            this.root.updateMatrix();
+            this.root.updateMatrixWorld(true);
+            this.root.matrixAutoUpdate = false;
+        } else if (this._initialRootPosition) {
+            // Normal mode: use initial state
             this.root.position.copy(this._initialRootPosition);
             this.root.quaternion.copy(this._initialRootQuaternion);
             this.root.scale.copy(this._initialRootScale);
+            this.root.matrixAutoUpdate = true;
             this.root.updateMatrix();
             this.root.updateMatrixWorld(true);
         }
     }
 
     /**
-     * Fold all hinges and reset root transform
+     * Set the presentation mode quaternion.
+     * When set, resetRootTransform() will use this instead of the initial transform.
+     * @param {THREE.Quaternion|null} quaternion - The quaternion to use, or null to exit presentation mode
      */
-    foldAll() {
+    setPresentationQuaternion(quaternion) {
+        this._presentationQuaternion = quaternion ? quaternion.clone() : null;
+    }
+
+    /**
+     * Fold all hinges and reset root transform
+     * @param {boolean} resetRoot - Whether to reset the root transform (default true)
+     */
+    foldAll(resetRoot = true) {
         // Reset root transform to clear accumulated compensation
-        this.resetRootTransform();
+        // In presentation mode, we skip this to keep the fixed presentation orientation
+        if (resetRoot) {
+            this.resetRootTransform();
+        }
 
         for (const h of this.hinges.values()) {
             h.fold();

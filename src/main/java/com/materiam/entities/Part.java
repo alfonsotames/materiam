@@ -88,9 +88,18 @@ public class Part implements Serializable {
     private Long bends;
     private Long timesRepeated;
     @ManyToOne
-    private CADFile cadfile;    
+    private CADFile cadfile;
     @Lob
     private String comments;
+
+    @Column(precision = 10, scale = 2) // Manual price override
+    private BigDecimal manualPrice;
+
+    // Simulation results from amatix
+    private Boolean hasCollisions;  // Part is infeasible if true
+    private Boolean hasWarnings;    // Part has manufacturing warnings
+    @Lob
+    private String simulationWarnings;  // JSON array of warning messages
     
     
     public Long getId() {
@@ -442,7 +451,59 @@ public class Part implements Serializable {
         this.diameter = diameter;
     }
 
+    /**
+     * @return the manualPrice
+     */
+    public BigDecimal getManualPrice() {
+        return manualPrice;
+    }
 
+    /**
+     * @param manualPrice the manualPrice to set
+     */
+    public void setManualPrice(BigDecimal manualPrice) {
+        this.manualPrice = manualPrice;
+    }
 
-    
+    /**
+     * @return true if the part has collisions (infeasible)
+     */
+    public Boolean getHasCollisions() {
+        return hasCollisions;
+    }
+
+    /**
+     * @param hasCollisions the hasCollisions to set
+     */
+    public void setHasCollisions(Boolean hasCollisions) {
+        this.hasCollisions = hasCollisions;
+    }
+
+    /**
+     * @return true if the part has manufacturing warnings
+     */
+    public Boolean getHasWarnings() {
+        return hasWarnings;
+    }
+
+    /**
+     * @param hasWarnings the hasWarnings to set
+     */
+    public void setHasWarnings(Boolean hasWarnings) {
+        this.hasWarnings = hasWarnings;
+    }
+
+    /**
+     * @return the simulation warnings as JSON array string
+     */
+    public String getSimulationWarnings() {
+        return simulationWarnings;
+    }
+
+    /**
+     * @param simulationWarnings the simulationWarnings to set
+     */
+    public void setSimulationWarnings(String simulationWarnings) {
+        this.simulationWarnings = simulationWarnings;
+    }
 }
